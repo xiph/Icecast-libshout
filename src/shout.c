@@ -137,7 +137,7 @@ int shout_send(shout_t *self, const unsigned char *data, size_t len)
 	if (self->starttime <= 0)
 		self->starttime = timing_get_time();
 
-	return self->send(self, buff, len);
+	return self->send(self, data, len);
 }
 
 ssize_t shout_send_raw(shout_t *self, const unsigned char *data, size_t len)
@@ -148,7 +148,7 @@ ssize_t shout_send_raw(shout_t *self, const unsigned char *data, size_t len)
 		return SHOUTERR_INSANE;
 
 	if (len) {
-		ret = sock_write_bytes(self->socket, buff, len);
+		ret = sock_write_bytes(self->socket, data, len);
 		if (ret < 0 || (size_t)ret != len) {
 			self->error = SHOUTERR_SOCKET;
 			return ret;

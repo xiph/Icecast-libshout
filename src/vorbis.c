@@ -53,7 +53,7 @@ static int send_vorbis(shout_t *self, const unsigned char *data, size_t len)
 	vorbis_comment vc;
 
 	buffer = ogg_sync_buffer(&vorbis_data->oy, len);
-	memcpy(buffer, buff, len);
+	memcpy(buffer, data, len);
 	ogg_sync_wrote(&vorbis_data->oy, len);
 
 	while (ogg_sync_pageout(&vorbis_data->oy, &og) == 1) {

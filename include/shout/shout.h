@@ -53,7 +53,7 @@ int shout_set_host(shout_t *self, const char *host);
 const char *shout_get_host(shout_t *self);
 
 int shout_set_port(shout_t *self, unsigned short port);
-const char *shout_get_port(shout_t *self);
+unsigned short shout_get_port(shout_t *self);
 
 int shout_set_password(shout_t *, const char *password);
 const char *shout_get_password(shout_t *self);
@@ -68,7 +68,7 @@ int shout_set_url(shout_t *self, const char *url);
 const char *shout_get_url(shout_t *self);
 
 int shout_set_genre(shout_t *self, const char *genre);
-const char *shout_set_genre(shout_t *self);
+const char *shout_get_genre(shout_t *self);
 
 int shout_set_description(shout_t *self, const char *description);
 const char *shout_get_description(shout_t *self);
