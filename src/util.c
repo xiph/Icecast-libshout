@@ -195,3 +195,62 @@ int util_dict_set(util_dict *dict, const char *key, const char *val)
 
 	return SHOUTERR_SUCCESS;
 }
+
+/* given a dictionary, URL-encode each key and val and stringify them in order as
+  key=val;key=val... if val is set, or just key;key if val is NULL.
+  sep is the separator character (';' in the example above)
+  TODO: Memory management needs overhaul. */
+char *util_dict_urlencode(util_dict *dict, char sep)
+{
+	char *res, *tmp;
+	char *enc;
+	int start = 1;
+
+	for (res = NULL; dict; dict = dict->next) {
+		/* encode key */
+		if (!dict->key)
+			continue;
+		if (!(enc = util_url_encode(dict->key))) {
+			if (res)
+				free(res);
+			return NULL;
+		}
+		if (start) {
+			if (!(res = malloc(strlen(enc) + 1))) {
+				free(enc);
+				return NULL;
+			}
+			sprintf(res, "%s", enc);
+			free(enc);
+			start = 0;
+		} else {
+			if (!(tmp = realloc(res, strlen(res) + strlen(enc) + 2))) {
+				free(enc);
+				free(res);
+				return NULL;
+			} else
+				res = tmp;
+			sprintf(res + strlen(res), "%c%s", sep, enc);
+			free(enc);
+		}
+
+		/* encode value */
+		if (!dict->val)
+			continue;
+		if (!(enc = util_url_encode(dict->val))) {
+			free(res);
+			return NULL;
+		}
+
+		if (!(tmp = realloc(res, strlen(res) + strlen(enc) + 2))) {
+			free(enc);
+			free(res);
+			return NULL;
+		} else
+			res = tmp;
+		sprintf(res + strlen(res), "=%s", enc);
+		free(enc);
+	}
+
+	return res;
+}

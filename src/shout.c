@@ -240,65 +240,27 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 	if (!self || !metadata)
 		return SHOUTERR_INSANE;
 
+	if (!(encvalue = util_dict_urlencode(metadata, '&')))
+		return SHOUTERR_MALLOC;
+
 	if (!self->connected)
 		return SHOUTERR_UNCONNECTED;
 	if ((socket = sock_connect(self->host, self->port)) <= 0)
 		return SHOUTERR_NOCONNECT;
 
 	if (self->protocol == SHOUT_PROTOCOL_ICY)
-		rv = sock_write(socket, "GET /admin.cgi?mode=updinfo&pass=%s", self->password);
-	else if (self->protocol == SHOUT_PROTOCOL_HTTP)
-		rv = sock_write(socket, "GET /admin/metadata?mode=updinfo&mount=%s", self->mount);
-	else
-		rv = sock_write(socket, "GET /admin.cgi?mode=updinfo&pass=%s&mount=%s", self->password, self->mount);
-	if (!rv) {
-		sock_close(socket);
-		return SHOUTERR_SOCKET;
-	}
-
-	while (metadata) {
-		if (metadata->key) {
-			if (metadata->val) {
-				if (!(encvalue = util_url_encode(metadata->val))) {
-					rv = SHOUTERR_MALLOC;
-					break;
-				}
-				rv = sock_write(socket, "&%s=%s", metadata->key, encvalue);
-			} else
-				rv = sock_write(socket, "&%s", metadata->key);
-
-			free (encvalue);
-			
-			if (!rv) {
-				sock_close(socket);
-				return SHOUTERR_SOCKET;
-			}
-		}
-		rv = SHOUTERR_SUCCESS;
-		metadata = metadata->next;
-	}
-	if (rv != SHOUTERR_SUCCESS) {
-		sock_close(socket);
-		return rv;
-	}
-
-	if (!sock_write(socket, " HTTP/1.0\r\nUser-Agent: %s\r\n", shout_get_agent(self))) {
-		sock_close(socket);
-		return SHOUTERR_SOCKET;
-	}
-	if (self->protocol == SHOUT_PROTOCOL_HTTP) {
+		rv = sock_write(socket, "GET /admin.cgi?mode=updinfo&pass=%s&%s HTTP/1.0\r\nUser-Agent: %s\r\n\r\n",
+		  self->password, encvalue, shout_get_agent(self));
+	else if (self->protocol == SHOUT_PROTOCOL_HTTP) {
 		char *auth = http_basic_authorization(self);
 
-		if (auth) {
-			if (!sock_write(socket, auth)) {
-				sock_close(socket);
-				free(auth);
-				return SHOUTERR_SOCKET;
-			}
-			free (auth);
-		}
-	}
-	if (!sock_write(socket, "\r\n")) {
+		rv = sock_write(socket, "GET /admin/metadata?mode=updinfo&mount=%s&%s HTTP/1.0\r\nUser-Agent: %s\r\n%s\r\n",
+		  self->mount, encvalue, shout_get_agent(self), auth ? auth : "");
+	} else
+		rv = sock_write(socket, "GET /admin.cgi?mode=updinfo&pass=%s&mount=%s&%s HTTP/1.0\r\nUser-Agent: %s\r\n\r\n",
+		  self->password, self->mount, encvalue, shout_get_agent(self));
+	free(encvalue);
+	if (!rv) {
 		sock_close(socket);
 		return SHOUTERR_SOCKET;
 	}
