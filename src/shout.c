@@ -828,13 +828,11 @@ static int login_http_basic(shout_t *self)
 	/* assume we'll have to authenticate, saves round trips on basic */
 	if(send_http_request(self, self->user, self->password) != 0) {
 #endif
-		sock_close(self->socket);
 		return self->error = SHOUTERR_SOCKET;
 	}
 
 	if (util_read_header(self->socket, header, 4096) == 0) {
 		/* either we didn't get a complete header, or we timed out */
-		sock_close(self->socket);
 		return self->error = SHOUTERR_SOCKET;
 	}
 
@@ -887,7 +885,6 @@ static int login_http_basic(shout_t *self)
 	}
 
 	httpp_destroy(parser);
-	sock_close(self->socket);
 	return self->error = SHOUTERR_REFUSED;
 }
 
