@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.44 2003/06/06 00:05:18 karl Exp $
+# $Id: configure.in,v 1.45 2003/06/10 00:17:57 brendan Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -151,7 +151,15 @@ then
 fi
 
 XIPH_PATH_OGG
+if test -z "$OGG_LIBS"
+then
+  AC_MSG_ERROR([The Ogg library is required to build libshout])
+fi
 XIPH_PATH_VORBIS
+if test -z "$VORBIS_LIBS"
+then
+  AC_MSG_ERROR([The Vorbis library is required to build libshout])
+fi
 XIPH_CFLAGS="$XIPH_CFLAGS $VORBIS_CFLAGS $OGG_CFLAGS"
 
 dnl pkgconfig/shout-config.
