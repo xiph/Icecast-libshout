@@ -8,7 +8,7 @@
 #include "shout_private.h"
 
 /*
- * MP3 Frame handling curtesy of Scott Manley - may he always be Manley.
+ * MP3 frame handling courtesy of Scott Manley - may he always be Manley.
  */
 
 #define MPEG_MODE_MONO 3
