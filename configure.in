@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.28 2003/03/14 00:39:18 karl Exp $
+# $Id: configure.in,v 1.29 2003/03/17 16:47:20 karl Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -78,7 +78,7 @@ typedef int socklen_t;
 dnl Checks for library functions.
 AC_CHECK_FUNCS(nanosleep)
 AC_CHECK_FUNCS(sethostent endhostent)
-AC_CHECK_FUNCS(getnameinfo getaddrinfo inet_pton)
+AC_CHECK_FUNCS(getnameinfo getaddrinfo inet_pton inet_aton)
 
 dnl Extra dependencies
 
