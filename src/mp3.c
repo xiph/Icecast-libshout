@@ -1,5 +1,6 @@
 /* -*- c-basic-offset: 8; -*- */
 /* mp3.c: libshout MP3 format handler
+ * $Id$
  *
  *  Copyright (C) 2002-2003 the Icecast team <team@icecast.org>
  *
