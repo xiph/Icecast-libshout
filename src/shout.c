@@ -155,8 +155,8 @@ ssize_t shout_send_raw(shout_t *self, const unsigned char *data, size_t len)
 	ssize_t ret;
     size_t remaining = len;
 
-	if (!self)
-		return SHOUTERR_INSANE;
+	if (!self) 
+		return -1;
 
 	while(remaining) {
 		ret = sock_write_bytes(self->socket, data, remaining);
