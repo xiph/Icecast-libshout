@@ -17,7 +17,7 @@
 #define SHOUTERR_CONNECTED	(7)
 #define SHOUTERR_UNCONNECTED	(8)
 #define SHOUTERR_UNSUPPORTED	(9)
-#define SHOUTERR_REFUSED    (10)
+#define SHOUTERR_REFUSED	(10)
 
 #define SHOUT_FORMAT_VORBIS	(0)
 #define SHOUT_FORMAT_MP3	(1)
@@ -25,7 +25,7 @@
 #define SHOUT_PROTOCOL_ICE		(0)
 #define SHOUT_PROTOCOL_XAUDIOCAST	(1)
 #define SHOUT_PROTOCOL_ICY		(2)
-#define SHOUT_PROTOCOL_HTTP	    (3)
+#define SHOUT_PROTOCOL_HTTP		(3)
 
 typedef struct shout shout_t;
 typedef struct shout_metadata shout_metadata_t;
@@ -51,6 +51,9 @@ const char *shout_get_error(shout_t *self);
 
 /* Return the error code (e.g. SHOUTERR_SOCKET) for this shout instance */
 int shout_get_errno(shout_t *self);
+
+/* returns SHOUTERR_CONNECTED or SHOUTERR_UNCONNECTED */
+int shout_get_connected(shout_t *self);
 
 /* Parameter manipulation functions.  libshout makes copies of all parameters,
  * the caller may free its copies after giving them to libshout.  May return
@@ -90,6 +93,9 @@ const char *shout_get_description(shout_t *self);
 int shout_set_bitrate(shout_t *self, unsigned int bitrate);
 unsigned int shout_get_bitrate(shout_t *self);
 
+int shout_set_public(shout_t *self, unsigned int public);
+unsigned int shout_get_public(shout_t *self);
+
 /* takes a SHOUT_FORMAT_xxxx argument */
 int shout_set_format(shout_t *self, unsigned int format);
 unsigned int shout_get_format(shout_t *self);
@@ -116,16 +122,24 @@ ssize_t shout_send_raw(shout_t *self, const unsigned char *data, size_t len);
 /* Puts caller to sleep until it is time to send more data to the server */
 void shout_sync(shout_t *self);
 
-/* Sets MP3 metadata */
+/* Sets MP3 metadata.
+ * Returns:
+ *   SHOUTERR_SUCCESS on success
+ *   SHOUTERR_UNSUPPORTED if protocol isn't Icy or X-Audiocast
+ */
 int shout_set_metadata(shout_t *self, shout_metadata_t *metadata);
 
-/* Allocates a new metadata structure.  Must be freed by shout_metadata_free */
+/* Allocates a new metadata structure.  Must be freed by shout_metadata_free. */
 shout_metadata_t *shout_metadata_new(void);
 
 /* Free resources allocated by shout_metadata_t */
 void shout_metadata_free(shout_metadata_t *self);
 
-/* Add a parameter to the metadata structure */
+/* Add a parameter to the metadata structure.
+ * Returns:
+ *   SHOUTERR_SUCCESS on success
+ *   SHOUTERR_INSANE if self isn't a valid shout_metadata_t* or name is null
+ *   SHOUTERR_MALLOC if memory can't be allocated */
 int shout_metadata_add(shout_metadata_t *self, const char *name, const char *value);
 
 #ifdef __cplusplus
