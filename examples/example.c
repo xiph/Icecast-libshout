@@ -21,7 +21,17 @@ int main()
 		printf("Error setting hostname: %s\n", shout_get_error(shout));
 		return 1;
 	}
-	shout_set_port(shout, 8000);
+
+    if (shout_set_protocol(shout, SHOUT_PROTOCOL_HTTP) != SHOUTERR_SUCCESS) {
+        printf("Error setting protocol: %s\n", shout_get_error(shout));
+        return 1;
+    }
+
+    if (shout_set_port(shout, 8000) != SHOUTERR_SUCCESS) {
+        printf("Error setting port: %s\n", shout_get_error(shout));
+        return 1;
+    }
+
 	if (shout_set_password(shout, "hackme") != SHOUTERR_SUCCESS) {
 		printf("Error setting password: %s\n", shout_get_error(shout));
 		return 1;
@@ -30,7 +40,16 @@ int main()
 		printf("Error setting mount: %s\n", shout_get_error(shout));
 		return 1;
 	}
-	shout_set_format(shout, SHOUT_FORMAT_MP3);
+
+    if (shout_set_user(shout, "source") != SHOUTERR_SUCCESS) {
+        printf("Error setting user: %s\n", shout_get_error(shout));
+        return 1;
+    }
+
+    if (shout_set_format(shout, SHOUT_FORMAT_VORBIS) != SHOUTERR_SUCCESS) {
+        printf("Error setting user: %s\n", shout_get_error(shout));
+        return 1;
+    }
 
 	if (shout_open(shout) == SHOUTERR_SUCCESS) {
 		printf("Connected to server...\n");
