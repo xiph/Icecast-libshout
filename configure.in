@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.43 2003/06/05 19:02:36 brendan Exp $
+# $Id: configure.in,v 1.44 2003/06/06 00:05:18 karl Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -109,6 +109,18 @@ AH_VERBATIM([X_HAVE_SOCKLEN_T],
   [#ifndef HAVE_SOCKLEN_T
 typedef int socklen_t;
 #endif])
+
+AC_MSG_CHECKING([how to copy va_list])
+AC_TRY_LINK([#include <stdarg.h>], [va_list ap1, ap2; va_copy(ap1, ap2);],
+        AC_MSG_RESULT([va_copy]),
+        [ AH_TEMPLATE([va_copy], [define if va_copy is not available])
+        AC_TRY_LINK([#include <stdarg.h>], [va_list ap1, ap2; __va_copy(ap1, ap2);],
+            [ AC_DEFINE([va_copy], [__va_copy])
+            AC_MSG_RESULT([__va_copy])],
+            [ AC_DEFINE([va_copy(dest,src)], [memcpy(&dest,&src,sizeof(va_list))])
+            AC_MSG_RESULT([memcpy])]
+            )
+        ])
 
 dnl Checks for library functions.
 AC_CHECK_FUNCS(nanosleep)
