@@ -2,6 +2,5 @@
 
 AUTOMAKE_OPTIONS = foreign
 
-SUBDIRS = shout
+EXTRA_DIST = libshout.dsp libshout.dsw
 
-EXTRA_DIST = os.h
