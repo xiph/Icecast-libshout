@@ -44,6 +44,11 @@ shout_t *shout_new(void)
 
 		return NULL;
 	}
+	if (!(self->audio_info = util_dict_new())) {
+		shout_free(self);
+
+		return NULL;
+	}
 
 	self->port = LIBSHOUT_DEFAULT_PORT;
 	self->format = LIBSHOUT_DEFAULT_FORMAT;
@@ -65,6 +70,7 @@ void shout_free(shout_t *self)
 	if (self->description) free(self->description);
 	if (self->user) free(self->user);
 	if (self->useragent) free(self->useragent);
+	if (self->audio_info) util_dict_free (self->audio_info);
 
 	free(self);
 }
@@ -204,13 +210,7 @@ void shout_sync(shout_t *self)
 
 shout_metadata_t *shout_metadata_new(void)
 {
-	shout_metadata_t *self;
-
-	if (!(self = (shout_metadata_t *)calloc(1, sizeof(shout_metadata_t)))) {
-		return NULL;
-	}
-
-	return self;
+	return util_dict_new();
 }
 
 void shout_metadata_free(shout_metadata_t *self)
@@ -218,7 +218,7 @@ void shout_metadata_free(shout_metadata_t *self)
 	if (!self)
 		return;
 
-	free (self);
+	util_dict_free(self);
 }
 
 int shout_metadata_add(shout_metadata_t *self, const char *name, const char *value)
@@ -226,31 +226,7 @@ int shout_metadata_add(shout_metadata_t *self, const char *name, const char *val
 	if (!self || !name)
 		return SHOUTERR_INSANE;
 
-	while (self->next)
-		self = self->next;
-	/* If this is the first entry, name/value are null and available. Otherwise
-	 * create a new entry at the end. */
-	if (self->name) {
-		shout_metadata_t* tail;
-
-		if (!(tail = shout_metadata_new()))
-			return SHOUTERR_MALLOC;
-
-		self->next = tail;
-		self = self->next;
-	}
-	
-	if (!(self->name = util_strdup(name)))
-		return SHOUTERR_MALLOC;
-
-	if (!(self->value = util_strdup(value))) {
-		free (self->name);
-		self->name = NULL;
-
-		return SHOUTERR_MALLOC;
-	};
-
-	return SHOUTERR_SUCCESS;
+	return util_dict_set(self, name, value);
 }
 
 /* open second socket to server, send HTTP request to change metadata.
@@ -281,15 +257,15 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 	}
 
 	while (metadata) {
-		if (metadata->name) {
-			if (metadata->value) {
-				if (!(encvalue = util_url_encode(metadata->value))) {
+		if (metadata->key) {
+			if (metadata->val) {
+				if (!(encvalue = util_url_encode(metadata->val))) {
 					rv = SHOUTERR_MALLOC;
 					break;
 				}
-				rv = sock_write(socket, "&%s=%s", metadata->name, encvalue);
+				rv = sock_write(socket, "&%s=%s", metadata->key, encvalue);
 			} else
-				rv = sock_write(socket, "&%s", metadata->name);
+				rv = sock_write(socket, "&%s", metadata->key);
 
 			free (encvalue);
 			
@@ -659,25 +635,14 @@ const char *shout_get_dumpfile(shout_t *self)
 	return self->dumpfile;
 }
 
-int shout_set_bitrate(shout_t *self, unsigned int bitrate)
+int shout_set_audio_info(shout_t *self, const char *name, const char *value)
 {
-	if (!self)
-		return SHOUTERR_INSANE;
-
-	if (self->connected)
-		return self->error = SHOUTERR_CONNECTED;
-
-	self->bitrate = bitrate;
-
-	return self->error = SHOUTERR_SUCCESS;
+	return self->error = util_dict_set(self->audio_info, name, value);
 }
 
-unsigned int shout_get_bitrate(shout_t *self)
+const char *shout_get_audio_info(shout_t *self, const char *name)
 {
-	if (!self)
-		return 0;
-
-	return self->bitrate;
+	return util_dict_get(self->audio_info, name);
 }
 
 int shout_set_public(shout_t *self, unsigned int public)
@@ -756,6 +721,9 @@ unsigned int shout_get_protocol(shout_t *self)
 static int send_http_request(shout_t *self, char *username, char *password)
 {
 	char *auth;
+	const char *bitrate;
+
+	bitrate = shout_get_audio_info(self, SHOUT_AI_BITRATE);
 
 	if (!sock_write(self->socket, "SOURCE %s HTTP/1.0\r\n", self->mount))
 		return SHOUTERR_SOCKET;
@@ -778,7 +746,7 @@ static int send_http_request(shout_t *self, char *username, char *password)
 		if (!sock_write(self->socket, "ice-genre: %s\r\n", self->genre))
 			return SHOUTERR_SOCKET;
 	}
-	if (self->bitrate && !sock_write(self->socket, "ice-bitrate: %d\r\n", self->bitrate))
+	if (bitrate && !sock_write(self->socket, "ice-bitrate: %s\r\n", bitrate))
 		return SHOUTERR_SOCKET;
 	if (!sock_write(self->socket, "ice-public: %d\r\n", self->public))
 		return SHOUTERR_SOCKET;
@@ -913,6 +881,11 @@ static int login_http_basic(shout_t *self)
 static int login_xaudiocast(shout_t *self)
 {
 	char response[4096];
+	const char *bitrate;
+
+	bitrate = shout_get_audio_info(self, SHOUT_AI_BITRATE);
+	if (!bitrate)
+		bitrate = "0";
 
 	if (!sock_write(self->socket, "SOURCE %s %s\n", self->password, self->mount))
 		return SHOUTERR_SOCKET;
@@ -922,7 +895,7 @@ static int login_xaudiocast(shout_t *self)
 		return SHOUTERR_SOCKET;
 	if (!sock_write(self->socket, "x-audiocast-genre: %s\n", self->genre != NULL ? self->genre : "icecast"))
 		return SHOUTERR_SOCKET;
-	if (!sock_write(self->socket, "x-audiocast-bitrate: %i\n", self->bitrate))
+	if (!sock_write(self->socket, "x-audiocast-bitrate: %s\n", bitrate))
 		return SHOUTERR_SOCKET;
 	if (!sock_write(self->socket, "x-audiocast-public: %i\n", self->public))
 		return SHOUTERR_SOCKET;
@@ -946,6 +919,11 @@ static int login_xaudiocast(shout_t *self)
 int login_icy(shout_t *self)
 {
 	char response[4096];
+	const char *bitrate;
+
+	bitrate = shout_get_audio_info(self, SHOUT_AI_BITRATE);
+	if (!bitrate)
+		bitrate = "0";
 
 	if (!sock_write(self->socket, "%s\n", self->password))
 		return SHOUTERR_SOCKET;
@@ -968,7 +946,7 @@ int login_icy(shout_t *self)
 
 	if (!sock_write(self->socket, "icy-genre:%s\n", self->genre != NULL ? self->genre : "icecast"))
 		return SHOUTERR_SOCKET;
-	if (!sock_write(self->socket, "icy-br:%i\n", self->bitrate))
+	if (!sock_write(self->socket, "icy-br:%s\n", bitrate))
 		return SHOUTERR_SOCKET;
 
 	if (!sock_write(self->socket, "\n"))

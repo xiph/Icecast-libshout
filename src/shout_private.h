@@ -4,6 +4,7 @@
 #define __LIBSHOUT_SHOUT_PRIVATE_H__
 
 #include "shout.h"
+#include "util.h"
 #include "sock.h"
 #include "timing.h"
 
@@ -49,6 +50,8 @@ struct shout {
 	unsigned int protocol;
 	/* type of data being sent */
 	unsigned int format;
+	/* audio encoding parameters */
+	util_dict *audio_info;
 
 	/* user-agent to use when doing HTTP login */
 	char *useragent;
@@ -66,8 +69,6 @@ struct shout {
 	char *dumpfile;
 	/* username to use for HTTP auth. */
 	char *user;
-	/* bitrate of this stream */
-	int bitrate;
 	/* is this stream private? */
 	int public;
 
@@ -86,12 +87,6 @@ struct shout {
 	uint64_t senttime;
 
 	int error;
-};
-
-struct shout_metadata {
-	char *name;
-	char *value;
-	shout_metadata_t *next;
 };
 
 int shout_open_vorbis(shout_t *self);

@@ -1,6 +1,6 @@
 /*  shout.h
 **
-**  api for libshout, the streaming library for icecast
+**  API for libshout, the streaming library for icecast
 */
 #ifndef __LIBSHOUT_SHOUT_H__
 #define __LIBSHOUT_SHOUT_H__
@@ -26,8 +26,13 @@
 #define SHOUT_PROTOCOL_XAUDIOCAST	(1)
 #define SHOUT_PROTOCOL_ICY		(2)
 
+#define SHOUT_AI_BITRATE	"bitrate"
+#define SHOUT_AI_SAMPLERATE	"samplerate"
+#define SHOUT_AI_CHANNELS	"channels"
+#define SHOUT_AI_QUALITY	"quality"
+
 typedef struct shout shout_t;
-typedef struct shout_metadata shout_metadata_t;
+typedef struct _util_dict shout_metadata_t;
 
 #ifdef __cplusplus
 extern "C" {
@@ -91,9 +96,8 @@ const char *shout_get_description(shout_t *self);
 int shout_set_dumpfile(shout_t *self, const char *dumpfile);
 const char *shout_get_dumpfile(shout_t *self);
 
-/* bitrate is in kbps */
-int shout_set_bitrate(shout_t *self, unsigned int bitrate);
-unsigned int shout_get_bitrate(shout_t *self);
+int shout_set_audio_info(shout_t *self, const char *name, const char *value);
+const char *shout_get_audio_info(shout_t *self, const char *name);
 
 int shout_set_public(shout_t *self, unsigned int public);
 unsigned int shout_get_public(shout_t *self);

@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#include "shout.h"
 #include "util.h"
 
 char *util_strdup(const char *s)
@@ -124,4 +125,73 @@ char *util_url_encode(const char *data) {
 	*q = '\0';
 
 	return dest;
+}
+
+util_dict *util_dict_new(void)
+{
+	return (util_dict *)calloc(1, sizeof(util_dict));
+}
+
+void util_dict_free(util_dict *dict)
+{
+	util_dict *cur;
+
+	do {
+		cur = dict->next;
+		if (dict->key)
+			free (dict->key);
+		if (dict->val)
+			free (dict->val);
+		free (dict);
+	} while (cur);
+}
+
+const char *util_dict_get(util_dict *dict, const char *key)
+{
+	while (dict) {
+		if (!strcmp(key, dict->key))
+			return dict->val;
+		dict = dict->next;
+	}
+}
+
+int util_dict_set(util_dict *dict, const char *key, const char *val)
+{
+	util_dict *prev;
+
+	if (!dict || !key)
+		return SHOUTERR_INSANE;
+
+	prev = NULL;
+	while (dict) {
+		if (!dict->key || !strcmp(dict->key, key))
+			break;
+		prev = dict;
+		dict = dict->next;
+	}
+
+	if (!dict) {
+		dict = util_dict_new();
+		if (!dict)
+			return SHOUTERR_MALLOC;
+		if (prev)
+			prev->next = dict;
+	}
+
+	if (dict->key)
+		free (dict->val);
+	else if (!(dict->key = strdup(key))) {
+		if (prev)
+			prev->next = NULL;
+		util_dict_free (dict);
+
+		return SHOUTERR_MALLOC;
+	}
+
+	dict->val = strdup(val);
+	if (!dict->val) {
+		return SHOUTERR_MALLOC;
+	}
+
+	return SHOUTERR_SUCCESS;
 }
