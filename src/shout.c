@@ -240,7 +240,7 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 	if (!self || !metadata)
 		return SHOUTERR_INSANE;
 
-	if (!(encvalue = util_dict_urlencode(metadata)))
+	if (!(encvalue = util_dict_urlencode(metadata, '&')))
 		return SHOUTERR_MALLOC;
 
 	if (!self->connected)
@@ -712,7 +712,7 @@ static int send_http_request(shout_t *self, char *username, char *password)
 	if (bitrate && !sock_write(self->socket, "ice-bitrate: %s\r\n", bitrate))
 		return SHOUTERR_SOCKET;
 #else
-	if (ai = util_dict_urlencode(self->audio_info)) {
+	if (ai = util_dict_urlencode(self->audio_info, ';')) {
 		if (!sock_write(self->socket, "ice-audio-info: %s\r\n", ai)) {
 			free(ai);
 			return SHOUTERR_SOCKET;

@@ -199,7 +199,7 @@ int util_dict_set(util_dict *dict, const char *key, const char *val)
 /* given a dictionary, URL-encode each key and val and stringify them in order as
   key=val&key=val... if val is set, or just key&key if val is NULL.
   TODO: Memory management needs overhaul. */
-char *util_dict_urlencode(util_dict *dict)
+char *util_dict_urlencode(util_dict *dict, char delim)
 {
 	char *res, *tmp;
 	char *enc;
@@ -229,7 +229,7 @@ char *util_dict_urlencode(util_dict *dict)
 				return NULL;
 			} else
 				res = tmp;
-			sprintf(res + strlen(res), "&%s", enc);
+			sprintf(res + strlen(res), "%c%s", delim, enc);
 			free(enc);
 		}
 
