@@ -30,6 +30,7 @@ typedef struct {
 	int prevW;
 
 	long serialno;
+    int initialised;
 } vorbis_data_t;
 
 /* -- static prototypes -- */
@@ -80,8 +81,9 @@ static int send_vorbis(shout_t *self, const unsigned char *data, size_t len)
 	ogg_sync_wrote(&vorbis_data->oy, len);
 
 	while (ogg_sync_pageout(&vorbis_data->oy, &og) == 1) {
-		if (vorbis_data->serialno != ogg_page_serialno(&og)) {
-
+		if (vorbis_data->serialno != ogg_page_serialno(&og) || 
+                !vorbis_data->initialised) 
+        {
 			/* Clear the old one - this is safe even if there was no previous
 			 * stream */
 			vorbis_comment_clear(&vorbis_data->vc);
@@ -94,6 +96,8 @@ static int send_vorbis(shout_t *self, const unsigned char *data, size_t len)
 
 			vorbis_info_init(&vorbis_data->vi);
 			vorbis_comment_init(&vorbis_data->vc);
+
+            vorbis_data->initialised = 1;
 
 			vorbis_data->headers = 1;
 		}
