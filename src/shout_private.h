@@ -41,6 +41,11 @@ typedef struct _shout_buf {
 	struct _shout_buf *next;
 } shout_buf_t;
 
+typedef struct {
+	shout_buf_t *head;
+	size_t len;
+} shout_queue_t;
+
 typedef enum {
 	SHOUT_STATE_UNCONNECTED = 0,
 	SHOUT_STATE_CONNECT_PENDING,
@@ -91,8 +96,8 @@ struct shout {
 	int (*send)(shout_t* self, const unsigned char* buff, size_t len);
 	void (*close)(shout_t* self);
 
-	shout_buf_t *rqueue;
-	shout_buf_t *wqueue;
+	shout_queue_t rqueue;
+	shout_queue_t wqueue;
 
 	/* start of this period's timeclock */
 	uint64_t starttime;

@@ -39,10 +39,10 @@
 #include "util.h"
 
 /* -- local prototypes -- */
-static int queue_data(shout_buf_t **queue, const unsigned char *data, size_t len);
+static int queue_data(shout_queue_t *queue, const unsigned char *data, size_t len);
 static int queue_str(shout_t *self, const char *str);
 static int queue_printf(shout_t *self, const char *fmt, ...);
-static void queue_free(shout_buf_t *queue);
+static void queue_free(shout_queue_t *queue);
 static int send_queue(shout_t *self);
 static int get_response(shout_t *self);
 static int try_connect (shout_t *self);
@@ -202,7 +202,7 @@ ssize_t shout_send_raw(shout_t *self, const unsigned char *data, size_t len)
 	self->error = SHOUTERR_SUCCESS;
 
 	/* send immediately if possible (should be the common case) */
-	if (len && ! self->wqueue) {
+	if (len && ! self->wqueue.len) {
 		if ((ret = try_write(self, data, len)) < 0)
 			return self->error;
 		if (ret < len) {
@@ -224,6 +224,15 @@ ssize_t shout_send_raw(shout_t *self, const unsigned char *data, size_t len)
 
 	return ret;
 }
+
+ssize_t shout_queuelen(shout_t *self)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	return (ssize_t)self->wqueue.len;
+}
+
 
 void shout_sync(shout_t *self)
 {
@@ -771,7 +780,7 @@ unsigned int shout_get_nonblocking(shout_t *self)
 /* -- static function definitions -- */
 
 /* queue data in pages of SHOUT_BUFSIZE bytes */
-static int queue_data(shout_buf_t **queue, const unsigned char *data, size_t len)
+static int queue_data(shout_queue_t *queue, const unsigned char *data, size_t len)
 {
 	shout_buf_t *buf;
 	size_t plen;
@@ -779,13 +788,13 @@ static int queue_data(shout_buf_t **queue, const unsigned char *data, size_t len
 	if (!len)
 		return SHOUTERR_SUCCESS;
 
-	if (!*queue) {
-		*queue = calloc(1, sizeof (shout_buf_t));
-		if (! *queue)
+	if (!queue->len) {
+		queue->head = calloc(1, sizeof (shout_buf_t));
+		if (! queue->head)
 			return SHOUTERR_MALLOC;
 	}
 
-	for (buf = *queue; buf->next; buf = buf->next);
+	for (buf = queue->head; buf->next; buf = buf->next);
 
 	/* Maybe any added data should be freed if we hit a malloc error?
 	 * Otherwise it'd be impossible to tell where to start requeueing.
@@ -804,6 +813,7 @@ static int queue_data(shout_buf_t **queue, const unsigned char *data, size_t len
 		buf->len += plen;
 		data += plen;
 		len -= plen;
+		queue->len += plen;
 	}
 
 	return SHOUTERR_SUCCESS;
@@ -850,15 +860,16 @@ static int queue_printf(shout_t *self, const char *fmt, ...)
 	return self->error;
 }
 
-static inline void queue_free(shout_buf_t *queue)
+static inline void queue_free(shout_queue_t *queue)
 {
 	shout_buf_t *prev;
 
-	while (queue) {
-		prev = queue;
-		queue = queue->next;
+	while (queue->head) {
+		prev = queue->head;
+		queue->head = queue->head->next;
 		free(prev);
 	}
+	queue->len = 0;
 }
 
 static int get_response(shout_t *self)
@@ -881,7 +892,7 @@ static int get_response(shout_t *self)
 
 	/* work from the back looking for \r?\n\r?\n. Anything else means more
 	 * is coming. */
-	for (queue = self->rqueue; queue->next; queue = queue->next);
+	for (queue = self->rqueue.head; queue->next; queue = queue->next);
 	pc = queue->data + queue->len - 1;
 	blen = queue->len;
 	while (blen) {
@@ -1028,20 +1039,21 @@ static int send_queue(shout_t *self)
 	shout_buf_t *buf;
 	int ret;
 
-	if (!self->wqueue)
+	if (!self->wqueue.len)
 		return SHOUTERR_SUCCESS;
 
-	buf = self->wqueue;
+	buf = self->wqueue.head;
 	while (buf) {
 		ret = try_write (self, buf->data + buf->pos, buf->len - buf->pos);
 		if (ret < 0)
 			return self->error;
 
 		buf->pos += ret;
+		self->wqueue.len -= ret;
 		if (buf->pos == buf->len) {
-			self->wqueue = buf->next;
+			self->wqueue.head = buf->next;
 			free(buf);
-			buf = self->wqueue;
+			buf = self->wqueue.head;
 			if (buf)
 				buf->prev = NULL;
 		} else /* incomplete write */
@@ -1165,11 +1177,10 @@ static int parse_http_response(shout_t *self)
 #endif
 
 	/* all this copying! */
-	hlen = collect_queue(self->rqueue, &header);
+	hlen = collect_queue(self->rqueue.head, &header);
 	if (hlen <= 0)
 		return SHOUTERR_MALLOC;
-	queue_free(self->rqueue);
-	self->rqueue = NULL;
+	queue_free(&self->rqueue);
 
 	parser = httpp_create_parser();
 	httpp_initialize(parser, NULL);
@@ -1228,10 +1239,9 @@ static int parse_xaudiocast_response(shout_t *self)
 {
 	char *response;
 
-	if (collect_queue(self->rqueue, &response) <= 0)
+	if (collect_queue(self->rqueue.head, &response) <= 0)
 		return SHOUTERR_MALLOC;
-	queue_free(self->rqueue);
-	self->rqueue = NULL;
+	queue_free(&self->rqueue);
 
 	if (!strstr(response, "OK")) {
 		free(response);

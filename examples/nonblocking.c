@@ -1,4 +1,5 @@
-/* example.c: Demonstration of the libshout API.
+/* -*- c-basic-offset: 8; -*-
+ * example.c: Demonstration of the libshout API.
  * $Id$
  */
 
@@ -55,7 +56,22 @@ int main()
 		return 1;
 	}
 
-	if (shout_open(shout) == SHOUTERR_SUCCESS) {
+	if (shout_set_nonblocking(shout, 1) != SHOUTERR_SUCCESS) {
+	  printf("Error setting non-blocking mode: %s\n", shout_get_error(shout));
+	  return 1;
+	}
+	
+	ret = shout_open(shout);
+	if (ret == SHOUTERR_SUCCESS)
+	  ret = SHOUTERR_CONNECTED;
+
+	while (ret == SHOUTERR_BUSY) {
+	  printf("Connection pending. Sleeping...\n");
+	  sleep(1);
+	  ret = shout_get_connected(shout);
+	}
+	
+	if (ret == SHOUTERR_CONNECTED) {
 		printf("Connected to server...\n");
 		total = 0;
 		while (1) {
@@ -71,6 +87,8 @@ int main()
 			} else {
 				break;
 			}
+			if (shout_queuelen(shout) > 0)
+				printf("DEBUG: queue length: %d\n", shout_queuelen(shout));
 
 			shout_sync(shout);
 		}
