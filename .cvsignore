@@ -6,3 +6,5 @@ config.log
 config.cache
 confdefs.h
 aclocal.m4
+config.status
+*.tar.gz
