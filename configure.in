@@ -42,23 +42,9 @@ if test -z "$GCC"; then
 		;;
         esac
 else
-        case $host in 
-        *-*-linux*)
-                DEBUG="-g -Wall -fsigned-char -D_REENTRANT -D_GNU_SOURCE"
-                CFLAGS="-Wall -O2 -ffast-math -fsigned-char -D_REENTRANT -D_GNU_SOURCE"
-                PROFILE="-Wall -pg -g -O2 -ffast-math -fsigned-char -D_REENTRANT -D_GNU_SOURCE"
-		;;
-        sparc-sun-*)
-                DEBUG="-g -Wall -fsigned-char -mv8"
-                CFLAGS="-O20 -ffast-math -fsigned-char -mv8"
-                PROFILE="-pg -g -O20 -fsigned-char -mv8" 
-		;;
-        *)
-                DEBUG="-g -Wall -fsigned-char"
-                CFLAGS="-O20 -fsigned-char"
-                PROFILE="-O20 -g -pg -fsigned-char" 
-		;;
-        esac
+        XIPH_CFLAGS="-Wall -ffast-math -fsigned-char -D_GNU_SOURCE"
+        DEBUG="-g"
+        PROFILE="-pg -g"
 fi
 
 dnl Checks for programs.
@@ -112,7 +98,7 @@ if test "$enable_pthread" != "no"
 then
   ACX_PTHREAD([
     LIBS="$LIBS $PTHREAD_LIBS"
-    CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
+    XIPH_CFLAGS="$XIPH_CFLAGS $PTHREAD_CFLAGS"
     CC="$PTHREAD_CC"
     have_thread="yes"
     ])
