@@ -1,4 +1,4 @@
-/* -*- c-basic-offset: 8; -*- */
+\/* -*- c-basic-offset: 8; -*- */
 /* mp3.c: libshout MP3 format handler */
 
 #include <stdio.h>
@@ -265,7 +265,7 @@ static void parse_header(mp3_header_t *mh, uint32_t header)
 		mh->samples = 576;
 
 	if(mh->samplerate)
-		mh->framesize = ((float)mh->samples * mh->bitrate * 1000 / (float)mh->samplerate) / 8 + mh->padding;
+		mh->framesize = (mh->samples * mh->bitrate * 1000 / mh->samplerate) / 8 + mh->padding;
 }
 
 /* mp3 frame parsing stuff */
