@@ -18,5 +18,7 @@ ltconfig
 ltmain.sh
 missing
 mkinstalldirs
+shout-config
+shout-config.in
 *.pbproj
 *.tar.gz
