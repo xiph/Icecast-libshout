@@ -111,7 +111,10 @@ int shout_open(shout_t *self)
 	if (!self)
 		return SHOUTERR_INSANE;
 
-	if (!self->host || !self->password || !self->port || self->connected)
+	if (self->connected)
+		return SHOUTERR_CONNECTED;
+
+	if (!self->host || !self->password || !self->port)
 		return self->error = SHOUTERR_INSANE;
 
 	if (self->format == SHOUT_FORMAT_VORBIS && self->protocol != SHOUT_PROTOCOL_HTTP)
@@ -202,7 +205,10 @@ ssize_t shout_send_raw(shout_t *self, const unsigned char *data, size_t len)
 	size_t remaining = len;
 
 	if (!self) 
-		return -1;
+		return SHOUTERR_INSANE;
+
+	if (!self->connected)
+		return SHOUTERR_UNCONNECTED;
 
 	self->error = SHOUTERR_SUCCESS;
 
@@ -213,10 +219,8 @@ ssize_t shout_send_raw(shout_t *self, const unsigned char *data, size_t len)
 		else if(ret < 0) {
 			if(errno == EINTR)
 				ret = 0;
-			else {
-				self->error = SHOUTERR_SOCKET;
-				return -1;
-			}
+			else
+				return self->error = SHOUTERR_SOCKET;
 		}
 		remaining -= ret;
 	}
