@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.41 2003/06/05 14:32:35 brendan Exp $
+# $Id: configure.in,v 1.42 2003/06/05 17:09:12 brendan Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -36,7 +36,7 @@ dnl to be fine
 case "$ac_cv_host" in
    *openbsd*)
    ;;
-   *) AC_DEFINE(_XOPEN_SOURCE, 500, [Define if you have POSIX and XPG specifications])
+   *) AC_DEFINE(_XOPEN_SOURCE, 600, [Define if you have POSIX and XPG specifications])
    ;;
 esac
 if test -z "$GCC"; then
@@ -68,7 +68,7 @@ dnl Checks for programs.
 
 dnl Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([inttypes.h sys/socket.h sys/uio.h])
+AC_CHECK_HEADERS([inttypes.h strings.h sys/socket.h sys/uio.h])
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -113,7 +113,9 @@ typedef int socklen_t;
 dnl Checks for library functions.
 AC_CHECK_FUNCS(nanosleep)
 AC_CHECK_FUNCS(sethostent endhostent)
-AC_CHECK_FUNCS(getnameinfo getaddrinfo inet_pton inet_aton)
+AC_SEARCH_LIBS([inet_pton], [socket],
+  [AC_DEFINE([HAVE_INET_PTON], [1], [Define if you have the inet_pton function])])
+AC_CHECK_FUNCS(getnameinfo getaddrinfo inet_aton)
 
 dnl Extra dependencies
 
