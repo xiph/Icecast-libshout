@@ -6,8 +6,8 @@
 #define __LIBSHOUT_SHOUT_H__
 
 #ifdef _WIN32
-typedef int64_t __int64
-typedef uint64_t unsigned __int64
+typedef __int64 int64_t;
+typedef unsigned __int64 uint64_t;
 #else
 # ifdef __GLIBC__
 #  include <stdint.h>
