@@ -169,26 +169,26 @@ int shout_send(shout_t *self, const unsigned char *data, size_t len)
 ssize_t shout_send_raw(shout_t *self, const unsigned char *data, size_t len)
 {
 	ssize_t ret;
-    size_t remaining = len;
+	size_t remaining = len;
 
 	if (!self) 
 		return -1;
 
-    self->error = SHOUTERR_SUCCESS;
+	self->error = SHOUTERR_SUCCESS;
 
 	while(remaining) {
 		ret = sock_write_bytes(self->socket, data, remaining);
-        if(ret == (ssize_t)remaining)
-            return len;
-        else if(ret < 0) {
-            if(errno == EINTR)
-                ret = 0;
-            else {
-                self->error = SHOUTERR_SOCKET;
-                return -1;
-            }
-        }
-        remaining -= ret;
+		if(ret == (ssize_t)remaining)
+			return len;
+		else if(ret < 0) {
+			if(errno == EINTR)
+				ret = 0;
+			else {
+				self->error = SHOUTERR_SOCKET;
+				return -1;
+			}
+		}
+		remaining -= ret;
 	}
 
 	return len;
@@ -642,6 +642,31 @@ const char *shout_get_description(shout_t *self)
 	return self->description;
 }
 
+int shout_set_dumpfile(shout_t *self, const char *dumpfile)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	if (self->connected)
+		return SHOUTERR_CONNECTED;
+
+	if (self->dumpfile)
+		free(self->dumpfile);
+
+	if (! (self->dumpfile = util_strdup (dumpfile)))
+		return self->error = SHOUTERR_MALLOC;
+
+	return self->error = SHOUTERR_SUCCESS;
+}
+
+const char *shout_get_dumpfile(shout_t *self)
+{
+	if (!self)
+		return NULL;
+
+	return self->dumpfile;
+}
+
 int shout_set_bitrate(shout_t *self, unsigned int bitrate)
 {
 	if (!self)
@@ -951,6 +976,8 @@ static int login_xaudiocast(shout_t *self)
 	if (!sock_write(self->socket, "x-audiocast-public: %i\n", self->public))
 		return SHOUTERR_SOCKET;
 	if (!sock_write(self->socket, "x-audiocast-description: %s\n", self->description != NULL ? self->description : "Broadcasting with the icecast streaming media server!"))
+		return SHOUTERR_SOCKET;
+	if (self->dumpfile && !sock_write(self->socket, "x-audiocast-dumpfile: %s\n", self->dumpfile))
 		return SHOUTERR_SOCKET;
 
 	if (!sock_write(self->socket, "\n"))

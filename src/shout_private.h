@@ -62,6 +62,8 @@ struct shout {
 	char *genre;
 	/* description of the stream */
 	char *description;
+	/* icecast 1.x dumpfile */
+	char *dumpfile;
 	/* username to use for HTTP auth. */
 	char *user;
 	/* bitrate of this stream */

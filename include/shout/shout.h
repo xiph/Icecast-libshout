@@ -89,6 +89,9 @@ const char *shout_get_agent(shout_t *self);
 int shout_set_description(shout_t *self, const char *description);
 const char *shout_get_description(shout_t *self);
 
+int shout_set_dumpfile(shout_t *self, const char *dumpfile);
+const char *shout_get_dumpfile(shout_t *self);
+
 /* bitrate is in kbps */
 int shout_set_bitrate(shout_t *self, unsigned int bitrate);
 unsigned int shout_get_bitrate(shout_t *self);
