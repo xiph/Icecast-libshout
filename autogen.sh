@@ -50,8 +50,8 @@ echo "Generating configuration files for $package, please wait...."
 
 echo "  aclocal $ACLOCAL_FLAGS"
 aclocal $ACLOCAL_FLAGS
-#echo "  autoheader"
-#autoheader
+echo "  autoheader"
+autoheader
 echo "  libtoolize --automake"
 libtoolize --automake
 echo "  automake --add-missing"

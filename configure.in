@@ -1,7 +1,18 @@
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/shout.c)
 
-AM_INIT_AUTOMAKE(libshout,2.0)
+LIBSHOUT_MAJOR=2
+LIBSHOUT_MINOR=0
+LIBSHOUT_MICRO=0
+
+if test "$LIBSHOUT_MICRO" != 0
+then
+  VERSION=$LIBSHOUT_MAJOR.$LIBSHOUT_MINOR.$LIBSHOUT_MICRO
+else
+  VERSION=$LIBSHOUT_MAJOR.$LIBSHOUT_MINOR
+fi
+
+AM_INIT_AUTOMAKE(libshout,$VERSION)
 
 AC_PROG_CC
 AM_PROG_LIBTOOL
@@ -84,9 +95,8 @@ if (sizeof (uint32_t))
   AC_CHECK_SIZEOF(long)
   AC_CHECK_SIZEOF(long long)
 ])
-AC_CHECK_TYPE(socklen_t, ,
-  AC_DEFINE(socklen_t, int, [Define if you lack the socklen_t type])
-)
+
+AC_CHECK_TYPE([socklen_t], int)
 
 dnl Checks for library functions.
 AC_CHECK_FUNCS(nanosleep)
