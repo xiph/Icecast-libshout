@@ -40,9 +40,9 @@ if test -z "$GCC"; then
 else
         case $host in 
         *-*-linux*)
-                DEBUG="-g -Wall -W -fsigned-char -D_REENTRANT -D_GNU_SOURCE"
-                CFLAGS="-Wall -W -O20 -ffast-math -fsigned-char -D_REENTRANT -D_GNU_SOURCE"
-                PROFILE="-Wall -W -pg -g -O20 -ffast-math -fsigned-char -D_REENTRANT -D_GNU_SOURCE"
+                DEBUG="-g -Wall -fsigned-char -D_REENTRANT -D_GNU_SOURCE"
+                CFLAGS="-Wall -O2 -ffast-math -fsigned-char -D_REENTRANT -D_GNU_SOURCE"
+                PROFILE="-Wall -pg -g -O2 -ffast-math -fsigned-char -D_REENTRANT -D_GNU_SOURCE"
 		;;
         sparc-sun-*)
                 DEBUG="-g -Wall -fsigned-char -mv8"
