@@ -42,7 +42,7 @@
 static int queue_data(shout_queue_t *queue, const unsigned char *data, size_t len);
 static int queue_str(shout_t *self, const char *str);
 static int queue_printf(shout_t *self, const char *fmt, ...);
-static void queue_free(shout_queue_t *queue);
+static inline void queue_free(shout_queue_t *queue);
 static int send_queue(shout_t *self);
 static int get_response(shout_t *self);
 static int try_connect (shout_t *self);
@@ -160,7 +160,7 @@ int shout_close(shout_t *self)
 	if (!self)
 		return SHOUTERR_INSANE;
 
-	if (self->state != SHOUT_STATE_UNCONNECTED)
+	if (self->state == SHOUT_STATE_UNCONNECTED)
 		return self->error = SHOUTERR_UNCONNECTED;
 
 	if (self->close)
@@ -168,6 +168,10 @@ int shout_close(shout_t *self)
 
 	sock_close(self->socket);
 	self->state = SHOUT_STATE_UNCONNECTED;
+	self->starttime = 0;
+	self->senttime = 0;
+	queue_free(&self->rqueue);
+	queue_free(&self->wqueue);
 
 	return self->error = SHOUTERR_SUCCESS;
 }
