@@ -6,7 +6,7 @@ SUBDIRS = net timing
 
 lib_LTLIBRARIES = libshout.la
 
-noinst_HEADERS = 
+noinst_HEADERS = shout_private.h util.h
 libshout_la_SOURCES = shout.c util.c vorbis.c mp3.c
 
 libshout_la_LIBADD = net/libicenet.la timing/libicetiming.la
