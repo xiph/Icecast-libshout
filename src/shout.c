@@ -683,7 +683,7 @@ unsigned int shout_get_protocol(shout_t *self)
 static int send_http_request(shout_t *self, char *username, char *password)
 {
 	char *auth;
-	const char *ai;
+	char *ai;
 
 	if (!sock_write(self->socket, "SOURCE %s HTTP/1.0\r\n", self->mount))
 		return SHOUTERR_SOCKET;
@@ -712,7 +712,7 @@ static int send_http_request(shout_t *self, char *username, char *password)
 	if (bitrate && !sock_write(self->socket, "ice-bitrate: %s\r\n", bitrate))
 		return SHOUTERR_SOCKET;
 #else
-	if (ai = util_dict_urlencode(self->audio_info, ';')) {
+	if ((ai = util_dict_urlencode(self->audio_info, ';'))) {
 		if (!sock_write(self->socket, "ice-audio-info: %s\r\n", ai)) {
 			free(ai);
 			return SHOUTERR_SOCKET;
