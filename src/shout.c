@@ -800,7 +800,7 @@ static int send_http_request(shout_t *self, char *username, char *password)
 			return SHOUTERR_SOCKET;
 	}
 	if (self->format == SHOUT_FORMAT_VORBIS) {
-		if (!sock_write(self->socket, "Content-Type: application/x-ogg\r\n"))
+		if (!sock_write(self->socket, "Content-Type: application/ogg\r\n"))
 			return SHOUTERR_SOCKET;
 	} else if (self->format == SHOUT_FORMAT_MP3) {
 		if (!sock_write(self->socket, "Content-Type: audio/mpeg\r\n"))
@@ -946,7 +946,7 @@ static int login_ice(shout_t *self)
 			return SHOUTERR_SOCKET;
 	}
 	if (self->format == SHOUT_FORMAT_VORBIS) {
-		if (!sock_write(self->socket, "Content-Type: application/x-ogg\n"))
+		if (!sock_write(self->socket, "Content-Type: application/ogg\n"))
 			return SHOUTERR_SOCKET;
 	} else if (self->format == SHOUT_FORMAT_MP3) {
 		if (!sock_write(self->socket, "Content-Type: audio/mpeg\n"))
