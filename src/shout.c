@@ -1,174 +1,188 @@
+/* shout.c: Implementation of public libshout interface shout.h */
+
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-#include <ogg/ogg.h>
-#include <vorbis/codec.h>
+#include "shout.h"
+#include "shout_private.h"
 
 #include "sock.h"
-
-#include "shout.h"
 #include "timing.h"
+#include "util.h"
 
-int _login(shout_conn_t *self)
+/* -- local prototypes -- */
+static int login_ice(shout_t *self);
+static int login_xaudiocast(shout_t *self);
+static int login_icy(shout_t *self);
+
+/* -- public functions -- */
+
+shout_t *shout_new(void)
 {
-	int res;
+	shout_t *self;
 
-	res = sock_write(self->_socket, "SOURCE %s ICE/1.0\n", self->mount);
-	if (!res) return 0;
-
-	res = sock_write(self->_socket, "ice-password: %s\n", self->password);
-	if (!res) return 0;
-
-	res = sock_write(self->_socket, "ice-name: %s\n", self->name != NULL ? self->name : "no name");
-	if (!res) return 0;
-
-	if (self->url) {
-		res = sock_write(self->_socket, "ice-url: %s\n", self->url);
-		if (!res) return 0;
+	if (!(self = (struct shout *)calloc(1, sizeof(shout_t)))) {
+		return NULL;
 	}
 
-	if (self->genre) {
-		res = sock_write(self->_socket, "ice-genre: %s\n", self->genre);
-		if (!res) return 0;
+	if (!(self->host = util_strdup(LIBSHOUT_DEFAULT_HOST))) {
+		free(self);
+		return NULL;
 	}
 
-	res = sock_write(self->_socket, "ice-bitrate: %d\n", self->bitrate);
-	if (!res) return 0;
+	self->port = LIBSHOUT_DEFAULT_PORT;
+	self->format = LIBSHOUT_DEFAULT_FORMAT;
+	self->protocol = LIBSHOUT_DEFAULT_PROTOCOL;
 
-	res = sock_write(self->_socket, "ice-public: %d\n", self->ispublic);
-	if (!res) return 0;
-
-	if (self->description) {
-		res = sock_write(self->_socket, "ice-description: %s\n", self->description);
-		if (!res) return 0;
-	}
-
-	res = sock_write(self->_socket, "\n");
-	if (!res) return 0;
-
-	return 1;
+	return self;
 }
 
-void shout_init_connection(shout_conn_t *self)
+void shout_free(shout_t *self)
 {
-	memset(self, 0, sizeof(shout_conn_t));
+	if (!self) return;
+
+	if (self->host) free(self->host);
+	if (self->password) free(self->password);
+	if (self->mount) free(self->mount);
+	if (self->name) free(self->name);
+	if (self->url) free(self->url);
+	if (self->genre) free(self->genre);
+	if (self->description) free(self->description);
+
+	free(self);
 }
 
-int shout_connect(shout_conn_t *self)
+int shout_open(shout_t *self)
 {
 	/* sanity check */
-	if ((self->ip == NULL) || (self->password == NULL) || (self->port <= 0) || self->connected) {
-		self->error = SHOUTERR_INSANE;
-		return 0;
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	if (!self->host || !self->password || !self->port || self->connected)
+		return self->error = SHOUTERR_INSANE;
+
+	if (self->format == SHOUT_FORMAT_VORBIS && self->protocol != SHOUT_PROTOCOL_ICE)
+		return self->error = SHOUTERR_UNSUPPORTED;
+
+	self->socket = sock_connect(self->host, self->port);
+	if (self->socket <= 0)
+		return self->error = SHOUTERR_NOCONNECT;
+
+	if (self->protocol == SHOUT_PROTOCOL_ICE) {
+		if ((self->error = login_ice(self)) != SHOUTERR_SUCCESS) {
+			sock_close(self->socket);
+			return self->error;
+		}
+	} else if (self->protocol == SHOUT_PROTOCOL_XAUDIOCAST) {
+		if ((self->error = login_xaudiocast(self)) != SHOUTERR_SUCCESS) {
+			sock_close(self->socket);
+			return self->error;
+		}
+	} else if (self->protocol == SHOUT_PROTOCOL_ICY) {
+		if ((self->error = login_icy(self)) != SHOUTERR_SUCCESS) {
+			sock_close(self->socket);
+			return self->error;
+		}
+		
+	} else
+		return self->error = SHOUTERR_INSANE;
+  
+	if (self->format == SHOUT_FORMAT_VORBIS) {
+		if ((self->error = shout_open_vorbis(self)) != SHOUTERR_SUCCESS) {
+			sock_close(self->socket);
+			return self->error;
+		}
+	} else if (self->format == SHOUT_FORMAT_MP3) {
+		if ((self->error = shout_open_mp3(self)) != SHOUTERR_SUCCESS) {
+			sock_close(self->socket);
+			return self->error;
+		}
+	} else {
+		sock_close(self->socket);
+		return self->error = SHOUTERR_INSANE;
 	}
 
-	self->_socket = sock_connect(self->ip, self->port);
-	if (self->_socket <= 0) {
-		self->error = SHOUTERR_NOCONNECT;
-		return 0;
-	}
+	self->connected = 1;
 
-	if (_login(self)) {
-		self->connected = 1;
-		ogg_sync_init(&self->_oy);
-		return 1;
-	}
-
-	self->error = SHOUTERR_NOLOGIN;
-	return 0;
+	return self->error;
 }
 
-int shout_disconnect(shout_conn_t *self)
+
+int shout_close(shout_t *self)
 {
-	if (!sock_valid_socket(self->_socket)) {
-		self->error = SHOUTERR_INSANE;
-		return 0;
-	}
+	if (!self)
+		return SHOUTERR_INSANE;
 
-	ogg_sync_clear(&self->_oy);
+	if (!self->connected)
+		return self->error = SHOUTERR_UNCONNECTED;
 
+	if (self->close)
+		self->close(self);
+
+	sock_close(self->socket);
 	self->connected = 0;
-	sock_close(self->_socket);
 
-	return 1;
+	return self->error = SHOUTERR_SUCCESS;
 }
 
-int shout_send_data(shout_conn_t *self, unsigned char *buff, unsigned long len)
+int shout_send(shout_t *self, const unsigned char *data, size_t len)
 {
-	int ret;
-	char *buffer;
-	ogg_stream_state os;
-	ogg_page og;
-	ogg_packet op;
-	vorbis_info vi;
-	vorbis_comment vc;
+	if (!self)
+		return SHOUTERR_INSANE;
 
-	if (self->_starttime == 0) 
-		self->_starttime = timing_get_time();
+	if (!self->connected)
+		return self->error = SHOUTERR_UNCONNECTED;
 
-	buffer = ogg_sync_buffer(&self->_oy, len);
-	memcpy(buffer, buff, len);
-	ogg_sync_wrote(&self->_oy, len);
+	if (self->starttime <= 0)
+		self->starttime = timing_get_time();
 
-	while (ogg_sync_pageout(&self->_oy, &og) == 1) {
-		if (self->_serialno != ogg_page_serialno(&og)) {
-			self->_serialno = ogg_page_serialno(&og);
-			
-			self->_oldsamples = 0;
-			
-			ogg_stream_init(&os, self->_serialno);
-			ogg_stream_pagein(&os, &og);
-			ogg_stream_packetout(&os, &op);
+	return self->send(self, buff, len);
+}
 
-			vorbis_info_init(&vi);
-			vorbis_comment_init(&vc);
-			vorbis_synthesis_headerin(&vi, &vc, &op);
-			
-			self->_samplerate = vi.rate;
-			
-			vorbis_comment_clear(&vc);
-			vorbis_info_clear(&vi);
-			ogg_stream_clear(&os);
-		}
+ssize_t shout_send_raw(shout_t *self, const unsigned char *data, size_t len)
+{
+	ssize_t ret;
 
-		self->_samples = ogg_page_granulepos(&og) - self->_oldsamples;
-		self->_oldsamples = ogg_page_granulepos(&og);
+	if (!self)
+		return SHOUTERR_INSANE;
 
-		
-		self->_senttime += ((double)self->_samples * 1000000 / (double)self->_samplerate);
-		
-		ret = sock_write_bytes(self->_socket, og.header, og.header_len);
-		if (ret != og.header_len) {
+	if (len) {
+		ret = sock_write_bytes(self->socket, buff, len);
+		if (ret < 0 || (size_t)ret != len) {
 			self->error = SHOUTERR_SOCKET;
-			return 0;
+			return ret;
 		}
-		
-		ret = sock_write_bytes(self->_socket, og.body, og.body_len);
-		if (ret != og.body_len) {
-			self->error = SHOUTERR_SOCKET;
-			return 0;
-		}
-		
-		self->pages++;
 	}
 
-	return 1;
+	self->error = SHOUTERR_SUCCESS;
+	return len;
 }
 
-void shout_sleep(shout_conn_t *self)
+void shout_sync(shout_t *self)
 {
 	uint64_t sleep;
 
-	if (self->_senttime == 0) return;
+	if (!self)
+		return;
 
-	sleep = ((double)self->_senttime / 1000) - (timing_get_time() - self->_starttime);
+	if (self->senttime == 0)
+		return;
 
-	if (sleep > 0) timing_sleep(sleep);
+	sleep = ((double)self->senttime / 1000) - (timing_get_time() - self->starttime);
+
+	if (sleep > 0)
+		timing_sleep(sleep);
 }
 
-char *shout_strerror(int error)
+const char *shout_get_error(shout_t *self)
 {
-	switch (error) {
+	if (!self)
+		return "Invalid shout_t";
+
+	switch (self->error) {
+	case SHOUTERR_SUCCESS:
+		return "No error";
 	case SHOUTERR_INSANE:
 		return "Nonsensical arguments";
 	case SHOUTERR_NOCONNECT:
@@ -179,7 +193,414 @@ char *shout_strerror(int error)
 		return "Socket error";
 	case SHOUTERR_MALLOC:
 		return "Out of memory";
+	case SHOUTERR_CONNECTED:
+		return "Cannot set parameter while connected";
+	case SHOUTERR_UNCONNECTED:
+		return "Not connected";
+	case SHOUTERR_UNSUPPORTED:
+		return "This libshout doesn't support the requested option";
 	default:
 		return "Unknown error";
 	}
+}
+
+int shout_set_host(shout_t *self, const char *host)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	if (self->connected)
+		return self->error = SHOUTERR_CONNECTED;
+
+	if (self->host)
+		free(self->host);
+
+	if (!(self->host = util_strdup(host)))
+		return self->error = SHOUTERR_MALLOC;
+
+	return self->error = SHOUTERR_SUCCESS;
+}
+
+const char *shout_get_host(shout_t *self)
+{
+	if (!self)
+		return NULL;
+
+	return self->host;
+}
+
+int shout_set_port(shout_t *self, unsigned short port)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	if (self->connected)
+		return self->error = SHOUTERR_CONNECTED;
+
+	self->port = port;
+
+	return self->error = SHOUTERR_SUCCESS;
+}
+
+unsigned short shout_get_port(shout_t *self)
+{
+	if (!self)
+		return 0;
+
+	return self->port;
+}
+
+int shout_set_password(shout_t *self, const char *password)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	if (self->connected)
+		return self->error = SHOUTERR_CONNECTED;
+
+	if (self->password)
+		free (self->password);
+
+	if (!(self->password = util_strdup(password)))
+		return self->error = SHOUTERR_MALLOC;
+
+	return self->error = SHOUTERR_SUCCESS;
+}
+
+const char* shout_get_password(shout_t *self)
+{
+	if (!self)
+		return NULL;
+
+	return self->password;
+}
+
+int shout_set_mount(shout_t *self, const char *mount)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	if (self->connected)
+		return self->error = SHOUTERR_CONNECTED;
+
+	if (self->mount)
+		free(self->mount);
+
+	if (!(self->mount = util_strdup(mount)))
+		return self->error = SHOUTERR_MALLOC;
+
+	return self->error = SHOUTERR_SUCCESS;
+}
+
+const char *shout_get_mount(shout_t *self)
+{
+	if (!self)
+		return NULL;
+
+	return self->mount;
+}
+
+int shout_set_name(shout_t *self, const char *name)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	if (self->connected)
+		return self->error = SHOUTERR_CONNECTED;
+
+	if (self->name)
+		free(self->name);
+
+	if (!(self->name = util_strdup(name)))
+		return self->error = SHOUTERR_MALLOC;
+
+	return self->error = SHOUTERR_SUCCESS;
+}
+
+const char *shout_get_name(shout_t *self)
+{
+	if (!self)
+		return NULL;
+
+	return self->name;
+}
+
+int shout_set_url(shout_t *self, const char *url)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	if (self->connected)
+		return self->error = SHOUTERR_CONNECTED;
+
+	if (self->url)
+		free(self->url);
+
+	if (!(self->url = util_strdup(url)))
+		return self->error = SHOUTERR_MALLOC;
+
+	return self->error = SHOUTERR_SUCCESS;
+}
+
+const char *shout_get_url(shout_t *self)
+{
+	if (!self)
+		return NULL;
+
+	return self->url;
+}
+
+int shout_set_genre(shout_t *self, const char *genre)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	if (self->connected)
+		return self->error = SHOUTERR_CONNECTED;
+
+	if (self->genre)
+		free(self->genre);
+
+	if (! (self->genre = util_strdup (genre)))
+		return self->error = SHOUTERR_MALLOC;
+
+	return self->error = SHOUTERR_SUCCESS;
+}
+
+const char *shout_get_genre(shout_t *self)
+{
+	if (!self)
+		return NULL;
+
+	return self->genre;
+}
+
+int shout_set_description(shout_t *self, const char *description)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	if (self->connected)
+		return self->error = SHOUTERR_CONNECTED;
+
+	if (self->description)
+		free(self->description);
+
+	if (! (self->description = util_strdup (description)))
+		return self->error = SHOUTERR_MALLOC;
+
+	return self->error = SHOUTERR_SUCCESS;
+}
+
+const char *shout_get_description(shout_t *self)
+{
+	if (!self)
+		return NULL;
+
+	return self->description;
+}
+
+int shout_set_bitrate(shout_t *self, unsigned int bitrate)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	if (self->connected)
+		return self->error = SHOUTERR_CONNECTED;
+
+	self->bitrate = bitrate;
+
+	return self->error = SHOUTERR_SUCCESS;
+}
+
+unsigned int shout_get_bitrate(shout_t *self)
+{
+	if (!self)
+		return 0;
+
+	return self->bitrate;
+}
+
+int shout_set_public(shout_t *self, unsigned int public)
+{
+	if (!self || (public != 0 && public != 1))
+		return SHOUTERR_INSANE;
+
+	if (self->connected)
+		return self->error = SHOUTERR_CONNECTED;
+
+	self->public = public;
+
+	return self->error = SHOUTERR_SUCCESS;
+}
+
+unsigned int shout_get_public(shout_t *self)
+{
+	if (!self)
+		return 0;
+
+	return self->public;
+}
+
+int shout_set_format(shout_t *self, unsigned int format)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	if (self->connected)
+		return self->error = SHOUTERR_CONNECTED;
+
+	if (format != SHOUT_FORMAT_VORBIS && format != SHOUT_FORMAT_MP3)
+		return self->error = SHOUTERR_UNSUPPORTED;
+
+	self->format = format;
+
+	return self->error = SHOUTERR_SUCCESS;
+}
+
+unsigned int shout_get_format(shout_t* self)
+{
+	if (!self)
+		return 0;
+
+	return self->format;
+}
+
+int shout_set_protocol(shout_t *self, unsigned int protocol)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	if (self->connected)
+		return self->error = SHOUTERR_CONNECTED;
+
+	if (protocol != SHOUT_PROTOCOL_ICE &&
+	    protocol != SHOUT_PROTOCOL_XAUDIOCAST &&
+	    protocol != SHOUT_PROTOCOL_ICY)
+		return self->error = SHOUTERR_UNSUPPORTED;
+
+	self->protocol = protocol;
+
+	return self->error = SHOUTERR_SUCCESS;
+}
+
+unsigned int shout_get_protocol(shout_t *self)
+{
+	if (!self)
+		return 0;
+
+	return self->protocol;
+}
+
+/* -- static function definitions -- */
+
+static int login_ice(shout_t *self)
+{
+	self->error = SHOUTERR_SOCKET;
+
+	if (!sock_write(self->socket, "SOURCE %s ICE/1.0\n", self->mount))
+		return SHOUTERR_SOCKET;
+	if (!sock_write(self->socket, "ice-password: %s\n", self->password))
+		return SHOUTERR_SOCKET;
+	if (!sock_write(self->socket, "ice-name: %s\n", self->name != NULL ? self->name : "no name"))
+		return SHOUTERR_SOCKET;
+	if (self->url) {
+		if (!sock_write(self->socket, "ice-url: %s\n", self->url))
+			return SHOUTERR_SOCKET;
+	}
+	if (self->genre) {
+		if (!sock_write(self->socket, "ice-genre: %s\n", self->genre))
+			return SHOUTERR_SOCKET;
+	}
+	if (!sock_write(self->socket, "ice-bitrate: %d\n", self->bitrate))
+		return SHOUTERR_SOCKET;
+	if (!sock_write(self->socket, "ice-public: %d\n", self->public))
+		return SHOUTERR_SOCKET;
+	if (self->description) {
+		if (!sock_write(self->socket, "ice-description: %s\n", self->description))
+			return SHOUTERR_SOCKET;
+	}
+	if (self->format == SHOUT_FORMAT_VORBIS) {
+		if (!sock_write(self->socket, "Content-Type: application/x-ogg\n"))
+			return SHOUTERR_SOCKET;
+	} else if (self->format == SHOUT_FORMAT_MP3) {
+		if (!sock_write(self->socket, "Content-Type: audio/mpeg\n"))
+			return SHOUTERR_SOCKET;
+	}
+
+	if (!sock_write(self->socket, "\n"))
+		return SHOUTERR_SOCKET;
+
+	return SHOUTERR_SUCCESS;
+}
+
+static int login_xaudiocast(shout_t *self)
+{
+	char response[4096];
+
+	if (!sock_write(self->socket, "SOURCE %s %s\n", self->password, self->mount))
+		return SHOUTERR_SOCKET;
+	if (!sock_write(self->socket, "x-audiocast-name: %s\n", self->name != NULL ? self->name : "unnamed"))
+		return SHOUTERR_SOCKET;
+	if (!sock_write(self->socket, "x-audiocast-url: %s\n", self->url != NULL ? self->url : "http://www.icecast.org/"))
+		return SHOUTERR_SOCKET;
+	if (!sock_write(self->socket, "x-audiocast-genre: %s\n", self->genre != NULL ? self->genre : "icecast"))
+		return SHOUTERR_SOCKET;
+	if (!sock_write(self->socket, "x-audiocast-bitrate: %i\n", self->bitrate))
+		return SHOUTERR_SOCKET;
+	if (!sock_write(self->socket, "x-audiocast-public: %i\n", self->public))
+		return SHOUTERR_SOCKET;
+	if (!sock_write(self->socket, "x-audiocast-description: %s\n", self->description != NULL ? self->description : "Broadcasting with the icecast streaming media server!"))
+		return SHOUTERR_SOCKET;
+
+	if (!sock_write(self->socket, "\n"))
+		return SHOUTERR_SOCKET;
+
+	if (!sock_read_line(self->socket, response, sizeof(response)))
+		return SHOUTERR_SOCKET;
+
+	if (!strstr(response, "OK"))
+		return SHOUTERR_NOLOGIN;
+
+	return SHOUTERR_SUCCESS;
+}
+
+int login_icy(shout_t *self)
+{
+	char response[4096];
+
+	if (!sock_write(self->socket, "%s\n", self->password))
+		return SHOUTERR_SOCKET;
+	if (!sock_write(self->socket, "icy-name:%s\n", self->name != NULL ? self->name : "unnamed"))
+		return SHOUTERR_SOCKET;
+	if (!sock_write(self->socket, "icy-url:%s\n", self->url != NULL ? self->url : "http://www.icecast.org/"))
+		return SHOUTERR_SOCKET;
+
+#if 0
+	/* Fields we don't use */
+	if (!sock_write(self->socket, "icy-irc:%s\n", self->irc != NULL ? self->irc : ""))
+		return SHOUTERR_SOCKET;
+	if (!sock_write(self->socket, "icy-aim:%s\n", self->aim != NULL ? self->aim : ""))
+		return SHOUTERR_SOCKET;
+	if (!sock_write(self->socket, "icy-icq:%s\n", self->icq != NULL ? self->icq : ""))
+		return SHOUTERR_SOCKET;
+	if (!sock_write(self->socket, "icy-pub:%i\n", self->ispublic))
+		return SHOUTERR_SOCKET;
+#endif
+
+	if (!sock_write(self->socket, "icy-genre:%s\n", self->genre != NULL ? self->genre : "icecast"))
+		return SHOUTERR_SOCKET;
+	if (!sock_write(self->socket, "icy-br:%i\n", self->bitrate))
+		return SHOUTERR_SOCKET;
+
+	if (!sock_write(self->socket, "\n"))
+		return SHOUTERR_SOCKET;
+
+	if (!sock_read_line(self->socket, response, sizeof(response)))
+		return SHOUTERR_SOCKET;
+
+	if (!strstr(response, "OK"))
+		return SHOUTERR_NOLOGIN;
+
+	return SHOUTERR_SUCCESS;
 }

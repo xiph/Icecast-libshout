@@ -5,104 +5,113 @@
 #ifndef __LIBSHOUT_SHOUT_H__
 #define __LIBSHOUT_SHOUT_H__
 
-#ifdef _WIN32
-typedef __int64 int64_t;
-typedef unsigned __int64 uint64_t;
-#else
-# ifdef __GLIBC__
-#  include <stdint.h>
-# endif
-#endif
+#define SHOUTERR_SUCCESS	(0)
+#define SHOUTERR_INSANE		(1)
+#define SHOUTERR_NOCONNECT	(2)
+#define SHOUTERR_NOLOGIN	(3)
+#define SHOUTERR_SOCKET		(4)
+#define SHOUTERR_MALLOC		(5)
+#define SHOUTERR_METADATA	(6)
+#define SHOUTERR_CONNECTED	(7)
+#define SHOUTERR_UNCONNECTED	(8)
+#define SHOUTERR_UNSUPPORTED	(9)
 
-#include <sys/types.h>
+#define SHOUT_FORMAT_VORBIS	(0)
+#define SHOUT_FORMAT_MP3	(1)
 
-#include <ogg/ogg.h>
+#define SHOUT_PROTOCOL_ICE		(0)
+#define SHOUT_PROTOCOL_XAUDIOCAST	(1)
+#define SHOUT_PROTOCOL_ICY		(2)
+
+typedef struct shout shout_t;
+typedef struct shout_metadata shout_metadata_t;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define SHOUTERR_INSANE		1
-#define SHOUTERR_NOCONNECT	2
-#define SHOUTERR_NOLOGIN	3
-#define SHOUTERR_SOCKET		4
-#define SHOUTERR_MALLOC		5
-#define SHOUTERR_METADATA	6
+/* returns a static version string.  Non-null parameters will be set to the
+ * value of the library major, minor, and patch levels, respectively */
+const char *shout_version(int *major, int *minor, int *patch);
 
-typedef struct {
-	char *ip;		/* ip of the icecast server (NOT A HOSTNAME) */
-	int port;		/* port of the icecast server */
-	char *mount;		/* mountpoint for this stream */
+/* Allocates and sets up a new shout_t.  Returns NULL if it can't get enough
+ * memory.  The returns shout_t must be disposed of with shout_free. */
+shout_t *shout_new(void);
 
-	int connected;		/* are we connected to a server? */
-	int _socket;		/* internal - socket the connection is on */
+/* Free all memory allocated by a shout_t */
+void shout_free(shout_t *self);
 
-	char *password;		/* login password for the server */
-	char *name;		/* name of the stream */
-	char *url;		/* homepage of the stream */
-	char *genre;		/* genre of the stream */
-	char *description;	/* description of the stream */
-	int bitrate;		/* bitrate of this stream */
-	int ispublic;		/* is this stream private? */
-	int error;
-	int pages;		/* total pages broadcasted */
+/* Returns a statically allocated string describing the last shout error
+ * to occur.  Only valid until the next libshout call on this shout_t */
+const char *shout_get_error(shout_t *self);
 
-	uint64_t _starttime;	/* start of this period's timeclock */
-	uint64_t _senttime;	/* amout of data we've sent (in milliseconds) */
-	int _samples;	        /* the number of samples for the current page */
-	int _oldsamples;
-	int _samplerate;  	/* the samplerate of the stream */
+/* Parameter manipulation functions.  libshout makes copies of all parameters,
+ * the caller may free its copies after giving them to libshout.  May return
+ * SHOUTERR_MALLOC */
 
-	ogg_sync_state _oy;
-	long _serialno;
-} shout_conn_t;
+int shout_set_host(shout_t *self, const char *host);
+const char *shout_get_host(shout_t *self);
 
+int shout_set_port(shout_t *self, unsigned short port);
+const char *shout_get_port(shout_t *self);
 
-/*
-** shout_init_connection
-**
-** initializes the shout_conn_t structure
-*/
-void shout_init_connection(shout_conn_t *self);
+int shout_set_password(shout_t *, const char *password);
+const char *shout_get_password(shout_t *self);
 
-/*
-** shout_connect
-**  
-** opens a connection to an icecast server, and logs in
-*/
-int shout_connect(shout_conn_t *self);
+int shout_set_mount(shout_t *self, const char *mount);
+const char *shout_get_mount(shout_t *self);
 
-/*
-** shout_disconnect
-**
-** closes a connection to an icecast server
-*/
-int shout_disconnect(shout_conn_t *self);
+int shout_set_name(shout_t *self, const char *name);
+const char *shout_get_name(shout_t *self);
 
-/*
-** shout_send_data
-** 
-** sends a block of data (buffsize bytes in buff) to the icecast
-** server at the correct rate (calculated by the bitrate in the mp3
-** frame headers
-*/
-int shout_send_data(shout_conn_t *self, unsigned char *buff, unsigned long len);
+int shout_set_url(shout_t *self, const char *url);
+const char *shout_get_url(shout_t *self);
 
-/*
-** shout_sleep
-**
-** sleeps if need be
-**
-*/
-void shout_sleep(shout_conn_t *self);
+int shout_set_genre(shout_t *self, const char *genre);
+const char *shout_set_genre(shout_t *self);
 
-/*
-** shout_strerror
-**
-** Formats the error code to a user readable string, like strerror()
-** Returns pointer to namespace.
-*/
-char *shout_strerror(int error);
+int shout_set_description(shout_t *self, const char *description);
+const char *shout_get_description(shout_t *self);
+
+/* bitrate is in kbps */
+int shout_set_bitrate(shout_t *self, unsigned int bitrate);
+unsigned int shout_get_bitrate(shout_t *self);
+
+/* takes a SHOUT_FORMAT_xxxx argument */
+int shout_set_format(shout_t *self, unsigned int format);
+unsigned int shout_get_format(shout_t *self);
+
+/* takes a SHOUT_PROTOCOL_xxxxx argument */
+int shout_set_protocol(shout_t *self, unsigned int protocol);
+unsigned int shout_get_protocol(shout_t *self);
+
+/* Opens a connection to the server.  All parameters must already be set */
+int shout_open(shout_t *self);
+
+/* Closes a connection to the server */
+int shout_close(shout_t *self);
+
+/* Send data to the server, parsing it for format specific timing info */
+int shout_send(shout_t *self, const unsigned char *data, size_t len);
+
+/* Send unparsed data to the server.  Do not use this unless you know
+ * what you are doing. */
+ssize_t shout_send_raw(shout_t *self, const unsigned char *data, size_t len);
+
+/* Puts caller to sleep until it is time to send more data to the server */
+void shout_sync(shout_t *self);
+
+/* Sets MP3 metadata */
+int shout_set_metadata(shout_t *self, shout_metadata_t *metadata);
+
+/* Allocates a new metadata structure.  Must be freed by shout_metadata_free */
+shout_metadata_t *shout_metadata_new(void);
+
+/* Free resources allocated by shout_metadata_t */
+void shout_metadata_free(shout_metadata_t *self);
+
+/* Add a parameter to the metadata structure */
+int shout_metadata_add(shout_metadata_t *self, const char *name, const char *value);
 
 #ifdef __cplusplus
 }

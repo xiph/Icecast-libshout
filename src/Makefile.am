@@ -7,14 +7,11 @@ SUBDIRS = net timing
 lib_LTLIBRARIES = libshout.la
 
 noinst_HEADERS = 
-libshout_la_SOURCES = shout.c
+libshout_la_SOURCES = shout.c util.c vorbis.c mp3.c
 
 libshout_la_LIBADD = net/libicenet.la timing/libicetiming.la
 
-INCLUDES = -I../include/shout -Inet -Itiming
-
-# SCCS stuff (for BitKeeper)
-GET = true
+INCLUDES = -I$(top_srcdir)/include/shout -I$(srcdir)/net -I$(srcdir)/timing
 
 debug:
 	$(MAKE) all CFLAGS="@DEBUG@"

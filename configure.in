@@ -15,7 +15,7 @@ if test -z "$GCC"; then
                 CFLAGS="-O2 -w -signed"
                 PROFILE="-p -g3 -O2 -signed"
 		;;
-        *-*-solaris*)
+        sparc-sun-solaris*)
                 DEBUG="-v -g"
                 CFLAGS="-xO4 -fast -w -fsimple -native -xcg92"
                 PROFILE="-v -xpg -g -xO4 -fast -native -fsimple -xcg92 -Dsuncc"
@@ -33,15 +33,10 @@ else
                 CFLAGS="-Wall -W -O20 -ffast-math -fsigned-char -D_REENTRANT"
                 PROFILE="-Wall -W -pg -g -O20 -ffast-math -fsigned-char -D_REENTRANT"
 		;;
-        sparc-sun-solaris*)
+        sparc-sun-*)
                 DEBUG="-g -Wall -fsigned-char -mv8"
                 CFLAGS="-O20 -ffast-math -fsigned-char -mv8"
                 PROFILE="-pg -g -O20 -fsigned-char -mv8" 
-		;;
-        *-pc-solaris*)
-                DEBUG="-g -Wall -fsigned-char"
-                CFLAGS="-O20 -ffast-math -fsigned-char"
-                PROFILE="-pg -g -O20 -fsigned-char" 
 		;;
         *)
                 DEBUG="-g -Wall -fsigned-char"
@@ -58,12 +53,34 @@ dnl Checks for libraries.
 dnl Checks for header files.
 AC_HEADER_STDC
 
-AC_CHECK_HEADER(stdint.h, AC_DEFINE(HAVE_STDINT_H, 1),,)
-
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 
 dnl Check for types
+AC_CHECK_HEADERS(stdint.h inttypes.h)
+AC_MSG_CHECKING(for C99 integer types)
+dnl This is from autoconf-2.50's AC_CHECK_TYPE macro
+AC_TRY_COMPILE([
+#include <sys/types.h>
+#ifdef HAVE_STDINT_H
+#  include <stdint.h>
+#elif defined (HAVE_INTTYPES_H)
+#  include <inttypes.h>
+#endif], [
+if ((uint32_t *) 0)
+  return 0;
+if (sizeof (uint32_t))
+  return 0;
+], [
+  AC_DEFINE(HAVE_C99_INTTYPES, 1, [Define if you have the C99 integer types])
+  AC_MSG_RESULT(yes)
+], [
+  AC_MSG_RESULT(no)
+  AC_CHECK_SIZEOF(short)
+  AC_CHECK_SIZEOF(int)
+  AC_CHECK_SIZEOF(long)
+  AC_CHECK_SIZEOF(long long)
+])
 
 dnl Checks for library functions.
 
@@ -76,4 +93,4 @@ AC_SUBST(DEBUG)
 AC_SUBST(CFLAGS)
 AC_SUBST(PROFILE)
 
-AC_OUTPUT(Makefile include/Makefile include/shout/Makefile src/Makefile src/net/Makefile src/timing/Makefile)
+AC_OUTPUT(Makefile include/Makefile include/shout/Makefile src/Makefile src/net/Makefile src/timing/Makefile examples/Makefile)
