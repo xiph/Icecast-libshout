@@ -1,5 +1,9 @@
 /* vorbis.c: Ogg Vorbis data handlers for libshout */
 
+#ifdef HAVE_CONFIG_H
+ #include <config.h>
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 
