@@ -8,4 +8,4 @@ example_SOURCES = example.c
 example_LDADD = ../src/libshout.la $(VORBIS_LIBS)
 AM_CFLAGS = @XIPH_CFLAGS@
 
-INCLUDES = -I$(top_srcdir)/include
+INCLUDES = -I$(top_builddir)/include
