@@ -1,3 +1,4 @@
+/* -*- c-basic-offset: 8; -*- */
 /* shout.h: Private libshout data structures and declarations
  *
  * $Id$
@@ -28,6 +29,16 @@
 #define LIBSHOUT_DEFAULT_PROTOCOL SHOUT_PROTOCOL_HTTP
 #define LIBSHOUT_DEFAULT_USER "source"
 #define LIBSHOUT_DEFAULT_USERAGENT "libshout/" VERSION
+
+#define SHOUT_BUFSIZE 4096
+
+typedef struct _shout_buf {
+	unsigned char data[SHOUT_BUFSIZE];
+	unsigned int len;
+	unsigned int pos;
+
+	struct _shout_buf *next;
+} shout_buf_t;
 
 struct shout {
 	/* hostname or IP of icecast server */
@@ -70,6 +81,8 @@ struct shout {
 	void *format_data;
 	int (*send)(shout_t* self, const unsigned char* buff, size_t len);
 	void (*close)(shout_t* self);
+
+	shout_buf_t *queue;
 
 	/* start of this period's timeclock */
 	uint64_t starttime;

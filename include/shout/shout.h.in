@@ -37,6 +37,8 @@
 #define SHOUTERR_UNCONNECTED	(-8)
 #define SHOUTERR_UNSUPPORTED	(-9)
 
+#define SHOUTERR_BUSY		(-10)
+
 #define SHOUT_FORMAT_OGG	(0)
 #define SHOUT_FORMAT_MP3	(1)
 /* backward-compatibility alias */

@@ -38,6 +38,10 @@
 #include "util.h"
 
 /* -- local prototypes -- */
+static int queue_data(shout_t *self, const unsigned char *data, size_t len);
+static int queue_str(shout_t *self, const char *str);
+static int try_write (shout_t *self, const void *data, size_t len);
+
 static int login_xaudiocast(shout_t *self);
 static int login_icy(shout_t *self);
 static int login_http_basic(shout_t *self);
@@ -754,7 +758,91 @@ unsigned int shout_get_protocol(shout_t *self)
 
 /* -- static function definitions -- */
 
-static int send_http_request(shout_t *self, char *username, char *password)
+/* queue data in pages of SHOUT_BUFSIZE bytes */
+static int queue_data(shout_t *self, const unsigned char *data, size_t len)
+{
+	shout_buf_t *buf;
+	size_t plen;
+
+	if (!len)
+		return SHOUTERR_SUCCESS;
+
+	if (!self->queue) {
+		self->queue = calloc(1, sizeof (shout_buf_t));
+		if (! self->queue)
+			return SHOUTERR_MALLOC;
+	}
+
+	for (buf = self->queue; buf->next; buf = buf->next);
+
+	/* Maybe any added data should be freed if we hit a malloc error?
+	 * Otherwise it'd be impossible to tell where to start requeueing.
+	 * (As if anyone ever tried to recover from a malloc error.) */
+	while (len > 0) {
+		if (buf->len == SHOUT_BUFSIZE) {
+			buf->next = calloc(1, sizeof (shout_buf_t));
+			if (! buf->next)
+				return SHOUTERR_MALLOC;
+			buf = buf->next;
+		}
+
+		plen = len > SHOUT_BUFSIZE - buf->len ? SHOUT_BUFSIZE - buf->len : len;
+		memcpy (buf->data + buf->len, data, plen);
+		buf->len += plen;
+		len -= plen;
+	}
+
+	return SHOUTERR_SUCCESS;
+}
+
+static int queue_str(shout_t *self, const char *str)
+{
+	return queue_data(self, str, strlen(str));
+}
+
+static int try_write (shout_t *self, const void *data, size_t len)
+{
+    int ret = sock_write_bytes (self->socket, data, len);
+
+    if (ret < 0)
+    {
+        if (sock_recoverable (sock_error()))
+        {
+            self->error = SHOUTERR_BUSY;
+            return 0;
+        }
+        self->error = SHOUTERR_SOCKET;
+    }
+    return ret;
+}
+
+static int send_queue(shout_t *self)
+{
+	shout_buf_t *buf;
+	int ret;
+
+	if (!self->queue)
+		return 0;
+
+	buf = self->queue;
+	while (buf) {
+		ret = try_write (self, buf + buf->pos, buf->len - buf->pos);
+		if (ret < 0)
+			return self->error;
+
+		buf->pos += ret;
+		if (buf->pos == buf->len) {
+			self->queue = buf->next;
+			free(buf);
+			buf = self->queue;
+		} else /* incomplete write */
+			return SHOUTERR_SUCCESS;
+	}
+
+	return self->error = SHOUTERR_SUCCESS;
+}
+
+static int send_http_request(shout_t *self)
 {
 	char *auth;
 	char *ai;
@@ -861,10 +949,10 @@ static int login_http_basic(shout_t *self)
 	}
 
 #if 0
-	if(send_http_request(self, NULL, NULL) != 0) {
+	if(send_http_request(self) != 0) {
 #else
 	/* assume we'll have to authenticate, saves round trips on basic */
-	if(send_http_request(self, self->user, self->password) != 0) {
+	if(send_http_request(self) != 0) {
 #endif
 		return self->error = SHOUTERR_SOCKET;
 	}
