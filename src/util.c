@@ -119,7 +119,7 @@ char *util_url_encode(const char *data) {
 			*q = *p;
 		} else {
 			*q++ = '%';
-			digit = *p >> 4;
+			digit = (*p >> 4) & 0xF;
 			*q++ = urltable[digit];
 			digit = *p & 0xf;
 			*q = urltable[digit];
