@@ -855,7 +855,7 @@ static int get_response(shout_t *self)
 
 	rc = sock_read_bytes(self->socket, buf, sizeof(buf));
 
-	if (rc < 0 && sock_recoverable(errno))
+	if (rc < 0 && sock_recoverable(sock_error()))
 		return SHOUTERR_BUSY;
 	if (rc <= 0)
 		return SHOUTERR_SOCKET;
