@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <shout/shout.h>
 
@@ -64,8 +65,10 @@ int main()
 	ret = shout_open(shout);
 	if (ret == SHOUTERR_SUCCESS)
 	  ret = SHOUTERR_CONNECTED;
+        else if (ret == SHOUTERR_BUSY)
+            ret = SHOUTERR_UNCONNECTED;
 
-	while (ret == SHOUTERR_BUSY) {
+	while (ret == SHOUTERR_UNCONNECTED) {
 	  printf("Connection pending. Sleeping...\n");
 	  sleep(1);
 	  ret = shout_get_connected(shout);
