@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.32 2003/03/18 00:16:45 brendan Exp $
+# $Id: configure.in,v 1.33 2003/03/18 01:15:11 brendan Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -12,6 +12,10 @@ AC_INIT([libshout], libshout_version, [icecast@xiph.org])
 AC_PREREQ(2.52)
 AC_CONFIG_SRCDIR([src/shout.c])
 AM_CONFIG_HEADER(config.h)
+# config.h guard
+AH_TOP([#ifndef __CONFIG_H__
+#define __CONFIG_H__ 1])
+AH_BOTTOM([#endif])
 
 AC_DEFINE([LIBSHOUT_MAJOR], libshout_major, [Shout library major version])
 AC_DEFINE([LIBSHOUT_MINOR], libshout_minor, [Shout library minor version])
@@ -69,6 +73,24 @@ AC_CHECK_TYPE([uint32_t],
    AC_CHECK_SIZEOF(int)
    AC_CHECK_SIZEOF(long)
    AC_CHECK_SIZEOF(long long)])
+AH_VERBATIM([X_HAVE_C99_INTTYPES],
+  [#ifndef HAVE_C99_INTTYPES
+#  if SIZEOF_SHORT == 4
+typedef unsigned short uint32_t;
+#  elif SIZEOF_INT == 4
+typedef unsigned int uint32_t;
+#  elif SIZEOF_LONG == 4
+typedef unsigned long uint32_t;
+#  endif
+#  if SIZEOF_INT == 8
+typedef unsigned int uint64_t;
+#  elif SIZEOF_LONG == 8
+typedef unsigned long uint64_t;
+#  elif SIZEOF_LONG_LONG == 8
+typedef unsigned long long uint64_t;
+#  endif
+#endif])
+
 AC_CHECK_TYPES([socklen_t],,,
   [#if HAVE_SYS_TYPES_H
 # include <sys/types.h>

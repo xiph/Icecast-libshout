@@ -3,6 +3,10 @@
 #ifndef __LIBSHOUT_SHOUT_PRIVATE_H__
 #define __LIBSHOUT_SHOUT_PRIVATE_H__
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <shout/shout.h>
 #include <net/sock.h>
 #include <timing/timing.h>
@@ -13,23 +17,6 @@
 #  include <stdint.h>
 #elif defined (HAVE_INTTYPES_H)
 #  include <inttypes.h>
-#endif
-
-#ifndef HAVE_C99_INTTYPES
-#  if SIZEOF_SHORT == 4
-typedef unsigned short uint32_t;
-#  elif SIZEOF_INT == 4
-typedef unsigned int uint32_t;
-#  elif SIZEOF_LONG == 4
-typedef unsigned long uint32_t;
-#  endif
-#  if SIZEOF_INT == 8
-typedef unsigned int uint64_t;
-#  elif SIZEOF_LONG == 8
-typedef unsigned long uint64_t;
-#  elif SIZEOF_LONG_LONG == 8
-typedef unsigned long long uint64_t;
-#  endif
 #endif
 
 #define LIBSHOUT_DEFAULT_HOST "localhost"
