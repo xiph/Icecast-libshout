@@ -114,9 +114,10 @@ XIPH_PATH_VORBIS
 VORBIS_LIBS="$VORBIS_LDFLAGS $VORBIS_LIBS"
 XIPH_CFLAGS="$XIPH_CFLAGS $VORBIS_CFLAGS"
 
-XIPH_PATH_THEORA(,[AC_MSG_WARN([Theora library not found, disabling])])
+XIPH_PATH_THEORA(, [AC_MSG_WARN([Theora library not found, disabling])])
 XIPH_VAR_APPEND([XIPH_CPPFLAGS],[$THEORA_CFLAGS])
 XIPH_VAR_PREPEND([XIPH_LIBS],[$THEORA LDFLAGS $THEORA_LIBS])
+AM_CONDITIONAL(HAVE_THEORA, test -n "$THEORA_LIBS")
 
 dnl pkgconfig/shout-config.
 dnl If pkgconfig is found, use it and disable shout-config, otherwise do the
