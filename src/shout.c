@@ -341,9 +341,15 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 }
 
 /* getters/setters */
-/* TODO: Add major/minor/patch support */
 const char *shout_version(int *major, int *minor, int *patch)
 {
+	if (major)
+		*major = LIBSHOUT_MAJOR;
+	if (minor)
+		*minor = LIBSHOUT_MINOR;
+	if (patch)
+		*patch = LIBSHOUT_MICRO;
+
 	return VERSION;
 }
 
