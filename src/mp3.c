@@ -149,7 +149,7 @@ static int send_mp3(shout_t* self, const unsigned char* buff, size_t len)
 	/** this is the main loop
 	*** we handle everything but the last 4 bytes...
 	**/
-	while (pos <= (len - 4)) {
+	while ((pos + 4) <= len) {
 		/* find mp3 header */
 		head = (buff[pos] << 24) | 
 			(buff[pos + 1] << 16) |
