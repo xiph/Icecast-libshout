@@ -22,7 +22,7 @@
 static int login_xaudiocast(shout_t *self);
 static int login_icy(shout_t *self);
 static int login_http_basic(shout_t *self);
-char *http_basic_authorization(shout_t *self);
+static char *http_basic_authorization(shout_t *self);
 
 /* -- static data -- */
 static int _initialized = 0;
@@ -799,7 +799,7 @@ static int send_http_request(shout_t *self, char *username, char *password)
 	return SHOUTERR_SUCCESS;
 }
 
-char *http_basic_authorization(shout_t *self)
+static char *http_basic_authorization(shout_t *self)
 {
 	char *out, *in;
 	int len;

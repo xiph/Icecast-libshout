@@ -51,7 +51,7 @@ typedef struct {
 } mp3_header_t;
 
 /* -- const data -- */
-const unsigned int bitrate[3][3][16] =
+static const unsigned int bitrate[3][3][16] =
 {
 	{
 		{ 0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 0 },
@@ -68,7 +68,7 @@ const unsigned int bitrate[3][3][16] =
 	}
 };
 
-const unsigned int samplerate[3][4] =
+static const unsigned int samplerate[3][4] =
 {
 	{ 44100, 48000, 32000, 0 },
 	{ 22050, 24000, 16000, 0 },
