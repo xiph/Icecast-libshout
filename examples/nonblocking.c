@@ -65,10 +65,8 @@ int main()
 	ret = shout_open(shout);
 	if (ret == SHOUTERR_SUCCESS)
 	  ret = SHOUTERR_CONNECTED;
-        else if (ret == SHOUTERR_BUSY)
-            ret = SHOUTERR_UNCONNECTED;
 
-	while (ret == SHOUTERR_UNCONNECTED) {
+	while (ret == SHOUTERR_BUSY) {
 	  printf("Connection pending. Sleeping...\n");
 	  sleep(1);
 	  ret = shout_get_connected(shout);

@@ -390,9 +390,7 @@ int shout_get_connected(shout_t *self)
 	if (self->state != SHOUT_STATE_UNCONNECTED) {
 		if ((rc = try_connect(self)) == SHOUTERR_SUCCESS)
 			return SHOUTERR_CONNECTED;
-		if (rc == SHOUTERR_BUSY)
-			return SHOUTERR_UNCONNECTED;
-		else return rc;
+		return rc;
 	}
 
 	return SHOUTERR_UNCONNECTED;
