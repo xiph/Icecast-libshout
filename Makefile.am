@@ -5,11 +5,11 @@ ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = include src examples
 
-EXTRA_DIST = shout.m4 m4/ac_config_libconfig_in.m4 m4/acx_pthread.m4 m4/ogg.m4 \
-	m4/vorbis.m4 m4/xiph_clean_ccflags.m4
+EXTRA_DIST = INSTALL shout.m4 m4/ac_config_libconfig_in.m4 m4/acx_pthread.m4 \
+	m4/ogg.m4 m4/vorbis.m4 m4/xiph_clean_ccflags.m4
 
 docdir = $(datadir)/doc
-doc_DATA = COPYING INSTALL README examples/example.c
+doc_DATA = COPYING README examples/example.c
 
 m4datadir = $(datadir)/aclocal
 m4data_DATA = shout.m4
