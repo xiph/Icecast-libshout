@@ -1003,7 +1003,18 @@ static int try_connect (shout_t *self)
 
 static int try_write (shout_t *self, const void *data, size_t len)
 {
-    int ret = sock_write_bytes (self->socket, data, len);
+    /* loop until whole buffer is written (unless it would block) */
+    int write_unfinished = 1;
+    int ret;
+    size_t pos = 0;
+
+    do {
+        ret = sock_write_bytes (self->socket, data + pos, len - pos);
+        if (ret > 0)
+            pos += ret;
+        if (pos == len)
+            write_unfinished = 0;
+    } while (write_unfinished && ret >= 0);
 
     if (ret < 0)
     {
@@ -1014,7 +1025,8 @@ static int try_write (shout_t *self, const void *data, size_t len)
         }
         self->error = SHOUTERR_SOCKET;
     }
-    return ret;
+
+    return pos;
 }
 
 /* collect nodes of a queue into a single buffer */
