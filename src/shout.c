@@ -1079,31 +1079,37 @@ int login_icy(shout_t *self)
 {
 	char response[4096];
 	const char *bitrate;
+	int ret;
 
 	bitrate = shout_get_audio_info(self, SHOUT_AI_BITRATE);
 	if (!bitrate)
 		bitrate = "0";
 
-	if (!sock_write(self->socket, "%s\n", self->password))
-		return SHOUTERR_SOCKET;
-	if (!sock_write(self->socket, "icy-name:%s\n", self->name != NULL ? self->name : "unnamed"))
-		return SHOUTERR_SOCKET;
-	if (!sock_write(self->socket, "icy-url:%s\n", self->url != NULL ? self->url : "http://www.icecast.org/"))
-		return SHOUTERR_SOCKET;
+	ret = SHOUTERR_MALLOC;
+	do {
+		if (queue_printf(self, "%s\n", self->password))
+			break;
+		if (queue_printf(self, "icy-name:%s\n", self->name ? self->name : "unnamed"))
+			break;
+		if (queue_printf(self, "icy-url:%s\n", self->url ? self->url : "http://www.icecast.org/"))
+			break;
+		if (queue_str(self, "icy-irc:\nicy-aim:icy-icq:\n"))
+			break;
+		if (queue_printf(self, "icy-pub:%i\n", self->public))
+			break;
+		if (queue_printf(self, "icy-genre:%s\n", self->genre ? self->genre : "icecast"))
+			break;
+		if (queue_printf(self, "icy-br:%s\n\n", bitrate))
+			break;
 
-	/* Fields we don't use */
-	if (!sock_write(self->socket, "icy-irc:\nicy-aim:\nicy-icq:\n"))
-		return SHOUTERR_SOCKET;
+		ret = SHOUTERR_SUCCESS;
+	} while (0);
 
-	if (!sock_write(self->socket, "icy-pub:%i\n", self->public))
-		return SHOUTERR_SOCKET;
-	if (!sock_write(self->socket, "icy-genre:%s\n", self->genre != NULL ? self->genre : "icecast"))
-		return SHOUTERR_SOCKET;
-	if (!sock_write(self->socket, "icy-br:%s\n", bitrate))
-		return SHOUTERR_SOCKET;
+	if (ret != SHOUTERR_SUCCESS)
+		return ret;
 
-	if (!sock_write(self->socket, "\n"))
-		return SHOUTERR_SOCKET;
+	if (send_queue(self) != SHOUTERR_SUCCESS)
+		return self->error;
 
 	if (!sock_read_line(self->socket, response, sizeof(response)))
 		return SHOUTERR_SOCKET;
