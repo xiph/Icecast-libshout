@@ -856,7 +856,7 @@ static int login_http_basic(shout_t *self)
 	}
 
 	httpp_destroy(parser);
-	return self->error = SHOUTERR_REFUSED;
+	return self->error = SHOUTERR_NOLOGIN;
 }
 
 static int login_xaudiocast(shout_t *self)
