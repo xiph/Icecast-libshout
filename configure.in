@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.67 2004/01/30 00:17:26 oddsock Exp $
+# $Id$
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -113,6 +113,10 @@ fi
 XIPH_PATH_VORBIS
 VORBIS_LIBS="$VORBIS_LDFLAGS $VORBIS_LIBS"
 XIPH_CFLAGS="$XIPH_CFLAGS $VORBIS_CFLAGS"
+
+XIPH_PATH_THEORA(,[AC_MSG_WARN([Theora library not found, disabling])])
+XIPH_VAR_APPEND([XIPH_CPPFLAGS],[$THEORA_CFLAGS])
+XIPH_VAR_PREPEND([XIPH_LIBS],[$THEORA LDFLAGS $THEORA_LIBS])
 
 dnl pkgconfig/shout-config.
 dnl If pkgconfig is found, use it and disable shout-config, otherwise do the

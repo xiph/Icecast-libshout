@@ -61,6 +61,15 @@ typedef struct {
 	int prevW;
 } vorbis_data_t;
 
+#ifdef HAVE_THEORA
+typedef struct {
+	theora_info ti;
+	theora_comment tc;
+	uint32_t granule_shift;
+	double prev_time;
+} theora_data_t;
+#endif
+
 /* -- static prototypes -- */
 static int send_ogg(shout_t *self, const unsigned char *data, size_t len);
 static void close_ogg(shout_t *self);
@@ -78,6 +87,9 @@ static int vorbis_blocksize(vorbis_data_t *vd, ogg_packet *p);
 #ifdef HAVE_THEORA
 /* theora handler */
 static int open_theora(ogg_codec_t *codec, ogg_page *page);
+static int read_theora_page(ogg_codec_t *codec, ogg_page *page);
+static void free_theora_data(void *codec_data);
+static int theora_ilog(unsigned int v);
 #endif
 
 typedef int (*codec_open_t)(ogg_codec_t *codec, ogg_page *page);
@@ -303,3 +315,93 @@ static int vorbis_blocksize(vorbis_data_t *vd, ogg_packet *p)
 	vd->prevW = this;
 	return ret;
 }
+
+#ifdef HAVE_THEORA
+/* theora handler */
+static int open_theora(ogg_codec_t *codec, ogg_page *page)
+{
+	ogg_packet packet;
+
+	theora_data_t *theora_data = calloc(1, sizeof(theora_data_t));
+	if (! theora_data)
+		return SHOUTERR_MALLOC;
+
+	theora_info_init(&theora_data->ti);
+	theora_comment_init(&theora_data->tc);
+
+	ogg_stream_packetout(&codec->os, &packet);
+	
+	if (theora_decode_header(&theora_data->ti, &theora_data->tc, &packet) < 0) {
+		free_theora_data(theora_data);
+
+		return SHOUTERR_UNSUPPORTED;
+	}
+
+	codec->codec_data = theora_data;
+	codec->read_page = read_theora_page;
+	codec->free_data = free_theora_data;
+	codec->headers = 1;
+
+	return SHOUTERR_SUCCESS;
+}
+
+static int read_theora_page(ogg_codec_t *codec, ogg_page *page)
+{
+	theora_data_t *theora_data = codec->codec_data;
+	ogg_packet packet;
+
+	if (ogg_page_granulepos(page) == 0)
+	{
+		while (ogg_stream_packetout(&codec->os, &packet) > 0) {
+			if (theora_decode_header(&theora_data->ti, &theora_data->tc, &packet) < 0)
+				return SHOUTERR_INSANE;
+			codec->headers++;
+		}
+		if (codec->headers == 3) {
+			theora_data->prev_time = 0;
+			theora_data->granule_shift = theora_ilog(theora_data->ti.keyframe_frequency_force - 1);
+		}
+
+		return SHOUTERR_SUCCESS;
+	}
+
+	double per_frame = (double)theora_data->ti.fps_denominator / theora_data->ti.fps_numerator * 1000000;
+	double duration;
+	ogg_int64_t granulepos = ogg_page_granulepos(page);
+
+	if (granulepos > 0) {
+		ogg_int64_t iframe = granulepos >> theora_data->granule_shift;
+		ogg_int64_t pframe = granulepos - (iframe << theora_data->granule_shift);
+		uint64_t frames = iframe + pframe;
+		double new_time = (frames  * per_frame);
+
+		duration = new_time - theora_data->prev_time;
+		theora_data->prev_time = new_time;
+
+		codec->senttime += (uint64_t)(duration + 0.5);
+	}
+
+	return SHOUTERR_SUCCESS;
+}
+
+static void free_theora_data(void *codec_data)
+{
+	theora_data_t *theora_data = (theora_data_t *)codec_data;
+
+	theora_info_clear(&theora_data->ti);
+	theora_comment_clear(&theora_data->tc);
+	free(theora_data);
+}
+
+static int theora_ilog(unsigned int v)
+{
+	int ret = 0;
+	while (v) {
+		ret++;
+		v >>= 1;
+	}
+
+	return ret;
+}
+
+#endif HAVE_THEORA
