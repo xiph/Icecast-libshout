@@ -18,6 +18,7 @@ static int login_ice(shout_t *self);
 static int login_xaudiocast(shout_t *self);
 static int login_icy(shout_t *self);
 static int login_http_basic(shout_t *self);
+char *http_basic_authorization(shout_t *self);
 
 /* -- public functions -- */
 
@@ -279,7 +280,7 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 	if (self->protocol == SHOUT_PROTOCOL_ICY)
 		rv = sock_write(socket, "GET /admin.cgi?mode=updinfo&pass=%s", self->password);
 	else if (self->protocol == SHOUT_PROTOCOL_HTTP)
-		rv = sock_write(socket, "GET /admin.cgi?mode=updinfo&mount=%s", self->mount);
+		rv = sock_write(socket, "GET /admin/metadata?mode=updinfo&mount=%s", self->mount);
 	else
 		rv = sock_write(socket, "GET /admin.cgi?mode=updinfo&pass=%s&mount=%s", self->password, self->mount);
 	if (!rv) {
@@ -313,7 +314,23 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 		return rv;
 	}
 
-	if (!sock_write(socket, " HTTP/1.0\r\nUser-Agent: %s\r\n\r\n", shout_get_agent(self))) {
+	if (!sock_write(socket, " HTTP/1.0\r\nUser-Agent: %s\r\n", shout_get_agent(self))) {
+		sock_close(socket);
+		return SHOUTERR_SOCKET;
+	}
+	if (self->protocol == SHOUT_PROTOCOL_HTTP) {
+		char *auth = http_basic_authorization(self);
+
+		if (auth) {
+			if (!sock_write(socket, auth)) {
+				sock_close(socket);
+				free(auth);
+				return SHOUTERR_SOCKET;
+			}
+			free (auth);
+		}
+	}
+	if (!sock_write(socket, "\r\n")) {
 		sock_close(socket);
 		return SHOUTERR_SOCKET;
 	}
@@ -716,8 +733,18 @@ unsigned int shout_get_protocol(shout_t *self)
 
 static int send_http_request(shout_t *self, char *username, char *password)
 {
+	char *auth;
+
 	if (!sock_write(self->socket, "SOURCE %s HTTP/1.0\r\n", self->mount))
 		return SHOUTERR_SOCKET;
+
+	if (self->password && (auth = http_basic_authorization(self))) {
+		if (!sock_write(self->socket, auth)) {
+			free(auth);
+			return SHOUTERR_SOCKET;
+		}
+		free(auth);
+	}
 
 	if (!sock_write(self->socket, "ice-name: %s\r\n", self->name != NULL ? self->name : "no name"))
 		return SHOUTERR_SOCKET;
@@ -748,22 +775,6 @@ static int send_http_request(shout_t *self, char *username, char *password)
 		if (!sock_write(self->socket, "Content-Type: audio/mpeg\r\n"))
 			return SHOUTERR_SOCKET;
 	}
-	if (username && password) {
-		char *data;
-		int len = strlen(username) + strlen(password) + 2;
-		char *orig = malloc(len);
-		strcpy(orig, username);
-		strcat(orig, ":");
-		strcat(orig, password);
-
-		data = util_base64_encode(orig);
-
-		if(!sock_write(self->socket, "Authorization: Basic %s\r\n", data)) {
-			free(data);
-			return SHOUTERR_SOCKET;
-		}
-		free(data);
-	}
 
 	if (!sock_write(self->socket, "\r\n"))
 		return SHOUTERR_SOCKET;
@@ -771,6 +782,31 @@ static int send_http_request(shout_t *self, char *username, char *password)
 	return SHOUTERR_SUCCESS;
 }
 
+char *http_basic_authorization(shout_t *self)
+{
+	char *out, *in;
+	int len;
+
+	if (!self || !self->user || !self->password)
+		return NULL;
+
+	len = strlen(self->user) + strlen(self->password) + 2;
+	if (!(in = malloc(len)))
+		return NULL;
+	sprintf(in, "%s:%s", self->user, self->password);
+	out = util_base64_encode(in);
+	free(in);
+
+	len = strlen(out) + 24;
+	if (!(in = malloc(len))) {
+		free(out);
+		return NULL;
+	}
+	sprintf(in, "Authorization: Basic %s\r\n", out);
+	free(out);
+	
+	return in;
+}
 
 static int login_http_basic(shout_t *self)
 {
