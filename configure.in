@@ -83,6 +83,9 @@ if (sizeof (uint32_t))
 ])
 
 dnl Checks for library functions.
+AC_CHECK_FUNCS(nanosleep)
+AC_CHECK_FUNCS(sethostent endhostent)
+AC_CHECK_FUNCS(getnameinfo getaddrinfo inet_pton)
 
 dnl Make substitutions
 

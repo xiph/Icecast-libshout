@@ -159,26 +159,29 @@ ssize_t shout_send_raw(shout_t *self, const unsigned char *data, size_t len)
 	if (!self) 
 		return -1;
 
+    self->error = SHOUTERR_SUCCESS;
+
 	while(remaining) {
 		ret = sock_write_bytes(self->socket, data, remaining);
-        if(ret < (ssize_t)remaining || errno == EINTR) {
-            remaining -= (ret>0)?ret:0;
-            continue;
-        }
+        if(ret == (ssize_t)remaining)
+            return len;
         else if(ret < 0) {
-            self->error = SHOUTERR_SOCKET;
-            return -1;
+            if(errno == EINTR)
+                ret = 0;
+            else {
+                self->error = SHOUTERR_SOCKET;
+                return -1;
+            }
         }
-        remaining = 0;
+        remaining -= ret;
 	}
 
-	self->error = SHOUTERR_SUCCESS;
 	return len;
 }
 
 void shout_sync(shout_t *self)
 {
-	uint64_t sleep;
+	int64_t sleep;
 
 	if (!self)
 		return;
@@ -189,7 +192,7 @@ void shout_sync(shout_t *self)
 	sleep = ((double)self->senttime / 1000) - (timing_get_time() - self->starttime);
 
 	if (sleep > 0)
-		timing_sleep(sleep);
+		timing_sleep((uint64_t)sleep);
 }
 
 int shout_get_errno(shout_t *self)

@@ -1,6 +1,7 @@
 /* vorbis.c: Ogg Vorbis data handlers for libshout */
 
 #include <stdlib.h>
+#include <string.h>
 
 #include <ogg/ogg.h>
 #include <vorbis/codec.h>
