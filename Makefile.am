@@ -2,9 +2,9 @@
 
 AUTOMAKE_OPTIONS = foreign
 
-SUBDIRS = include src
+SUBDIRS = include src examples
 
-EXTRA_DIST = README COPYING examples/Makefile examples/example.c
+EXTRA_DIST = README COPYING
 
 #install-data-local:
 #	mkdir -p $(DESTDIR)$(includedir)/shout
