@@ -79,6 +79,7 @@ AC_CHECK_HEADERS([strings.h])
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
+AC_C_INLINE
 XIPH_C99_INTTYPES
 
 dnl Checks for library functions.
