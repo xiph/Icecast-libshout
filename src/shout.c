@@ -252,7 +252,7 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 		return SHOUTERR_NOCONNECT;
 
 	if (self->protocol == SHOUT_PROTOCOL_ICY)
-		rv = sock_write(socket, "GET /admin.cgi?mode=updinfo&pass=%s&%s HTTP/1.0\r\nUser-Agent: %s\r\n\r\n",
+		rv = sock_write(socket, "GET /admin.cgi?mode=updinfo&pass=%s&%s HTTP/1.0\r\nUser-Agent: %s (Mozilla compatible)\r\n\r\n",
 		  self->password, encvalue, shout_get_agent(self));
 	else if (self->protocol == SHOUT_PROTOCOL_HTTP) {
 		char *auth = http_basic_authorization(self);
