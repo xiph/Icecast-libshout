@@ -1,7 +1,8 @@
 /* -*- c-basic-offset: 8; -*- */
 /* vorbis.c: Ogg Vorbis data handlers for libshout
+ * $Id$
  *
- *  Copyright (C) 2002-2003 the Icecast team <team@icecast.org>
+ *  Copyright (C) 2002-2004 the Icecast team <team@icecast.org>
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -27,6 +28,9 @@
 
 #include <ogg/ogg.h>
 #include <vorbis/codec.h>
+#ifdef HAVE_THEORA
+#include <theora/theora.h>
+#endif
 
 #include <shout/shout.h>
 #include "shout_private.h"
@@ -51,10 +55,10 @@ typedef struct {
 } vorbis_data_t;
 
 /* -- static prototypes -- */
-static int send_vorbis(shout_t *self, const unsigned char *data, size_t len);
-static void close_vorbis(shout_t *self);
+static int send_ogg(shout_t *self, const unsigned char *data, size_t len);
+static void close_ogg(shout_t *self);
 
-int shout_open_vorbis(shout_t *self)
+int shout_open_ogg(shout_t *self)
 {
 	vorbis_data_t *vorbis_data;
 
@@ -64,8 +68,8 @@ int shout_open_vorbis(shout_t *self)
 
 	ogg_sync_init(&vorbis_data->oy);
 
-	self->send = send_vorbis;
-	self->close = close_vorbis;
+	self->send = send_ogg;
+	self->close = close_ogg;
 
 	return SHOUTERR_SUCCESS;
 }
@@ -84,7 +88,7 @@ static int blocksize(vorbis_data_t *vd, ogg_packet *p)
 	return ret;
 }
 
-static int send_vorbis(shout_t *self, const unsigned char *data, size_t len)
+static int send_ogg(shout_t *self, const unsigned char *data, size_t len)
 {
 	vorbis_data_t *vorbis_data = (vorbis_data_t *)self->format_data;
 	int ret;
@@ -156,7 +160,7 @@ static int send_vorbis(shout_t *self, const unsigned char *data, size_t len)
 	return self->error = SHOUTERR_SUCCESS;
 }
 
-static void close_vorbis(shout_t *self)
+static void close_ogg(shout_t *self)
 {
 	vorbis_data_t *vorbis_data = (vorbis_data_t *)self->format_data;
 	ogg_sync_clear(&vorbis_data->oy);

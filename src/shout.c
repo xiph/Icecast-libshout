@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8; -*- */
 /* shout.c: Implementation of public libshout interface shout.h
  *
- *  Copyright (C) 2002-2003 the Icecast team <team@icecast.org>
+ *  Copyright (C) 2002-2004 the Icecast team <team@icecast.org>
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -16,6 +16,8 @@
  *  You should have received a copy of the GNU Library General Public
  *  License along with this library; if not, write to the Free
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * $Id$
  */
 
 #ifdef HAVE_CONFIG_H
@@ -134,7 +136,7 @@ int shout_open(shout_t *self)
 	if (!self->host || !self->password || !self->port)
 		return self->error = SHOUTERR_INSANE;
 
-	if (self->format == SHOUT_FORMAT_VORBIS && self->protocol != SHOUT_PROTOCOL_HTTP)
+	if (self->format == SHOUT_FORMAT_OGG && self->protocol != SHOUT_PROTOCOL_HTTP)
 		return self->error = SHOUTERR_UNSUPPORTED;
 
 	if(self->protocol != SHOUT_PROTOCOL_HTTP) {
@@ -164,8 +166,8 @@ int shout_open(shout_t *self)
 	} else
 		return self->error = SHOUTERR_INSANE;
   
-	if (self->format == SHOUT_FORMAT_VORBIS) {
-		if ((self->error = shout_open_vorbis(self)) != SHOUTERR_SUCCESS) {
+	if (self->format == SHOUT_FORMAT_OGG) {
+		if ((self->error = shout_open_ogg(self)) != SHOUTERR_SUCCESS) {
 			sock_close(self->socket);
 			return self->error;
 		}
@@ -708,7 +710,7 @@ int shout_set_format(shout_t *self, unsigned int format)
 	if (self->connected)
 		return self->error = SHOUTERR_CONNECTED;
 
-	if (format != SHOUT_FORMAT_VORBIS && format != SHOUT_FORMAT_MP3)
+	if (format != SHOUT_FORMAT_OGG && format != SHOUT_FORMAT_MP3)
 		return self->error = SHOUTERR_UNSUPPORTED;
 
 	self->format = format;
@@ -801,7 +803,7 @@ static int send_http_request(shout_t *self, char *username, char *password)
 		if (!sock_write(self->socket, "User-Agent: %s\r\n", self->useragent))
 			return SHOUTERR_SOCKET;
 	}
-	if (self->format == SHOUT_FORMAT_VORBIS) {
+	if (self->format == SHOUT_FORMAT_OGG) {
 		if (!sock_write(self->socket, "Content-Type: application/ogg\r\n"))
 			return SHOUTERR_SOCKET;
 	} else if (self->format == SHOUT_FORMAT_MP3) {

@@ -37,8 +37,10 @@
 #define SHOUTERR_UNCONNECTED	(-8)
 #define SHOUTERR_UNSUPPORTED	(-9)
 
-#define SHOUT_FORMAT_VORBIS	(0)
+#define SHOUT_FORMAT_OGG	(0)
 #define SHOUT_FORMAT_MP3	(1)
+/* backward-compatibility alias */
+#define SHOUT_FORMAT_VORBIS	SHOUT_FORMAT_OGG
 
 #define SHOUT_PROTOCOL_HTTP		(0)
 #define SHOUT_PROTOCOL_XAUDIOCAST	(1)

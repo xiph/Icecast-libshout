@@ -1,4 +1,7 @@
-/* shout.h: Private libshout data structures and declarations */
+/* shout.h: Private libshout data structures and declarations
+ *
+ * $Id$
+ */
 
 #ifndef __LIBSHOUT_SHOUT_PRIVATE_H__
 #define __LIBSHOUT_SHOUT_PRIVATE_H__
@@ -21,7 +24,7 @@
 
 #define LIBSHOUT_DEFAULT_HOST "localhost"
 #define LIBSHOUT_DEFAULT_PORT 8000
-#define LIBSHOUT_DEFAULT_FORMAT SHOUT_FORMAT_VORBIS
+#define LIBSHOUT_DEFAULT_FORMAT SHOUT_FORMAT_OGG
 #define LIBSHOUT_DEFAULT_PROTOCOL SHOUT_PROTOCOL_HTTP
 #define LIBSHOUT_DEFAULT_USER "source"
 #define LIBSHOUT_DEFAULT_USERAGENT "libshout/" VERSION
@@ -76,7 +79,7 @@ struct shout {
 	int error;
 };
 
-int shout_open_vorbis(shout_t *self);
+int shout_open_ogg(shout_t *self);
 int shout_open_mp3(shout_t *self);
 
 #endif /* __LIBSHOUT_SHOUT_PRIVATE_H__ */
