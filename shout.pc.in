@@ -1,0 +1,12 @@
+# libshout pkg-config source file
+
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: Shout
+Description: Audio streaming library for icecast sources
+Version: @VERSION@
+Libs: -L${libdir} -lshout @SHOUT_LIBDEPS@
+Cflags: -I${includedir} @SHOUT_CFLAGS@

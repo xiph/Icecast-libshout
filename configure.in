@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.35 2003/03/26 12:19:16 karl Exp $
+# $Id: configure.in,v 1.36 2003/06/03 20:16:21 brendan Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -140,11 +140,13 @@ XIPH_PATH_OGG
 XIPH_PATH_VORBIS
 XIPH_CFLAGS="$XIPH_CFLAGS $VORBIS_CFLAGS $OGG_CFLAGS"
 
-# Build shout-config
+# Build shout-config, shout.pc
 SHOUT_VERSION="$VERSION"
 SHOUT_LIBS="-lshout"
 SHOUT_LIBDEPS="$VORBIS_LIBS $OGG_LIBS $PTHREAD_LIBS"
 SHOUT_CFLAGS="$VORBIS_CFLAGS $OGG_CFLAGS $PTHREAD_CFLAGS"
+AC_SUBST(SHOUT_LIBDEPS)
+AC_SUBST(SHOUT_CFLAGS)
 AC_CONFIG_LIBCONFIG_IN_STATIC
 AC_CONFIG_LIBCONFIG_IN([shout])
 
@@ -158,6 +160,6 @@ AC_SUBST(CFLAGS)
 AC_SUBST(PROFILE)
 AC_SUBST(XIPH_CFLAGS)
 
-AC_OUTPUT([Makefile include/Makefile include/shout/Makefile src/Makefile src/net/Makefile
-  src/timing/Makefile src/thread/Makefile src/avl/Makefile src/httpp/Makefile examples/Makefile
-  shout-config])
+AC_OUTPUT([Makefile include/Makefile include/shout/Makefile src/Makefile
+  src/net/Makefile src/timing/Makefile src/thread/Makefile src/avl/Makefile
+  src/httpp/Makefile examples/Makefile shout-config shout.pc])
