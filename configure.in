@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.54 2003/06/28 02:16:47 brendan Exp $
+# $Id: configure.in,v 1.55 2003/07/02 17:58:51 brendan Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -9,7 +9,7 @@ m4_define(libshout_version,
    libshout_major.libshout_minor.libshout_micro[b1]))
 
 AC_INIT([libshout], libshout_version, [icecast@xiph.org])
-AC_PREREQ(2.52)
+AC_PREREQ([2.54])
 AC_CONFIG_SRCDIR([src/shout.c])
 AM_CONFIG_HEADER(config.h)
 # config.h guard
