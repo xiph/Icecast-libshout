@@ -5,6 +5,6 @@ AUTOMAKE_OPTIONS = foreign
 noinst_PROGRAMS = example
 
 example_SOURCES = example.c
-example_LDADD = ../src/libshout.la -logg -lvorbis -lpthread
+example_LDADD = ../src/libshout.la $(OGG_LIBS) $(VORBIS_LIBS)
 
 INCLUDES = -I$(top_srcdir)/include
