@@ -48,8 +48,8 @@ struct shout {
 	/* type of data being sent */
 	unsigned int format;
 
-    /* user-agent to use when doing HTTP login */
-    char *useragent;
+	/* user-agent to use when doing HTTP login */
+	char *useragent;
 	/* mountpoint for this stream */
 	char *mount;
 	/* name of the stream */
@@ -60,8 +60,8 @@ struct shout {
 	char *genre;
 	/* description of the stream */
 	char *description;
-    /* username to use for HTTP auth. */
-    char *user;
+	/* username to use for HTTP auth. */
+	char *user;
 	/* bitrate of this stream */
 	int bitrate;
 	/* is this stream private? */
