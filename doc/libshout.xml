@@ -15,7 +15,7 @@
     </copyright>
     -->
     <orgname><ulink url="http://xiph.org/">Xiph.org</ulink></orgname>
-    <releaseinfo>$Id: libshout.xml,v 1.4 2003/07/09 18:09:00 brendan Exp $</releaseinfo>
+    <releaseinfo>$Id: libshout.xml,v 1.5 2003/07/10 01:46:24 brendan Exp $</releaseinfo>
     <date> 3 Jul 2003</date>
   </bookinfo>
 
@@ -315,6 +315,309 @@ applications that may wish to do other processing in the meantime.
 </section>
 
 <section><title>Connection parameters</title>
+
+The following functions are used to get or set attributes of the
+<type>shout_t</type> object before calling
+<link linkend="shout_open"><function>shout_open</function></link>.  They all
+work the same way: they operate on one attribute of a
+<type>shout_t</type>*.  The <function>shout_get_*</function> functions
+return the value of their associated parameter, or 0 on error (that's
+NULL for those functions that return strings). The
+<function>shout_set_*</function> functions will return either
+<constant>SHOUTERR_SUCCESS</constant> on success, or one of:
+
+<itemizedlist>
+  <listitem><constant>SHOUTERR_INSANE</constant> - <type>shout_t</type>
+  is invalid.</listitem>
+  <listitem><constant>SHOUTERR_MALLOC</constant> - libshout could not
+  allocate enough memory to assign the parameter.</listitem>
+  <listitem><constant>SHOUTERR_CONNECTED</constant> - you are attempting
+  to change a connection attribute while the connection is open. Since these
+  parameters are only used when first opening the connection, this operation
+  would be useless.</listitem>
+</itemizedlist>
+
+<funcsynopsis id="shout_set_host">
+<funcprototype>
+  <funcdef>int <function>shout_set_host</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>const char *<parameter>host</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Sets the server hostname or IP address. The default is <constant>localhost</constant>.
+
+<funcsynopsis id="shout_get_host">
+<funcprototype>
+  <funcdef>const char *<function>shout_get_host</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Returns the server hostname or IP address.
+
+<funcsynopsis id="shout_set_port">
+<funcprototype>
+  <funcdef>int <function>shout_set_port</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>int <parameter>port</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Sets the server port. The default is <constant>8000</constant>.
+
+<funcsynopsis id="shout_get_port">
+<funcprototype>
+  <funcdef>int <function>shout_get_port</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Returns the server port.
+
+<funcsynopsis id="shout_set_user">
+<funcprototype>
+  <funcdef>int <function>shout_set_user</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>const char *<parameter>user</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Sets the user to authenticate as, for protocols that can use this parameter.
+The default is <constant>source</constant>.
+
+<funcsynopsis id="shout_get_user">
+<funcprototype>
+  <funcdef>const char *<function>shout_get_user</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Returns the user name.
+
+<funcsynopsis id="shout_set_pass">
+<funcprototype>
+  <funcdef>int <function>shout_set_pass</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>const char *<parameter>pass</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Sets the password to authenticate to the server with. This parameter
+<emphasis>must</emphasis> be set. There is no default.
+
+<funcsynopsis id="shout_get_pass">
+<funcprototype>
+  <funcdef>const char *<function>shout_get_pass</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Returns the password.
+
+<funcsynopsis id="shout_set_protocol">
+<funcprototype>
+  <funcdef>int <function>shout_set_protocol</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>int <parameter>protocol</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Set the protocol with which to connect to the server. Supported protocols
+are listed in <link linkend="protocol_constants">Protocol Constants</link>.
+The default is <constant>SHOUT_PROTOCOL_HTTP</constant> (compatible with
+Icecast 2).
+
+<funcsynopsis id="shout_get_protocol">
+<funcprototype>
+  <funcdef>int <function>shout_get_protocol</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Returns the protocol used to connect to the server.
+
+<funcsynopsis id="shout_set_format">
+<funcprototype>
+  <funcdef>int <function>shout_set_format</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>int <parameter>format</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Sets the audio format of this stream. The currently supported formats
+are listed in <link linkend="format_constants">Format Constants</link>.
+The default is <constant>SHOUT_FORMAT_VORBIS</constant>.
+
+<funcsynopsis id="shout_get_format">
+<funcprototype>
+  <funcdef>int <function>shout_get_format</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Returns the audio format used by this stream.
+
+<funcsynopsis id="shout_set_mount">
+<funcprototype>
+  <funcdef>int <function>shout_set_mount</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>const char *<parameter>mount</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Sets the mount point for this stream, for protocols that support this option
+(<constant>SHOUT_PROTOCOL_ICY</constant> doesn't).
+
+<funcsynopsis id="shout_get_mount">
+<funcprototype>
+  <funcdef>const char *<function>shout_get_mount</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Returns the stream mount point.
+
+<funcsynopsis id="shout_set_dumpfile">
+<funcprototype>
+  <funcdef>int <function>shout_set_dumpfile</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>const char *<parameter>dumpfile</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+If the server supports it, you can request that your stream be archived
+on the server under the name <varname>dumpfile</varname>. This can quickly
+eat a lot of disk space, so think twice before setting it.
+
+<funcsynopsis id="shout_get_dumpfile">
+<funcprototype>
+  <funcdef>const char *<function>shout_get_dumpfile</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Returns the dump file, if specified.
+
+<funcsynopsis id="shout_set_agent">
+<funcprototype>
+  <funcdef>int <function>shout_set_agent</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>const char *<parameter>agent</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Sets the user agent header. This is <constant>libshout/VERSION</constant>
+by default. If you don't know what this function is for, don't use it.
+
+<funcsynopsis id="shout_get_agent">
+<funcprototype>
+  <funcdef>const char *<function>shout_get_agent</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Returns the user agent.
+
+<section><title>Directory parameters</title>
+
+The following parameters are optional. They are used to control whether
+and how your stream will be listed in the server's stream directory (if available).
+
+<funcsynopsis id="shout_set_public">
+<funcprototype>
+  <funcdef>int <function>shout_set_public</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>int <parameter>makepublic</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Setting this to <constant>1</constant> asks the server to list the stream in
+any directories it knows about. To suppress listing, set this to
+<constant>0</constant>. The default is <constant>0</constant>.
+
+<funcsynopsis id="shout_get_public">
+<funcprototype>
+  <funcdef>int <function>shout_get_public</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Returns whether or not this stream is public.
+
+<funcsynopsis id="shout_set_name">
+<funcprototype>
+  <funcdef>int <function>shout_set_name</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>const char *<parameter>name</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Sets the name of the stream.
+
+<funcsynopsis id="shout_get_name">
+<funcprototype>
+  <funcdef>const char *<function>shout_get_name</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Returns the stream name.
+
+<funcsynopsis id="shout_set_url">
+<funcprototype>
+  <funcdef>int <function>shout_set_url</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>const char *<parameter>url</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Sets the URL of a site about this stream.
+
+<funcsynopsis id="shout_get_url">
+<funcprototype>
+  <funcdef>const char *<function>shout_get_url</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Returns the stream URL.
+
+<funcsynopsis id="shout_set_genre">
+<funcprototype>
+  <funcdef>int <function>shout_set_genre</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>const char *<parameter>genre</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Sets the genre (or genres) of the stream. This is usually a keyword list,
+eg "pop rock rap".
+
+<funcsynopsis id="shout_get_genre">
+<funcprototype>
+  <funcdef>const char *<function>shout_get_genre</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Returns the stream genre.
+
+<funcsynopsis id="shout_set_description">
+<funcprototype>
+  <funcdef>int <function>shout_set_description</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>const char *<parameter>description</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Sets the description of this stream.
+
+<funcsynopsis id="shout_get_description">
+<funcprototype>
+  <funcdef>const char *<function>shout_get_description</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Returns the stream description.
+
+<funcsynopsis id="shout_set_audio_info">
+<funcprototype>
+  <funcdef>int <function>shout_set_audio_info</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>const char *<parameter>name</parameter></paramdef>
+  <paramdef>const char *<parameter>value</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Sets a stream audio parameter (eg bitrate, samplerate, channels or quality).
+The currently defined parameters are listed in the
+<link linkend="audio_info_constants">Audio Info Constants</link> section, but
+you are free to add additional fields if your directory server understands them.
+
+<funcsynopsis id="shout_get_audio_info">
+<funcprototype>
+  <funcdef>const char *<function>shout_get_audio_info</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>const char *<parameter>name</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Returns the value of the audio info field <varname>name</varname>, if defined.
+
+</section>
+
 </section>
 
 <section><title>Metadata</title>
