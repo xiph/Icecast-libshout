@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.24 2003/03/11 07:00:09 brendan Exp $
+# $Id: configure.in,v 1.25 2003/03/11 07:23:52 brendan Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -20,6 +20,7 @@ AC_DEFINE([LIBSHOUT_MICRO], libshout_micro, ["Shout library patch version"])
 VERSION=libshout_version
 
 AM_INIT_AUTOMAKE([libshout], libshout_version)
+AM_MAINTAINER_MODE
 
 AC_PROG_CC
 AM_PROG_LIBTOOL
