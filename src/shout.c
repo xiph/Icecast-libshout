@@ -103,7 +103,6 @@ int shout_open(shout_t *self)
 
 	if (self->protocol == SHOUT_PROTOCOL_HTTP) {
 		if ((self->error = login_http_basic(self)) != SHOUTERR_SUCCESS) {
-			sock_close(self->socket);
 			return self->error;
 		}
 	} else if (self->protocol == SHOUT_PROTOCOL_XAUDIOCAST) {
