@@ -40,7 +40,7 @@ In general, steps 2 and 3 need to be re-run every time any of the
 following files are modified (either manually or by a cvs update):
 
 	  configure.in
-	  acinclude.m4
+	  m4/*
 
 Running "make clean" after running steps 2 and 3 is generally also
 advisable before running step 4.  It isn't *always* necessary, but
