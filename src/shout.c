@@ -692,7 +692,8 @@ static int send_http_request(shout_t *self, char *username, char *password)
 	char *auth;
 	char *ai;
 
-	if (!sock_write(self->socket, "SOURCE %s HTTP/1.0\r\n", self->mount))
+	if (!sock_write(self->socket, "SOURCE %s%s HTTP/1.0\r\n",
+        self->mount[0] == '/' ? "" : "/", self->mount))
 		return SHOUTERR_SOCKET;
 
 	if (self->password && (auth = http_basic_authorization(self))) {
