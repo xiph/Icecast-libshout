@@ -37,6 +37,7 @@ typedef struct _shout_buf {
 	unsigned int len;
 	unsigned int pos;
 
+	struct _shout_buf *prev;
 	struct _shout_buf *next;
 } shout_buf_t;
 
@@ -82,7 +83,8 @@ struct shout {
 	int (*send)(shout_t* self, const unsigned char* buff, size_t len);
 	void (*close)(shout_t* self);
 
-	shout_buf_t *queue;
+	shout_buf_t *rqueue;
+	shout_buf_t *wqueue;
 
 	/* start of this period's timeclock */
 	uint64_t starttime;
