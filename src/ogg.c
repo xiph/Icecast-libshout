@@ -136,7 +136,7 @@ static int send_ogg(shout_t *self, const unsigned char *data, size_t len)
 				ogg_data->bos = 1;
 			}
 
-			ogg_codec_t *codec = calloc(1, sizeof(ogg_codec_t));
+			codec = calloc(1, sizeof(ogg_codec_t));
 			if (! codec)
 				return self->error = SHOUTERR_MALLOC;
 			
@@ -272,6 +272,7 @@ static int read_vorbis_page(ogg_codec_t *codec, ogg_page *page)
 {
 	ogg_packet packet;
 	vorbis_data_t *vorbis_data = codec->codec_data;
+	uint64_t samples = 0;
 
 	if (codec->headers < 3) {
 		while (ogg_stream_packetout (&codec->os, &packet) > 0) {
@@ -282,8 +283,6 @@ static int read_vorbis_page(ogg_codec_t *codec, ogg_page *page)
 
 		return SHOUTERR_SUCCESS;
 	}
-
-	uint64_t samples = 0;
 
 	while (ogg_stream_packetout (&codec->os, &packet) > 0)
 		samples += vorbis_blocksize(vorbis_data, &packet);
@@ -349,6 +348,9 @@ static int read_theora_page(ogg_codec_t *codec, ogg_page *page)
 {
 	theora_data_t *theora_data = codec->codec_data;
 	ogg_packet packet;
+	double per_frame, duration, new_time;
+	ogg_int64_t granulepos, iframe, pframe;
+	uint64_t frames;
 
 	if (ogg_page_granulepos(page) == 0)
 	{
@@ -365,15 +367,14 @@ static int read_theora_page(ogg_codec_t *codec, ogg_page *page)
 		return SHOUTERR_SUCCESS;
 	}
 
-	double per_frame = (double)theora_data->ti.fps_denominator / theora_data->ti.fps_numerator * 1000000;
-	double duration;
-	ogg_int64_t granulepos = ogg_page_granulepos(page);
+	per_frame = (double)theora_data->ti.fps_denominator / theora_data->ti.fps_numerator * 1000000;
+	granulepos = ogg_page_granulepos(page);
 
 	if (granulepos > 0) {
-		ogg_int64_t iframe = granulepos >> theora_data->granule_shift;
-		ogg_int64_t pframe = granulepos - (iframe << theora_data->granule_shift);
-		uint64_t frames = iframe + pframe;
-		double new_time = (frames  * per_frame);
+		iframe = granulepos >> theora_data->granule_shift;
+		pframe = granulepos - (iframe << theora_data->granule_shift);
+		frames = iframe + pframe;
+		new_time = (frames  * per_frame);
 
 		duration = new_time - theora_data->prev_time;
 		theora_data->prev_time = new_time;
@@ -396,6 +397,7 @@ static void free_theora_data(void *codec_data)
 static int theora_ilog(unsigned int v)
 {
 	int ret = 0;
+
 	while (v) {
 		ret++;
 		v >>= 1;
