@@ -22,6 +22,9 @@
 #define __LIBSHOUT_SHOUT_H__
 
 #include <sys/types.h>
+#ifdef WIN32
+#include <os.h>
+#endif
 
 #define SHOUTERR_SUCCESS	(0)
 #define SHOUTERR_INSANE		(-1)
