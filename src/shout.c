@@ -418,17 +418,25 @@ const char* shout_get_password(shout_t *self)
 
 int shout_set_mount(shout_t *self, const char *mount)
 {
-	if (!self)
+	size_t len;
+
+	if (!self || !mount)
 		return SHOUTERR_INSANE;
 
 	if (self->connected)
 		return self->error = SHOUTERR_CONNECTED;
-
+	
 	if (self->mount)
 		free(self->mount);
 
-	if (!(self->mount = util_strdup(mount)))
+	len = strlen (mount) + 1;
+	if (mount[0] != '/')
+		len++;
+
+	if (!(self->mount = malloc(len)))
 		return self->error = SHOUTERR_MALLOC;
+
+	sprintf (self->mount, "%s%s", mount[0] == '/' ? "" : "/", mount);
 
 	return self->error = SHOUTERR_SUCCESS;
 }
@@ -705,8 +713,7 @@ static int send_http_request(shout_t *self, char *username, char *password)
 	char *auth;
 	char *ai;
 
-	if (!sock_write(self->socket, "SOURCE %s%s HTTP/1.0\r\n",
-        self->mount[0] == '/' ? "" : "/", self->mount))
+	if (!sock_write(self->socket, "SOURCE %s HTTP/1.0\r\n", self->mount))
 		return SHOUTERR_SOCKET;
 
 	if (self->password && (auth = http_basic_authorization(self))) {
