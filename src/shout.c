@@ -604,8 +604,8 @@ static int send_http_request(shout_t *self, char *username, char *password)
 	}
     if (username && password) {
         char *data;
-        int len = strlen(username) + strlen(password) + 1;
-        char *orig = malloc(len+1);
+        int len = strlen(username) + strlen(password) + 2;
+        char *orig = malloc(len);
         strcpy(orig, username);
         strcat(orig, ":");
         strcat(orig, password);
