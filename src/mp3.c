@@ -1,7 +1,6 @@
 /* mp3.c: libshout MP3 format handler */
 
 #include <stdio.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
