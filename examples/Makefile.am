@@ -5,7 +5,6 @@ AUTOMAKE_OPTIONS = foreign
 noinst_PROGRAMS = example
 
 example_SOURCES = example.c
-example_LDADD = ../src/libshout.la $(VORBIS_LIBS)
+example_LDADD = $(top_builddir)/src/libshout.la
 AM_CFLAGS = @XIPH_CFLAGS@
-
-INCLUDES = -I$(top_builddir)/include
+AM_CPPFLAGS = @XIPH_CPPFLAGS@ -I$(top_builddir)/include
