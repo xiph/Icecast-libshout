@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.50 2003/06/18 22:55:56 brendan Exp $
+# $Id: configure.in,v 1.51 2003/06/24 01:09:58 brendan Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -142,7 +142,7 @@ if test "$enable_pthread" != "no"
 then
   ACX_PTHREAD([
     LIBS="$LIBS $PTHREAD_LIBS"
-    XIPH_CFLAGS="$XIPH_CFLAGS $PTHREAD_CFLAGS"
+    XIPH_CFLAGS="$XIPH_CFLAGS $PTHREAD_CFLAGS $PTHREAD_CPPFLAGS"
     CC="$PTHREAD_CC"
     have_thread="yes"
     ])
@@ -178,7 +178,7 @@ AM_CONDITIONAL([HAVE_PKGCONFIG], [test "$PKGCONFIG" != "no"])
 SHOUT_VERSION="$VERSION"
 SHOUT_LIBS="-lshout"
 XIPH_CLEAN_CCFLAGS([$VORBIS_LIBS $PTHREAD_LIBS], [SHOUT_LIBDEPS])
-XIPH_CLEAN_CCFLAGS([$VORBIS_CFLAGS $PTHREAD_CFLAGS], [SHOUT_CFLAGS])
+XIPH_CLEAN_CCFLAGS([$VORBIS_CFLAGS $PTHREAD_CFLAGS $PTHREAD_CPPFLAGS], [SHOUT_CFLAGS])
 AC_SUBST(SHOUT_LIBDEPS)
 AC_SUBST(SHOUT_CFLAGS)
 AC_CONFIG_LIBCONFIG_IN_STATIC
