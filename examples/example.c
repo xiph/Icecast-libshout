@@ -48,7 +48,7 @@ int main()
 		return 1;
 	}
 
-	if (shout_set_format(shout, SHOUT_FORMAT_VORBIS) != SHOUTERR_SUCCESS) {
+	if (shout_set_format(shout, SHOUT_FORMAT_OGG) != SHOUTERR_SUCCESS) {
 		printf("Error setting user: %s\n", shout_get_error(shout));
 		return 1;
 	}
