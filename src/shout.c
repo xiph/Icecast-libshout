@@ -88,7 +88,10 @@ int shout_open(shout_t *self)
 		return self->error = SHOUTERR_UNSUPPORTED;
 
 	if(self->protocol != SHOUT_PROTOCOL_HTTP) {
-		self->socket = sock_connect(self->host, self->port);
+		if (self->protocol == SHOUT_PROTOCOL_ICY)
+			self->socket = sock_connect(self->host, self->port+1);
+		else
+			self->socket = sock_connect(self->host, self->port);
 		if (self->socket <= 0)
 			return self->error = SHOUTERR_NOCONNECT;
 	}
@@ -903,18 +906,12 @@ int login_icy(shout_t *self)
 	if (!sock_write(self->socket, "icy-url:%s\n", self->url != NULL ? self->url : "http://www.icecast.org/"))
 		return SHOUTERR_SOCKET;
 
-#if 0
 	/* Fields we don't use */
-	if (!sock_write(self->socket, "icy-irc:%s\n", self->irc != NULL ? self->irc : ""))
+	if (!sock_write(self->socket, "icy-irc:\nicy-aim:\nicy-icq:\n"))
 		return SHOUTERR_SOCKET;
-	if (!sock_write(self->socket, "icy-aim:%s\n", self->aim != NULL ? self->aim : ""))
-		return SHOUTERR_SOCKET;
-	if (!sock_write(self->socket, "icy-icq:%s\n", self->icq != NULL ? self->icq : ""))
-		return SHOUTERR_SOCKET;
-	if (!sock_write(self->socket, "icy-pub:%i\n", self->ispublic))
-		return SHOUTERR_SOCKET;
-#endif
 
+	if (!sock_write(self->socket, "icy-pub:%i\n", self->public))
+		return SHOUTERR_SOCKET;
 	if (!sock_write(self->socket, "icy-genre:%s\n", self->genre != NULL ? self->genre : "icecast"))
 		return SHOUTERR_SOCKET;
 	if (!sock_write(self->socket, "icy-br:%s\n", bitrate))
