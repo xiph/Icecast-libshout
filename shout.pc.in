@@ -4,9 +4,11 @@ prefix=@prefix@
 exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
+cppflags=@SHOUT_CPPFLAGS@
+cflags_only=@SHOUT_CFLAGS@
 
 Name: Shout
 Description: Audio streaming library for icecast encoders
 Version: @VERSION@
 Libs: -L${libdir} -lshout @SHOUT_LIBDEPS@
-Cflags: @SHOUT_CFLAGS@
+Cflags: @SHOUT_CPPFLAGS@ @SHOUT_CFLAGS@

@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.53 2003/06/26 16:03:37 brendan Exp $
+# $Id: configure.in,v 1.54 2003/06/28 02:16:47 brendan Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -137,12 +137,15 @@ eval shout_includedir="$includedir"
 prefix="$save_prefix"
 
 SHOUT_VERSION="$VERSION"
-SHOUT_CFLAGS="-I$shout_includedir $VORBIS_CFLAGS $PTHREAD_CFLAGS $PTHREAD_CPPFLAGS"
+SHOUT_CPPFLAGS="-I$shout_includedir $VORBIS_CFLAGS $PTHREAD_CPPFLAGS"
+SHOUT_CFLAGS="$PTHREAD_CFLAGS"
 SHOUT_LIBS="-lshout"
 
+XIPH_CLEAN_CCFLAGS([$SHOUT_CPPFLAGS], [SHOUT_CPPFLAGS])
 XIPH_CLEAN_CCFLAGS([$SHOUT_CFLAGS], [SHOUT_CFLAGS])
 XIPH_CLEAN_CCFLAGS([$VORBIS_LIBS $PTHREAD_LIBS $LIBS], [SHOUT_LIBDEPS])
 AC_SUBST(SHOUT_LIBDEPS)
+AC_SUBST(SHOUT_CPPFLAGS)
 AC_SUBST(SHOUT_CFLAGS)
 AC_CONFIG_LIBCONFIG_IN_STATIC
 AC_CONFIG_LIBCONFIG_IN([shout])
