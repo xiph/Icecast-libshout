@@ -165,6 +165,7 @@ AC_SUBST(DEBUG)
 AC_SUBST(CFLAGS)
 AC_SUBST(PROFILE)
 AC_SUBST(XIPH_CFLAGS)
+AC_SUBST(XIPH_CPPFLAGS)
 
 AC_OUTPUT([Makefile debian/Makefile include/Makefile include/shout/Makefile
   include/shout/shout.h src/Makefile src/net/Makefile src/timing/Makefile
