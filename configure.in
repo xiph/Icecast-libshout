@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.58 2003/07/04 02:20:41 brendan Exp $
+# $Id: configure.in,v 1.59 2003/07/04 23:18:26 giles Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -25,6 +25,13 @@ VERSION=libshout_version
 
 AM_INIT_AUTOMAKE([libshout], libshout_version)
 AM_MAINTAINER_MODE
+
+dnl create our name mangling macro
+dnl the prefix must be hardwired because of AH limitations
+AH_VERBATIM([_mangle], [
+/* name mangling to protect code we share with other libraries */
+#define _mangle(proc) shout ## _ ## proc
+])
 
 AC_PROG_CC
 AM_PROG_LIBTOOL
