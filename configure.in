@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.27 2003/03/13 14:22:19 msmith Exp $
+# $Id: configure.in,v 1.28 2003/03/14 00:39:18 karl Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -27,6 +27,7 @@ AM_PROG_LIBTOOL
 
 dnl Set some options based on environment
 
+AC_DEFINE(_XOPEN_SOURCE, ,[Define if you have POSIX and XPG specifications])
 if test -z "$GCC"; then
         case $host in 
         *-*-irix*)
