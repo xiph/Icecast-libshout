@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.39 2003/06/05 13:56:58 brendan Exp $
+# $Id: configure.in,v 1.40 2003/06/05 13:59:29 brendan Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -130,7 +130,7 @@ then
     have_thread="yes"
     ])
 fi
-AM_CONDITIONAL([HAVE_THREAD], [test "$have_thread" == "yes"])
+AM_CONDITIONAL([HAVE_THREAD], [test "$have_thread" = "yes"])
 if test "$have_thread" != "yes"
 then
   AC_DEFINE([NO_THREAD], 1, [Define if you don't want to use the thread library])
