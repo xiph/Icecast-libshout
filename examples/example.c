@@ -12,6 +12,8 @@ int main()
 	char buff[4096];
 	long read, ret, total;
 
+	shout_init();
+
 	if (!(shout = shout_new())) {
 		printf("Could not allocate shout_t\n");
 		return 1;
@@ -75,6 +77,8 @@ int main()
 	}
 
 	shout_close(shout);
+
+	shout_shutdown();
 
 	return 0;
 }

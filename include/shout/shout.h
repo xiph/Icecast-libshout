@@ -37,6 +37,13 @@ typedef struct _util_dict shout_metadata_t;
 extern "C" {
 #endif
 
+/* initializes the shout library. Must be called before anything else */
+void shout_init(void);
+
+/* shuts down the shout library, deallocating any global storage. Don't call
+ * anything afterwards */
+void shout_shutdown(void);
+
 /* returns a static version string.  Non-null parameters will be set to the
  * value of the library major, minor, and patch levels, respectively */
 const char *shout_version(int *major, int *minor, int *patch);

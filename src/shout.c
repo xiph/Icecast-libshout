@@ -24,12 +24,37 @@ static int login_icy(shout_t *self);
 static int login_http_basic(shout_t *self);
 char *http_basic_authorization(shout_t *self);
 
+/* -- static data -- */
+static int _initialized = 0;
+
 /* -- public functions -- */
+
+void shout_init(void)
+{
+	if (_initialized)
+		return;
+
+	sock_initialize();
+	_initialized = 1;
+}
+
+void shout_shutdown(void)
+{
+	if (!_initialized)
+		return;
+
+	sock_shutdown();
+	_initialized = 0;
+}
 
 shout_t *shout_new(void)
 {
 	shout_t *self;
 
+	/* in case users haven't done this explicitly. Should we error
+	 * if not initialized instead? */
+	shout_init();
+	
 	if (!(self = (shout_t *)calloc(1, sizeof(shout_t)))) {
 		return NULL;
 	}
