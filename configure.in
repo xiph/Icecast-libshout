@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.55 2003/07/02 17:58:51 brendan Exp $
+# $Id: configure.in,v 1.56 2003/07/02 18:26:30 brendan Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -85,11 +85,11 @@ dnl Module checks
 XIPH_NET
 
 dnl Extra dependencies
-AC_ARG_ENABLE([pthread],
-  AC_HELP_STRING([--disable-pthread],[do not link with pthread even if it is available]))
+AC_ARG_ENABLE([thread],
+  AC_HELP_STRING([--disable-thread],[do not build with thread support even if it is available]))
 
 have_thread="no"
-if test "$enable_pthread" != "no"
+if test "$enable_thread" != "no"
 then
   ACX_PTHREAD([
     LIBS="$LIBS $PTHREAD_LIBS"
