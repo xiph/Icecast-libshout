@@ -1,0 +1,108 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.2.0//EN"
+               "http://docbook.org/xml/4.2/docbookx.dtd">
+
+<book><title>Programming With Libshout 2</title>
+  <bookinfo>
+    <!--
+    <author>
+      <firstname>Brendan</firstname><surname>Cully</surname>
+      <email>brendan@xiph.org</email>
+    </author>
+    <copyright>
+      <year>2003</year>
+      <holder>Brendan Cully</holder>
+    </copyright>
+    -->
+    <orgname><ulink url="http://xiph.org/">Xiph.org</ulink></orgname>
+    <releaseinfo>$Id: libshout.xml,v 1.1 2003/07/04 02:20:41 brendan Exp $</releaseinfo>
+    <date> 3 Jul 2003</date>
+  </bookinfo>
+
+<chapter><title>Overview</title>
+
+<para>
+libshout is a library for streaming audio to icecast or shoutcast-compatible
+servers. Currently it supports two audio formats and three protocols.
+</para>
+
+<itemizedlist><title>Audio Formats</title>
+  <listitem>Ogg Vorbis</listitem>
+  <listitem>MP3</listitem>
+</itemizedlist>
+
+<itemizedlist><title>Protocols</title>
+  <listitem>HTTP</listitem>
+  <listitem>Audiocast</listitem>
+  <listitem>ShoutCast</listitem>
+</itemizedlist>
+
+</chapter>
+
+<chapter><title>Function Reference</title>
+
+<funcsynopsis id="shout_init">
+<funcprototype>
+  <funcdef>void <function>shout_init</function></funcdef>
+  <void/>
+</funcprototype>
+<funcsynopsisinfo>
+Initializes the shout library. Currently this initializes the networking
+mutexes when the library is built with thread safety. This function must
+always be called before any other libshout function.
+</funcsynopsisinfo>
+</funcsynopsis>
+
+<funcsynopsis id="shout_shutdown">
+<funcprototype>
+  <funcdef>void <function>shout_shutdown</function></funcdef>
+  <void/>
+</funcprototype>
+<funcsynopsisinfo>
+Releases any resources which may have been allocated by a call to
+<link linkend="shout_init">shout_init</link>. An application should call this
+function after it has finished using libshout.
+</funcsynopsisinfo>
+</funcsynopsis>
+
+<funcsynopsis id="shout_version">
+<funcprototype>
+  <funcdef>const char *<function>shout_version</function></funcdef>
+  <paramdef>int *<parameter>major</parameter></paramdef>
+  <paramdef>int *<parameter>minor</parameter></paramdef>
+  <paramdef>int *<parameter>patch</parameter></paramdef>
+</funcprototype>
+<funcsynopsisinfo>
+Returns the version of the libshout library, both as a string via the
+return value, and as a set of integers corresponding to the major,
+minor and patch levels of the library. The application must allocate
+the integer parameters. If any parameter is NULL, libshout will not
+attempt to set it.
+</funcsynopsisinfo>
+</funcsynopsis>
+
+<funcsynopsis id="shout_new">
+<funcprototype>
+  <funcdef><type>shout_t</type> <function>shout_new</function></funcdef>
+  <void/>
+</funcprototype>
+<funcsynopsisinfo>
+Allocates a new <type>shout_t</type> structure. May return NULL if no memory
+is available. The result should be disposed of with
+<link linkend="shout_free">shout_free</link> when you are finished with it.
+</funcsynopsisinfo>
+</funcsynopsis>
+
+<funcsynopsis id="shout_free">
+<funcprototype>
+  <funcdef>void <function>shout_free</function></funcdef>
+  <paramdef><type>shout_t</type> <parameter>self</parameter></paramdef>
+</funcprototype>
+<funcsynopsisinfo>
+Frees a <type>shout_t</type> allocated by <link linkend="shout_new">shout_new</link>.
+</funcsynopsisinfo>
+</funcsynopsis>
+
+</chapter>
+
+</book>
