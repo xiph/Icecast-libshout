@@ -161,14 +161,14 @@ ssize_t shout_send_raw(shout_t *self, const unsigned char *data, size_t len)
 
 	while(remaining) {
 		ret = sock_write_bytes(self->socket, data, remaining);
-        if(ret < (ssize_t)remaining && errno == EINTR) {
-            remaining -= (remaining>0)?remaining:0;
+        if(ret < (ssize_t)remaining || errno == EINTR) {
+            remaining -= (ret>0)?ret:0;
             continue;
         }
-		if (ret < 0 || (size_t)ret != remaining) {
-			self->error = SHOUTERR_SOCKET;
-			return ret;
-		}
+        else if(ret < 0) {
+            self->error = SHOUTERR_SOCKET;
+            return -1;
+        }
         remaining = 0;
 	}
 
