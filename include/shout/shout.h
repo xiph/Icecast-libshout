@@ -5,6 +5,8 @@
 #ifndef __LIBSHOUT_SHOUT_H__
 #define __LIBSHOUT_SHOUT_H__
 
+#include <sys/types.h>
+
 #define SHOUTERR_SUCCESS	(0)
 #define SHOUTERR_INSANE		(1)
 #define SHOUTERR_NOCONNECT	(2)
