@@ -1,5 +1,6 @@
 /* -*- c-basic-offset: 8; -*- */
 /* shout.c: Implementation of public libshout interface shout.h
+ * $Id$
  *
  *  Copyright (C) 2002-2004 the Icecast team <team@icecast.org>
  *
@@ -795,9 +796,45 @@ static int queue_data(shout_t *self, const unsigned char *data, size_t len)
 	return SHOUTERR_SUCCESS;
 }
 
-static int queue_str(shout_t *self, const char *str)
+static inline int queue_str(shout_t *self, const char *str)
 {
 	return queue_data(self, str, strlen(str));
+}
+
+/* this should be shared with sock_write. Create libicecommon. */
+static int queue_printf(shout_t *self, const char *fmt, ...)
+{
+	char buffer[1024];
+	char *buf;
+	va_list ap, ap_retry;
+	int len;
+
+	buf = buffer;
+
+	va_start(ap, fmt);
+	va_copy(ap_retry, ap);
+
+	len = vsnprintf(buf, sizeof(buffer), fmt, ap);
+
+	self->error = SHOUTERR_SUCCESS;
+	if (len > 0) {
+		if ((size_t)len < sizeof(buffer))
+			queue_data(self, buf, len);
+		else {
+			buf = malloc(++len);
+			if (buf) {
+				len = vsnprintf(buf, len, fmt, ap_retry);
+				queue_data(self, buf, len);
+				free(buf);
+			} else
+				self->error = SHOUTERR_MALLOC;
+		}
+	}
+
+	va_end(ap_retry);
+	va_end(ap);
+
+	return self->error;
 }
 
 static int try_write (shout_t *self, const void *data, size_t len)
@@ -842,67 +879,57 @@ static int send_queue(shout_t *self)
 	return self->error = SHOUTERR_SUCCESS;
 }
 
-static int send_http_request(shout_t *self)
+static int create_http_request(shout_t *self)
 {
 	char *auth;
 	char *ai;
+	int ret = SHOUTERR_MALLOC;
 
-	if (!sock_write(self->socket, "SOURCE %s HTTP/1.0\r\n", self->mount))
-		return SHOUTERR_SOCKET;
-
-	if (self->password && (auth = http_basic_authorization(self))) {
-		if (!sock_write(self->socket, auth)) {
+	/* this is lazy code that relies on the only error from queue_* being
+	 * SHOUTERR_MALLOC */
+	do {
+		if (queue_printf(self, "SOURCE %s HTTP/1.0\r\n", self->mount))
+			break;
+		if (self->password) {
+			if (! (auth = http_basic_authorization(self)))
+				break;
+			if (queue_str(self, auth)) {
+				free(auth);
+				break;
+			}
 			free(auth);
-			return SHOUTERR_SOCKET;
 		}
-		free(auth);
-	}
+		if (self->useragent && queue_printf(self, "User-Agent: %s\r\n", self->useragent))
+			break;
+		if (self->format == SHOUT_FORMAT_OGG && queue_printf(self, "Content-Type: application/ogg\r\n"))
+			break;
+		if (self->format == SHOUT_FORMAT_MP3 && queue_printf(self, "Content-Type: audio/mpeg\r\n"))
+			break;
+		if (queue_printf(self, "ice-name: %s\r\n", self->name ? self->name : "no name"))
+			break;
+		if (queue_printf(self, "ice-public: %d\r\n", self->public))
+			break;
 
-	if (!sock_write(self->socket, "ice-name: %s\r\n", self->name != NULL ? self->name : "no name"))
-		return SHOUTERR_SOCKET;
-	if (self->url) {
-		if (!sock_write(self->socket, "ice-url: %s\r\n", self->url))
-			return SHOUTERR_SOCKET;
-	}
-	if (self->genre) {
-		if (!sock_write(self->socket, "ice-genre: %s\r\n", self->genre))
-			return SHOUTERR_SOCKET;
-	}
-#if 0
-	ai = shout_get_audio_info(self, SHOUT_AI_BITRATE);
-
-	if (bitrate && !sock_write(self->socket, "ice-bitrate: %s\r\n", bitrate))
-		return SHOUTERR_SOCKET;
-#else
-	if ((ai = _shout_util_dict_urlencode(self->audio_info, ';'))) {
-		if (!sock_write(self->socket, "ice-audio-info: %s\r\n", ai)) {
+		if (self->url && queue_printf(self, "ice-url: %s\r\n", self->url))
+			break;
+		if (self->genre && queue_printf(self, "ice-genre: %s\r\n", self->genre))
+			break;
+		if ((ai = _shout_util_dict_urlencode(self->audio_info, ';'))) {
+			if (queue_printf(self, "ice-audio-info: %s\r\n", ai)) {
+				free(ai);
+				break;
+			}
 			free(ai);
-			return SHOUTERR_SOCKET;
 		}
-	}
-#endif
-	if (!sock_write(self->socket, "ice-public: %d\r\n", self->public))
-		return SHOUTERR_SOCKET;
-	if (self->description) {
-		if (!sock_write(self->socket, "ice-description: %s\r\n", self->description))
-			return SHOUTERR_SOCKET;
-	}
-	if (self->useragent) {
-		if (!sock_write(self->socket, "User-Agent: %s\r\n", self->useragent))
-			return SHOUTERR_SOCKET;
-	}
-	if (self->format == SHOUT_FORMAT_OGG) {
-		if (!sock_write(self->socket, "Content-Type: application/ogg\r\n"))
-			return SHOUTERR_SOCKET;
-	} else if (self->format == SHOUT_FORMAT_MP3) {
-		if (!sock_write(self->socket, "Content-Type: audio/mpeg\r\n"))
-			return SHOUTERR_SOCKET;
-	}
+		if (self->description && queue_printf(self, "ice-description: %s\r\n", self->description))
+			break;
+		if (queue_str(self, "\r\n"))
+			break;
+		
+		ret = SHOUTERR_SUCCESS;
+	} while (0);
 
-	if (!sock_write(self->socket, "\r\n"))
-		return SHOUTERR_SOCKET;
-
-	return SHOUTERR_SUCCESS;
+	return ret;
 }
 
 static char *http_basic_authorization(shout_t *self)
@@ -944,23 +971,19 @@ static int login_http_basic(shout_t *self)
 	self->error = SHOUTERR_SOCKET;
 
    	self->socket = sock_connect(self->host, self->port);
-	if (self->socket < 0) {
+	if (self->socket < 0)
 		return self->error = SHOUTERR_NOCONNECT;
-	}
 
-#if 0
-	if(send_http_request(self) != 0) {
-#else
 	/* assume we'll have to authenticate, saves round trips on basic */
-	if(send_http_request(self) != 0) {
-#endif
-		return self->error = SHOUTERR_SOCKET;
-	}
+	if(create_http_request(self) != SHOUTERR_SUCCESS)
+		return self->error;
 
-	if (_shout_util_read_header(self->socket, header, 4096) == 0) {
+	if (send_queue(self) != SHOUTERR_SUCCESS)
+		return self->error;
+
+	if (_shout_util_read_header(self->socket, header, 4096) == 0)
 		/* either we didn't get a complete header, or we timed out */
 		return self->error = SHOUTERR_SOCKET;
-	}
 
 	parser = httpp_create_parser();
 	httpp_initialize(parser, NULL);
