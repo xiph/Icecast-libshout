@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.22 2003/03/11 05:20:17 brendan Exp $
+# $Id: configure.in,v 1.23 2003/03/11 05:40:33 brendan Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -77,7 +77,7 @@ AC_CHECK_TYPES([socklen_t],,,
 #if HAVE_SYS_SOCKET_H
 # include <sys/socket.h>
 #endif])
-AH_VERBATIM([HAVE_SOCKLEN_T],
+AH_VERBATIM([X_HAVE_SOCKLEN_T],
   [#ifndef HAVE_SOCKLEN_T
 typedef int socklen_t;
 #endif])
