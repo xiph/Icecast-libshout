@@ -134,16 +134,19 @@ util_dict *util_dict_new(void)
 
 void util_dict_free(util_dict *dict)
 {
-	util_dict *cur;
+	util_dict *next;
 
-	do {
-		cur = dict->next;
+	while (dict) {
+		next = dict->next;
+
 		if (dict->key)
 			free (dict->key);
 		if (dict->val)
 			free (dict->val);
 		free (dict);
-	} while (cur);
+
+		dict = next;
+	}
 }
 
 const char *util_dict_get(util_dict *dict, const char *key)
