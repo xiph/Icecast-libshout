@@ -14,7 +14,7 @@
 #include <shout/shout.h>
 #include "util.h"
 
-char *util_strdup(const char *s)
+char *_shout_util_strdup(const char *s)
 {
 	if (!s)
 		return NULL;
@@ -22,7 +22,7 @@ char *util_strdup(const char *s)
 	return strdup(s);
 }
 
-int util_read_header(int sock, char *buff, unsigned long len)
+int _shout_util_read_header(int sock, char *buff, unsigned long len)
 {
 	int read_bytes, ret;
 	unsigned long pos;
@@ -60,7 +60,7 @@ static char base64table[65] = {
 };
 
 /* This isn't efficient, but it doesn't need to be */
-char *util_base64_encode(char *data)
+char *_shout_util_base64_encode(char *data)
 {
 	int len = strlen(data);
 	char *out = malloc(len*4/3 + 4);
@@ -119,7 +119,7 @@ static char safechars[256] = {
 
 /* modified from libshout1, which credits Rick Franchuk <rickf@transpect.net>.
  * Caller must free result. */
-char *util_url_encode(const char *data) {
+char *_shout_util_url_encode(const char *data) {
 	const char *p;
 	char *q, *dest;
 	int digit;
@@ -150,12 +150,12 @@ char *util_url_encode(const char *data) {
 	return dest;
 }
 
-util_dict *util_dict_new(void)
+util_dict *_shout_util_dict_new(void)
 {
 	return (util_dict *)calloc(1, sizeof(util_dict));
 }
 
-void util_dict_free(util_dict *dict)
+void _shout_util_dict_free(util_dict *dict)
 {
 	util_dict *next;
 
@@ -172,7 +172,7 @@ void util_dict_free(util_dict *dict)
 	}
 }
 
-const char *util_dict_get(util_dict *dict, const char *key)
+const char *_shout_util_dict_get(util_dict *dict, const char *key)
 {
 	while (dict) {
 		if (dict->key && !strcmp(key, dict->key))
@@ -183,7 +183,7 @@ const char *util_dict_get(util_dict *dict, const char *key)
 	return NULL;
 }
 
-int util_dict_set(util_dict *dict, const char *key, const char *val)
+int _shout_util_dict_set(util_dict *dict, const char *key, const char *val)
 {
 	util_dict *prev;
 
@@ -199,7 +199,7 @@ int util_dict_set(util_dict *dict, const char *key, const char *val)
 	}
 
 	if (!dict) {
-		dict = util_dict_new();
+		dict = _shout_util_dict_new();
 		if (!dict)
 			return SHOUTERR_MALLOC;
 		if (prev)
@@ -211,7 +211,7 @@ int util_dict_set(util_dict *dict, const char *key, const char *val)
 	else if (!(dict->key = strdup(key))) {
 		if (prev)
 			prev->next = NULL;
-		util_dict_free (dict);
+		_shout_util_dict_free (dict);
 
 		return SHOUTERR_MALLOC;
 	}
@@ -227,7 +227,7 @@ int util_dict_set(util_dict *dict, const char *key, const char *val)
 /* given a dictionary, URL-encode each key and val and stringify them in order as
   key=val&key=val... if val is set, or just key&key if val is NULL.
   TODO: Memory management needs overhaul. */
-char *util_dict_urlencode(util_dict *dict, char delim)
+char *_shout_util_dict_urlencode(util_dict *dict, char delim)
 {
 	char *res, *tmp;
 	char *enc;
@@ -237,7 +237,7 @@ char *util_dict_urlencode(util_dict *dict, char delim)
 		/* encode key */
 		if (!dict->key)
 			continue;
-		if (!(enc = util_url_encode(dict->key))) {
+		if (!(enc = _shout_util_url_encode(dict->key))) {
 			if (res)
 				free(res);
 			return NULL;
@@ -264,7 +264,7 @@ char *util_dict_urlencode(util_dict *dict, char delim)
 		/* encode value */
 		if (!dict->val)
 			continue;
-		if (!(enc = util_url_encode(dict->val))) {
+		if (!(enc = _shout_util_url_encode(dict->val))) {
 			free(res);
 			return NULL;
 		}
@@ -281,4 +281,3 @@ char *util_dict_urlencode(util_dict *dict, char delim)
 
 	return res;
 }
-

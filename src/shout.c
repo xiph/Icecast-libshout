@@ -74,7 +74,7 @@ shout_t *shout_new(void)
 
 		return NULL;
 	}
-	if (!(self->audio_info = util_dict_new())) {
+	if (!(self->audio_info = _shout_util_dict_new())) {
 		shout_free(self);
 
 		return NULL;
@@ -100,7 +100,7 @@ void shout_free(shout_t *self)
 	if (self->description) free(self->description);
 	if (self->user) free(self->user);
 	if (self->useragent) free(self->useragent);
-	if (self->audio_info) util_dict_free (self->audio_info);
+	if (self->audio_info) _shout_util_dict_free (self->audio_info);
 
 	free(self);
 }
@@ -258,7 +258,7 @@ int shout_delay(shout_t *self)
   
 shout_metadata_t *shout_metadata_new(void)
 {
-	return util_dict_new();
+	return _shout_util_dict_new();
 }
 
 void shout_metadata_free(shout_metadata_t *self)
@@ -266,7 +266,7 @@ void shout_metadata_free(shout_metadata_t *self)
 	if (!self)
 		return;
 
-	util_dict_free(self);
+	_shout_util_dict_free(self);
 }
 
 int shout_metadata_add(shout_metadata_t *self, const char *name, const char *value)
@@ -274,7 +274,7 @@ int shout_metadata_add(shout_metadata_t *self, const char *name, const char *val
 	if (!self || !name)
 		return SHOUTERR_INSANE;
 
-	return util_dict_set(self, name, value);
+	return _shout_util_dict_set(self, name, value);
 }
 
 /* open second socket to server, send HTTP request to change metadata.
@@ -288,7 +288,7 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 	if (!self || !metadata)
 		return SHOUTERR_INSANE;
 
-	if (!(encvalue = util_dict_urlencode(metadata, '&')))
+	if (!(encvalue = _shout_util_dict_urlencode(metadata, '&')))
 		return SHOUTERR_MALLOC;
 
 	if (!self->connected)
@@ -384,7 +384,7 @@ int shout_set_host(shout_t *self, const char *host)
 	if (self->host)
 		free(self->host);
 
-	if (!(self->host = util_strdup(host)))
+	if (!(self->host = _shout_util_strdup(host)))
 		return self->error = SHOUTERR_MALLOC;
 
 	return self->error = SHOUTERR_SUCCESS;
@@ -430,7 +430,7 @@ int shout_set_password(shout_t *self, const char *password)
 	if (self->password)
 		free (self->password);
 
-	if (!(self->password = util_strdup(password)))
+	if (!(self->password = _shout_util_strdup(password)))
 		return self->error = SHOUTERR_MALLOC;
 
 	return self->error = SHOUTERR_SUCCESS;
@@ -488,7 +488,7 @@ int shout_set_name(shout_t *self, const char *name)
 	if (self->name)
 		free(self->name);
 
-	if (!(self->name = util_strdup(name)))
+	if (!(self->name = _shout_util_strdup(name)))
 		return self->error = SHOUTERR_MALLOC;
 
 	return self->error = SHOUTERR_SUCCESS;
@@ -513,7 +513,7 @@ int shout_set_url(shout_t *self, const char *url)
 	if (self->url)
 		free(self->url);
 
-	if (!(self->url = util_strdup(url)))
+	if (!(self->url = _shout_util_strdup(url)))
 		return self->error = SHOUTERR_MALLOC;
 
 	return self->error = SHOUTERR_SUCCESS;
@@ -538,7 +538,7 @@ int shout_set_genre(shout_t *self, const char *genre)
 	if (self->genre)
 		free(self->genre);
 
-	if (! (self->genre = util_strdup (genre)))
+	if (! (self->genre = _shout_util_strdup (genre)))
 		return self->error = SHOUTERR_MALLOC;
 
 	return self->error = SHOUTERR_SUCCESS;
@@ -563,7 +563,7 @@ int shout_set_agent(shout_t *self, const char *agent)
 	if (self->useragent)
 		free(self->useragent);
 
-	if (! (self->useragent = util_strdup (agent)))
+	if (! (self->useragent = _shout_util_strdup (agent)))
 		return self->error = SHOUTERR_MALLOC;
 
 	return self->error = SHOUTERR_SUCCESS;
@@ -589,7 +589,7 @@ int shout_set_user(shout_t *self, const char *username)
 	if (self->user)
 		free(self->user);
 
-	if (! (self->user = util_strdup (username)))
+	if (! (self->user = _shout_util_strdup (username)))
 		return self->error = SHOUTERR_MALLOC;
 
 	return self->error = SHOUTERR_SUCCESS;
@@ -614,7 +614,7 @@ int shout_set_description(shout_t *self, const char *description)
 	if (self->description)
 		free(self->description);
 
-	if (! (self->description = util_strdup (description)))
+	if (! (self->description = _shout_util_strdup (description)))
 		return self->error = SHOUTERR_MALLOC;
 
 	return self->error = SHOUTERR_SUCCESS;
@@ -639,7 +639,7 @@ int shout_set_dumpfile(shout_t *self, const char *dumpfile)
 	if (self->dumpfile)
 		free(self->dumpfile);
 
-	if (! (self->dumpfile = util_strdup (dumpfile)))
+	if (! (self->dumpfile = _shout_util_strdup (dumpfile)))
 		return self->error = SHOUTERR_MALLOC;
 
 	return self->error = SHOUTERR_SUCCESS;
@@ -655,12 +655,12 @@ const char *shout_get_dumpfile(shout_t *self)
 
 int shout_set_audio_info(shout_t *self, const char *name, const char *value)
 {
-	return self->error = util_dict_set(self->audio_info, name, value);
+	return self->error = _shout_util_dict_set(self->audio_info, name, value);
 }
 
 const char *shout_get_audio_info(shout_t *self, const char *name)
 {
-	return util_dict_get(self->audio_info, name);
+	return _shout_util_dict_get(self->audio_info, name);
 }
 
 int shout_set_public(shout_t *self, unsigned int public)
@@ -768,7 +768,7 @@ static int send_http_request(shout_t *self, char *username, char *password)
 	if (bitrate && !sock_write(self->socket, "ice-bitrate: %s\r\n", bitrate))
 		return SHOUTERR_SOCKET;
 #else
-	if ((ai = util_dict_urlencode(self->audio_info, ';'))) {
+	if ((ai = _shout_util_dict_urlencode(self->audio_info, ';'))) {
 		if (!sock_write(self->socket, "ice-audio-info: %s\r\n", ai)) {
 			free(ai);
 			return SHOUTERR_SOCKET;
@@ -811,7 +811,7 @@ char *http_basic_authorization(shout_t *self)
 	if (!(in = malloc(len)))
 		return NULL;
 	sprintf(in, "%s:%s", self->user, self->password);
-	out = util_base64_encode(in);
+	out = _shout_util_base64_encode(in);
 	free(in);
 
 	len = strlen(out) + 24;
@@ -851,7 +851,7 @@ static int login_http_basic(shout_t *self)
 		return self->error = SHOUTERR_SOCKET;
 	}
 
-	if (util_read_header(self->socket, header, 4096) == 0) {
+	if (_shout_util_read_header(self->socket, header, 4096) == 0) {
 		/* either we didn't get a complete header, or we timed out */
 		return self->error = SHOUTERR_SOCKET;
 	}
@@ -884,7 +884,7 @@ static int login_http_basic(shout_t *self)
 					return self->error = SHOUTERR_SOCKET;
 				}
 
-				if (util_read_header(self->socket, header, 4096) == 0) {
+				if (_shout_util_read_header(self->socket, header, 4096) == 0) {
 					/* either we didn't get a complete header, or we timed out */
 					sock_close(self->socket);
 					return self->error = SHOUTERR_SOCKET;

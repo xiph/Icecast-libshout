@@ -97,7 +97,7 @@ static int send_vorbis(shout_t *self, const unsigned char *data, size_t len)
 			vorbis_info_init(&vorbis_data->vi);
 			vorbis_comment_init(&vorbis_data->vc);
 
-            vorbis_data->initialised = 1;
+			vorbis_data->initialised = 1;
 
 			vorbis_data->headers = 1;
 		}
