@@ -15,7 +15,7 @@
     </copyright>
     -->
     <orgname><ulink url="http://xiph.org/">Xiph.org</ulink></orgname>
-    <releaseinfo>$Id: libshout.xml,v 1.2 2003/07/05 02:48:09 brendan Exp $</releaseinfo>
+    <releaseinfo>$Id: libshout.xml,v 1.3 2003/07/05 04:40:27 brendan Exp $</releaseinfo>
     <date> 3 Jul 2003</date>
   </bookinfo>
 
@@ -95,6 +95,211 @@ finished with it.
 </funcsynopsis>
 Frees a <type>shout_t</type> allocated by
 <link linkend="shout_new"><function>shout_new</function></link>.
+
+<funcsynopsis id="shout_open">
+<funcprototype>
+  <funcdef>int <function>shout_open</function></funcdef>
+  <paramdef><type>shout_t</type> <parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Opens a connection to a server. All connection parameters must have been
+set prior to this call.
+<variablelist><title>Return Values</title>
+  <varlistentry>
+  <term><constant>SHOUTERR_SUCCESS</constant></term>
+  <listitem>The connection was successfully opened.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_INSANE</constant></term>
+  <listitem><varname>self</varname> is corrupt or incorrect. Possible reasons
+  include an unset host, port, or password.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_CONNECTED</constant></term>
+  <listitem>The connection has already been opened.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_UNSUPPORTED</constant></term>
+  <listitem>The protocol/format combination is unsupported. For instance,
+  Ogg Vorbis may only be sent via the HTTP protocol.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_NOCONNECT</constant></term>
+  <listitem>A connection to the server could not be established.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_SOCKET</constant></term>
+  <listitem>An error occured while talking to the server.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_NOLOGIN</constant></term>
+  <listitem>The server refused login, probably because authentication
+  failed.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_MALLOC</constant></term>
+  <listitem>There wasn't enough memory to complete the operation.</listitem>
+  </varlistentry>
+</variablelist>
+
+<funcsynopsis id="shout_close">
+<funcprototype>
+  <funcdef>int <function>shout_close</function></funcdef>
+  <paramdef><type>shout_t</type> <parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Closes a connection to the server.
+
+<variablelist><title>Return Values</title>
+  <varlistentry>
+  <term><constant>SHOUTERR_SUCCESS</constant></term>
+  <listitem>The connection was successfully closed.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_INSANE</constant></term>
+  <listitem><varname>self</varname> is not a valid <type>shout_t</type>
+  object.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_UNCONNECTED</constant></term>
+  <listitem><varname>self</varname> is not currently connected.</listitem>
+  </varlistentry>
+</variablelist>
+
+<funcsynopsis id="shout_send">
+<funcprototype>
+  <funcdef>int <function>shout_send</function></funcdef>
+  <paramdef><type>shout_t</type> <parameter>self</parameter></paramdef>
+  <paramdef>const unsigned char *<parameter>data></parameter></paramdef>
+  <paramdef><type>size_t</type> <parameter>len</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Sends <varname>len</varname> bytes of audio data from the buffer pointed to by
+<varname>data</varname> to the server. The connection must already have been
+established by a successful call to
+<link linkend="shout_open"><function>shout_open</function></link>.
+
+<variablelist><title>Return Values</title>
+  <varlistentry>
+  <term><constant>SHOUTERR_SUCCESS</constant></term>
+  <listitem>The audio data was sent successfully.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_INSANE</constant></term>
+  <listitem><varname>self</varname> is not a valid <type>shout_t</type>
+  object.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_UNCONNECTED</constant></term>
+  <listitem><varname>self</varname> is not currently connected.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_MALLOC</constant></term>
+  <listitem>There wasn't enough memory to complete the operation.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_SOCKET</constant></term>
+  <listitem>An error occured while talking to the server.</listitem>
+  </varlistentry>
+</variablelist>
+
+<funcsynopsis id="shout_send_raw">
+<funcprototype>
+  <funcdef><type>ssize_t</type> <function>shout_send_raw</function></funcdef>
+  <paramdef><type>shout_t</type> <parameter>self</parameter></paramdef>
+  <paramdef>const unsigned char *<parameter>data></parameter></paramdef>
+  <paramdef><type>size_t</type> <parameter>len</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Sends <varname>len</varname> bytes of audio data from the buffer pointed to by
+<varname>data</varname> to the server. The data is not parsed for timing
+or validity, but sent raw over the connection. The connection must already have been
+established by a successful call to
+<link linkend="shout_open"><function>shout_open</function></link>.
+<warning>This function should not be used unless you know exactly what you
+are doing. Its use is deprecated and it may be removed in a future version of
+the library.</warning>
+
+<variablelist><title>Return Values</title>
+  <varlistentry>
+  <term>&gt;= 0</term>
+  <listitem>The number of bytes written.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_INSANE</constant></term>
+  <listitem><varname>self</varname> is not a valid <type>shout_t</type>
+  object.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_UNCONNECTED</constant></term>
+  <listitem><varname>self</varname> is not currently connected.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_SOCKET</constant></term>
+  <listitem>An error occured while talking to the server.</listitem>
+  </varlistentry>
+</variablelist>
+
+<funcsynopsis id="shout_sync">
+<funcprototype>
+  <funcdef>void <function>shout_sync</function></funcdef>
+  <paramdef><type>shout_t</type> <parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Causes the caller to sleep for the amount of time necessary to play back
+audio sent since the last call to <function>shout_sync</function>. Should
+be called before every call to
+<link linkend="shout_send"><function>shout_send</function></link> to
+ensure that audio data is sent to the server at the correct speed.
+Alternatively, the caller may use
+<link linkend="shout_delay"><function>shout_delay</function></link> to
+determine the number of milliseconds to wait and delay itself.
+
+<funcsynopsis id="shout_delay">
+<funcprototype>
+  <funcdef>int <function>shout_delay</function></funcdef>
+  <paramdef><type>shout_t</type> <parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Returns the number of milliseconds the caller should wait before calling
+<link linkend="shout_send"><function>shout_send</function></link> again.
+This function is provided as an alternative to
+<link linkend="shout_sync"><function>shout_sync</function></link> for
+applications that may wish to do other processing in the meantime.
+
+<funcsynopsis id="shout_get_error">
+<funcprototype>
+  <funcdef>const char *<function>shout_get_error</function></funcdef>
+  <paramdef><type>shout_t</type> <parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Returns a statically allocated string describing the last shout error
+that occured in this connection. Only valid until the next call affecting
+this connection.
+
+<funcsynopsis id="shout_get_errno">
+<funcprototype>
+  <funcdef>int <function>shout_get_errno</function></funcdef>
+  <paramdef><type>shout_t</type> <parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Returns the shout error code of the last error that occured in this connection.
 
 </section>
 
