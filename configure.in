@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.60 2003/07/05 06:05:13 brendan Exp $
+# $Id: configure.in,v 1.61 2003/07/07 03:39:59 brendan Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -44,6 +44,8 @@ case "$ac_cv_host" in
    *openbsd*)
    ;;
    *solaris*)
+   ;;
+   *irix*)
    ;;
    *) AC_DEFINE(_XOPEN_SOURCE, 600, [Define if you have POSIX and XPG specifications])
    ;;
