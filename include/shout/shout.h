@@ -102,7 +102,7 @@ void shout_sleep(shout_conn_t *self);
 ** Formats the error code to a user readable string, like strerror()
 ** Returns pointer to namespace.
 */
-char *shout_strerror(shout_conn_t *self, int error);
+char *shout_strerror(int error);
 
 #ifdef __cplusplus
 }

@@ -166,7 +166,7 @@ void shout_sleep(shout_conn_t *self)
 	if (sleep > 0) timing_sleep(sleep);
 }
 
-char *shout_strerror(shout_conn_t *self, int error)
+char *shout_strerror(int error)
 {
 	switch (error) {
 	case SHOUTERR_INSANE:
