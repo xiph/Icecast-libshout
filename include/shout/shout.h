@@ -22,10 +22,9 @@
 #define SHOUT_FORMAT_VORBIS	(0)
 #define SHOUT_FORMAT_MP3	(1)
 
-#define SHOUT_PROTOCOL_ICE		(0)
+#define SHOUT_PROTOCOL_HTTP		(0)
 #define SHOUT_PROTOCOL_XAUDIOCAST	(1)
 #define SHOUT_PROTOCOL_ICY		(2)
-#define SHOUT_PROTOCOL_HTTP		(3)
 
 typedef struct shout shout_t;
 typedef struct shout_metadata shout_metadata_t;

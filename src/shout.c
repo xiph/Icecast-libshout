@@ -14,7 +14,6 @@
 #include "httpp/httpp.h"
 
 /* -- local prototypes -- */
-static int login_ice(shout_t *self);
 static int login_xaudiocast(shout_t *self);
 static int login_icy(shout_t *self);
 static int login_http_basic(shout_t *self);
@@ -79,8 +78,7 @@ int shout_open(shout_t *self)
 	if (!self->host || !self->password || !self->port || self->connected)
 		return self->error = SHOUTERR_INSANE;
 
-	if (self->format == SHOUT_FORMAT_VORBIS && 
-	    self->protocol != SHOUT_PROTOCOL_ICE && self->protocol != SHOUT_PROTOCOL_HTTP)
+	if (self->format == SHOUT_FORMAT_VORBIS && self->protocol != SHOUT_PROTOCOL_HTTP)
 		return self->error = SHOUTERR_UNSUPPORTED;
 
 	if(self->protocol != SHOUT_PROTOCOL_HTTP) {
@@ -91,12 +89,6 @@ int shout_open(shout_t *self)
 
 	if (self->protocol == SHOUT_PROTOCOL_HTTP) {
 		if ((self->error = login_http_basic(self)) != SHOUTERR_SUCCESS) {
-			sock_close(self->socket);
-			return self->error;
-		}
-	}
-	else if (self->protocol == SHOUT_PROTOCOL_ICE) {
-		if ((self->error = login_ice(self)) != SHOUTERR_SUCCESS) {
 			sock_close(self->socket);
 			return self->error;
 		}
@@ -741,10 +733,9 @@ int shout_set_protocol(shout_t *self, unsigned int protocol)
 	if (self->connected)
 		return self->error = SHOUTERR_CONNECTED;
 
-	if (protocol != SHOUT_PROTOCOL_ICE &&
+	if (protocol != SHOUT_PROTOCOL_HTTP &&
 	    protocol != SHOUT_PROTOCOL_XAUDIOCAST &&
-	    protocol != SHOUT_PROTOCOL_ICY &&
-	    protocol != SHOUT_PROTOCOL_HTTP)
+	    protocol != SHOUT_PROTOCOL_ICY)
 		return self->error = SHOUTERR_UNSUPPORTED;
 
 	self->protocol = protocol;
@@ -787,7 +778,7 @@ static int send_http_request(shout_t *self, char *username, char *password)
 		if (!sock_write(self->socket, "ice-genre: %s\r\n", self->genre))
 			return SHOUTERR_SOCKET;
 	}
-	if (!sock_write(self->socket, "ice-bitrate: %d\r\n", self->bitrate))
+	if (self->bitrate && !sock_write(self->socket, "ice-bitrate: %d\r\n", self->bitrate))
 		return SHOUTERR_SOCKET;
 	if (!sock_write(self->socket, "ice-public: %d\r\n", self->public))
 		return SHOUTERR_SOCKET;
@@ -917,46 +908,6 @@ static int login_http_basic(shout_t *self)
 
 	httpp_destroy(parser);
 	return self->error = SHOUTERR_REFUSED;
-}
-
-static int login_ice(shout_t *self)
-{
-	self->error = SHOUTERR_SOCKET;
-
-	if (!sock_write(self->socket, "SOURCE %s ICE/1.0\n", self->mount))
-		return SHOUTERR_SOCKET;
-	if (!sock_write(self->socket, "ice-password: %s\n", self->password))
-		return SHOUTERR_SOCKET;
-	if (!sock_write(self->socket, "ice-name: %s\n", self->name != NULL ? self->name : "no name"))
-		return SHOUTERR_SOCKET;
-	if (self->url) {
-		if (!sock_write(self->socket, "ice-url: %s\n", self->url))
-			return SHOUTERR_SOCKET;
-	}
-	if (self->genre) {
-		if (!sock_write(self->socket, "ice-genre: %s\n", self->genre))
-			return SHOUTERR_SOCKET;
-	}
-	if (!sock_write(self->socket, "ice-bitrate: %d\n", self->bitrate))
-		return SHOUTERR_SOCKET;
-	if (!sock_write(self->socket, "ice-public: %d\n", self->public))
-		return SHOUTERR_SOCKET;
-	if (self->description) {
-		if (!sock_write(self->socket, "ice-description: %s\n", self->description))
-			return SHOUTERR_SOCKET;
-	}
-	if (self->format == SHOUT_FORMAT_VORBIS) {
-		if (!sock_write(self->socket, "Content-Type: application/ogg\n"))
-			return SHOUTERR_SOCKET;
-	} else if (self->format == SHOUT_FORMAT_MP3) {
-		if (!sock_write(self->socket, "Content-Type: audio/mpeg\n"))
-			return SHOUTERR_SOCKET;
-	}
-
-	if (!sock_write(self->socket, "\n"))
-		return SHOUTERR_SOCKET;
-
-	return SHOUTERR_SUCCESS;
 }
 
 static int login_xaudiocast(shout_t *self)
