@@ -1,3 +1,4 @@
+/* -*- c-basic-offset: 8; -*- */
 /* mp3.c: libshout MP3 format handler */
 
 #include <stdio.h>

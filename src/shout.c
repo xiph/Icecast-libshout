@@ -1,3 +1,4 @@
+/* -*- c-basic-offset: 8; -*- */
 /* shout.c: Implementation of public libshout interface shout.h */
 
 #ifdef HAVE_CONFIG_H
@@ -215,6 +216,18 @@ void shout_sync(shout_t *self)
 		timing_sleep((uint64_t)sleep);
 }
 
+int shout_delay(shout_t *self)
+{
+	if (!self)
+		return 0;
+
+	if (self->senttime == 0)
+		return 0;
+
+	/* Is this cast to double needed? */
+	return (double)self->senttime / 1000 - (timing_get_time() - self->starttime);
+}
+  
 shout_metadata_t *shout_metadata_new(void)
 {
 	return util_dict_new();

@@ -127,6 +127,9 @@ ssize_t shout_send_raw(shout_t *self, const unsigned char *data, size_t len);
 /* Puts caller to sleep until it is time to send more data to the server */
 void shout_sync(shout_t *self);
 
+/* Amount of time in ms caller should wait before sending again */
+int shout_delay(shout_t *self);
+  
 /* Sets MP3 metadata.
  * Returns:
  *   SHOUTERR_SUCCESS on success
