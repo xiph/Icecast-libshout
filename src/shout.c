@@ -781,7 +781,10 @@ static int login_http_basic(shout_t *self)
 	char header[4096];
 	http_parser_t *parser;
 	int code;
-	char *retcode, *realm;
+	char *retcode;
+#if 0
+	char *realm;
+#endif
     
 	self->error = SHOUTERR_SOCKET;
 
