@@ -58,6 +58,8 @@ struct shout {
 	char *genre;
 	/* description of the stream */
 	char *description;
+    /* username to use for HTTP auth. */
+    char *user;
 	/* bitrate of this stream */
 	int bitrate;
 	/* is this stream private? */

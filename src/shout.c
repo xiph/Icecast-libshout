@@ -11,11 +11,13 @@
 #include "sock.h"
 #include "timing.h"
 #include "util.h"
+#include "httpp/httpp.h"
 
 /* -- local prototypes -- */
 static int login_ice(shout_t *self);
 static int login_xaudiocast(shout_t *self);
 static int login_icy(shout_t *self);
+static int login_http_basic(shout_t *self);
 
 /* -- public functions -- */
 
@@ -50,6 +52,7 @@ void shout_free(shout_t *self)
 	if (self->url) free(self->url);
 	if (self->genre) free(self->genre);
 	if (self->description) free(self->description);
+	if (self->user) free(self->user);
 
 	free(self);
 }
@@ -63,14 +66,19 @@ int shout_open(shout_t *self)
 	if (!self->host || !self->password || !self->port || self->connected)
 		return self->error = SHOUTERR_INSANE;
 
-	if (self->format == SHOUT_FORMAT_VORBIS && self->protocol != SHOUT_PROTOCOL_ICE)
+	if (self->format == SHOUT_FORMAT_VORBIS && self->protocol != SHOUT_PROTOCOL_ICE && self->protocol != SHOUT_PROTOCOL_HTTP)
 		return self->error = SHOUTERR_UNSUPPORTED;
 
-	self->socket = sock_connect(self->host, self->port);
-	if (self->socket <= 0)
-		return self->error = SHOUTERR_NOCONNECT;
+    if(self->protocol != SHOUT_PROTOCOL_HTTP) {
+    	self->socket = sock_connect(self->host, self->port);
+	    if (self->socket <= 0)
+		    return self->error = SHOUTERR_NOCONNECT;
+    }
 
-	if (self->protocol == SHOUT_PROTOCOL_ICE) {
+    if (self->protocol == SHOUT_PROTOCOL_HTTP) {
+        return login_http_basic(self);
+    }
+    else if (self->protocol == SHOUT_PROTOCOL_ICE) {
 		if ((self->error = login_ice(self)) != SHOUTERR_SUCCESS) {
 			sock_close(self->socket);
 			return self->error;
@@ -388,6 +396,31 @@ const char *shout_get_genre(shout_t *self)
 	return self->genre;
 }
 
+int shout_set_user(shout_t *self, const char *username)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	if (self->connected)
+		return self->error = SHOUTERR_CONNECTED;
+
+	if (self->user)
+		free(self->user);
+
+	if (! (self->user = util_strdup (username)))
+		return self->error = SHOUTERR_MALLOC;
+
+	return self->error = SHOUTERR_SUCCESS;
+}
+
+const char *shout_get_user(shout_t *self)
+{
+    if (!self)
+        return NULL;
+
+    return self->user;
+}
+
 int shout_set_description(shout_t *self, const char *description)
 {
 	if (!self)
@@ -489,7 +522,8 @@ int shout_set_protocol(shout_t *self, unsigned int protocol)
 
 	if (protocol != SHOUT_PROTOCOL_ICE &&
 	    protocol != SHOUT_PROTOCOL_XAUDIOCAST &&
-	    protocol != SHOUT_PROTOCOL_ICY)
+	    protocol != SHOUT_PROTOCOL_ICY &&
+        protocol != SHOUT_PROTOCOL_HTTP)
 		return self->error = SHOUTERR_UNSUPPORTED;
 
 	self->protocol = protocol;
@@ -506,6 +540,136 @@ unsigned int shout_get_protocol(shout_t *self)
 }
 
 /* -- static function definitions -- */
+
+static int send_http_request(shout_t *self, char *username, char *password)
+{
+    if (!sock_write(self->socket, "SOURCE %s HTTP/1.0\r\n", self->mount))
+		return SHOUTERR_SOCKET;
+
+	if (!sock_write(self->socket, "ice-name: %s\r\n", self->name != NULL ? self->name : "no name"))
+		return SHOUTERR_SOCKET;
+	if (self->url) {
+		if (!sock_write(self->socket, "ice-url: %s\r\n", self->url))
+			return SHOUTERR_SOCKET;
+	}
+	if (self->genre) {
+		if (!sock_write(self->socket, "ice-genre: %s\r\n", self->genre))
+			return SHOUTERR_SOCKET;
+	}
+	if (!sock_write(self->socket, "ice-bitrate: %d\r\n", self->bitrate))
+		return SHOUTERR_SOCKET;
+	if (!sock_write(self->socket, "ice-public: %d\r\n", self->public))
+		return SHOUTERR_SOCKET;
+	if (self->description) {
+		if (!sock_write(self->socket, "ice-description: %s\r\n", self->description))
+			return SHOUTERR_SOCKET;
+	}
+	if (self->format == SHOUT_FORMAT_VORBIS) {
+		if (!sock_write(self->socket, "Content-Type: application/x-ogg\r\n"))
+			return SHOUTERR_SOCKET;
+	} else if (self->format == SHOUT_FORMAT_MP3) {
+		if (!sock_write(self->socket, "Content-Type: audio/mpeg\r\n"))
+			return SHOUTERR_SOCKET;
+	}
+    if (username && password) {
+        char *data;
+        int len = strlen(username) + strlen(password) + 1;
+        char *orig = malloc(len+1);
+        strcpy(orig, username);
+        strcat(orig, ":");
+        strcat(orig, password);
+
+        data = util_base64_encode(orig);
+
+        if(!sock_write(self->socket, "Authorization: Basic %s\r\n", data)) {
+            free(data);
+            return SHOUTERR_SOCKET;
+        }
+        free(data);
+    }
+
+	if (!sock_write(self->socket, "\r\n"))
+		return SHOUTERR_SOCKET;
+
+	return SHOUTERR_SUCCESS;
+}
+
+
+static int login_http_basic(shout_t *self)
+{
+    char header[4096];
+    http_parser_t *parser;
+    int code;
+    char *retcode, *realm;
+    
+    self->error = SHOUTERR_SOCKET;
+
+   	self->socket = sock_connect(self->host, self->port);
+    if (self->socket <= 0) {
+	    return self->error = SHOUTERR_NOCONNECT;
+    }
+
+    if(send_http_request(self, NULL, NULL) != 0) {
+        sock_close(self->socket);
+        return self->error = SHOUTERR_SOCKET;
+    }
+
+    if (util_read_header(self->socket, header, 4096) == 0) {
+        /* either we didn't get a complete header, or we timed out */
+        sock_close(self->socket);
+	    return self->error = SHOUTERR_SOCKET;
+    }
+
+    parser = httpp_create_parser();
+    httpp_initialize(parser, NULL);
+    if (httpp_parse_response(parser, header, strlen(header), self->mount)) {
+        retcode = httpp_getvar(parser, HTTPP_VAR_ERROR_CODE);
+        code = atoi(retcode);
+        if(code >= 200 && code < 300) {
+            httpp_destroy(parser);
+	        return SHOUTERR_SUCCESS;
+        }
+        else if(code == 401) {
+            /* Don't really use this right now other than to check that it's
+             * present.
+             */
+            realm = httpp_getvar(parser, "www-authenticate");
+            if(realm) {
+                httpp_destroy(parser);
+                sock_close(self->socket);
+
+   	            self->socket = sock_connect(self->host, self->port);
+                if (self->socket <= 0)
+            	    return self->error = SHOUTERR_NOCONNECT;
+
+                if(send_http_request(self, self->user, self->password) != 0) {
+                    sock_close(self->socket);
+                    return self->error = SHOUTERR_SOCKET;
+                }
+
+                if (util_read_header(self->socket, header, 4096) == 0) {
+                    /* either we didn't get a complete header, or we timed out */
+                    sock_close(self->socket);
+	                return self->error = SHOUTERR_SOCKET;
+                }
+                parser = httpp_create_parser();
+                httpp_initialize(parser, NULL);
+                if (httpp_parse_response(parser, header, strlen(header), self->mount)) {
+                    retcode = httpp_getvar(parser, HTTPP_VAR_ERROR_CODE);
+                    code = atoi(retcode);
+                    if(code >= 200 && code < 300) {
+                        httpp_destroy(parser);
+            	        return SHOUTERR_SUCCESS;
+                    }
+                }
+            }
+        }
+    }
+
+    httpp_destroy(parser);
+    sock_close(self->socket);
+    return self->error = SHOUTERR_REFUSED;
+}
 
 static int login_ice(shout_t *self)
 {

@@ -17,6 +17,7 @@
 #define SHOUTERR_CONNECTED	(7)
 #define SHOUTERR_UNCONNECTED	(8)
 #define SHOUTERR_UNSUPPORTED	(9)
+#define SHOUTERR_REFUSED    (10)
 
 #define SHOUT_FORMAT_VORBIS	(0)
 #define SHOUT_FORMAT_MP3	(1)
@@ -24,6 +25,7 @@
 #define SHOUT_PROTOCOL_ICE		(0)
 #define SHOUT_PROTOCOL_XAUDIOCAST	(1)
 #define SHOUT_PROTOCOL_ICY		(2)
+#define SHOUT_PROTOCOL_HTTP	    (3)
 
 typedef struct shout shout_t;
 typedef struct shout_metadata shout_metadata_t;
@@ -74,6 +76,9 @@ const char *shout_get_url(shout_t *self);
 
 int shout_set_genre(shout_t *self, const char *genre);
 const char *shout_get_genre(shout_t *self);
+
+int shout_set_user(shout_t *self, const char *username);
+const char *shout_get_user(shout_t *self);
 
 int shout_set_description(shout_t *self, const char *description);
 const char *shout_get_description(shout_t *self);

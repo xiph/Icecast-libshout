@@ -29,9 +29,9 @@ if test -z "$GCC"; then
 else
         case $host in 
         *-*-linux*)
-                DEBUG="-g -Wall -W -fsigned-char -D_REENTRANT"
-                CFLAGS="-Wall -W -O20 -ffast-math -fsigned-char -D_REENTRANT"
-                PROFILE="-Wall -W -pg -g -O20 -ffast-math -fsigned-char -D_REENTRANT"
+                DEBUG="-g -Wall -W -fsigned-char -D_REENTRANT -D_GNU_SOURCE"
+                CFLAGS="-Wall -W -O20 -ffast-math -fsigned-char -D_REENTRANT -D_GNU_SOURCE"
+                PROFILE="-Wall -W -pg -g -O20 -ffast-math -fsigned-char -D_REENTRANT -D_GNU_SOURCE"
 		;;
         sparc-sun-*)
                 DEBUG="-g -Wall -fsigned-char -mv8"
@@ -93,4 +93,4 @@ AC_SUBST(DEBUG)
 AC_SUBST(CFLAGS)
 AC_SUBST(PROFILE)
 
-AC_OUTPUT(Makefile include/Makefile include/shout/Makefile src/Makefile src/net/Makefile src/timing/Makefile examples/Makefile)
+AC_OUTPUT(Makefile include/Makefile include/shout/Makefile src/Makefile src/net/Makefile src/timing/Makefile src/thread/Makefile src/avl/Makefile src/httpp/Makefile examples/Makefile)
