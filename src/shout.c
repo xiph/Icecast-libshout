@@ -429,7 +429,7 @@ int shout_set_mount(shout_t *self, const char *mount)
 	if (self->mount)
 		free(self->mount);
 
-	len = strlen (mount) + 2;
+	len = strlen (mount) + 1;
 	if (mount[0] != '/')
 		len++;
 
