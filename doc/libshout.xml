@@ -15,7 +15,7 @@
     </copyright>
     -->
     <orgname><ulink url="http://xiph.org/">Xiph.org</ulink></orgname>
-    <releaseinfo>$Id: libshout.xml,v 1.3 2003/07/05 04:40:27 brendan Exp $</releaseinfo>
+    <releaseinfo>$Id: libshout.xml,v 1.4 2003/07/09 18:09:00 brendan Exp $</releaseinfo>
     <date> 3 Jul 2003</date>
   </bookinfo>
 
@@ -42,6 +42,9 @@ servers. Currently it supports two audio formats and three protocols.
 <chapter><title>Reference</title>
 
 <section><title>Functions</title>
+
+<section><title>Global functions</title>
+
 <funcsynopsis id="shout_init">
 <funcprototype>
   <funcdef>void <function>shout_init</function></funcdef>
@@ -76,9 +79,13 @@ minor and patch levels of the library. The application must allocate
 the integer parameters. If any parameter is NULL, libshout will not
 attempt to set it.
 
+</section>
+
+<section><title>Managing connections</title>
+
 <funcsynopsis id="shout_new">
 <funcprototype>
-  <funcdef><type>shout_t</type> <function>shout_new</function></funcdef>
+  <funcdef><type>shout_t</type> *<function>shout_new</function></funcdef>
   <void/>
 </funcprototype>
 </funcsynopsis>
@@ -90,7 +97,7 @@ finished with it.
 <funcsynopsis id="shout_free">
 <funcprototype>
   <funcdef>void <function>shout_free</function></funcdef>
-  <paramdef><type>shout_t</type> <parameter>self</parameter></paramdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
 Frees a <type>shout_t</type> allocated by
@@ -99,7 +106,7 @@ Frees a <type>shout_t</type> allocated by
 <funcsynopsis id="shout_open">
 <funcprototype>
   <funcdef>int <function>shout_open</function></funcdef>
-  <paramdef><type>shout_t</type> <parameter>self</parameter></paramdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
 Opens a connection to a server. All connection parameters must have been
@@ -152,7 +159,7 @@ set prior to this call.
 <funcsynopsis id="shout_close">
 <funcprototype>
   <funcdef>int <function>shout_close</function></funcdef>
-  <paramdef><type>shout_t</type> <parameter>self</parameter></paramdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
 Closes a connection to the server.
@@ -175,10 +182,32 @@ Closes a connection to the server.
   </varlistentry>
 </variablelist>
 
+<funcsynopsis id="shout_get_error">
+<funcprototype>
+  <funcdef>const char *<function>shout_get_error</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Returns a statically allocated string describing the last shout error
+that occured in this connection. Only valid until the next call affecting
+this connection.
+
+<funcsynopsis id="shout_get_errno">
+<funcprototype>
+  <funcdef>int <function>shout_get_errno</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Returns the shout error code of the last error that occured in this connection.
+
+</section>
+
+<section><title>Sending data</title>
+
 <funcsynopsis id="shout_send">
 <funcprototype>
   <funcdef>int <function>shout_send</function></funcdef>
-  <paramdef><type>shout_t</type> <parameter>self</parameter></paramdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
   <paramdef>const unsigned char *<parameter>data></parameter></paramdef>
   <paramdef><type>size_t</type> <parameter>len</parameter></paramdef>
 </funcprototype>
@@ -219,7 +248,7 @@ established by a successful call to
 <funcsynopsis id="shout_send_raw">
 <funcprototype>
   <funcdef><type>ssize_t</type> <function>shout_send_raw</function></funcdef>
-  <paramdef><type>shout_t</type> <parameter>self</parameter></paramdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
   <paramdef>const unsigned char *<parameter>data></parameter></paramdef>
   <paramdef><type>size_t</type> <parameter>len</parameter></paramdef>
 </funcprototype>
@@ -259,7 +288,7 @@ the library.</warning>
 <funcsynopsis id="shout_sync">
 <funcprototype>
   <funcdef>void <function>shout_sync</function></funcdef>
-  <paramdef><type>shout_t</type> <parameter>self</parameter></paramdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
 Causes the caller to sleep for the amount of time necessary to play back
@@ -274,7 +303,7 @@ determine the number of milliseconds to wait and delay itself.
 <funcsynopsis id="shout_delay">
 <funcprototype>
   <funcdef>int <function>shout_delay</function></funcdef>
-  <paramdef><type>shout_t</type> <parameter>self</parameter></paramdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
 Returns the number of milliseconds the caller should wait before calling
@@ -283,23 +312,114 @@ This function is provided as an alternative to
 <link linkend="shout_sync"><function>shout_sync</function></link> for
 applications that may wish to do other processing in the meantime.
 
-<funcsynopsis id="shout_get_error">
-<funcprototype>
-  <funcdef>const char *<function>shout_get_error</function></funcdef>
-  <paramdef><type>shout_t</type> <parameter>self</parameter></paramdef>
-</funcprototype>
-</funcsynopsis>
-Returns a statically allocated string describing the last shout error
-that occured in this connection. Only valid until the next call affecting
-this connection.
+</section>
 
-<funcsynopsis id="shout_get_errno">
+<section><title>Connection parameters</title>
+</section>
+
+<section><title>Metadata</title>
+These functions currently only make sense for MP3 streams. Vorbis streams are expected
+to embed metadata as vorbis comments in the audio stream.
+
+<funcsynopsis id="shout_metadata_new">
 <funcprototype>
-  <funcdef>int <function>shout_get_errno</function></funcdef>
-  <paramdef><type>shout_t</type> <parameter>self</parameter></paramdef>
+  <funcdef><type>shout_metadata_t</type> *<function>shout_metadata_new</function></funcdef>
+  <void/>
 </funcprototype>
 </funcsynopsis>
-Returns the shout error code of the last error that occured in this connection.
+Allocates a new metadata structure, or returns NULL if no memory is available. The
+returned structure should be freed with
+<link linkend="shout_metadata_free">shout_metadata_free</link> when you are done with
+it.
+
+<funcsynopsis id="shout_metadata_free">
+<funcprototype>
+  <funcdef>void <function>shout_metadata_free</function></funcdef>
+  <paramdef><type>shout_metadata_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Frees any resources associated with <varname>self</varname>.
+
+<funcsynopsis id="shout_metadata_add">
+<funcprototype>
+  <funcdef>int <function>shout_metadata_add</function></funcdef>
+  <paramdef><type>shout_metadata_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>const char *<parameter>name</parameter></paramdef>
+  <paramdef>const char *<parameter>value</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Add metadata value <varname>value</varname> to <varname>self</varname>, under the
+key <varname>name</varname>. You'll probably want to set <varname>name</varname>
+to <constant>"song"</constant>, though <constant>"url"</constant> may also be
+useful.
+
+<variablelist><title>Return Values</title>
+  <varlistentry>
+  <term><constant>SHOUTERR_SUCCESS</constant></term>
+  <listitem>The metadata was copied into <varname>self</varname>.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_INSANE</constant></term>
+  <listitem><varname>self</varname> is not a valid <type>shout_metadata_t</type> object.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_MALLOC</constant></term>
+  <listitem>Couldn't allocate enough memory to copy the metadata.</listitem>
+  </varlistentry>
+</variablelist>
+
+<funcsynopsis id="shout_set_metadata">
+<funcprototype>
+  <funcdef>int <function>shout_set_metadata</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef><type>shout_metadata_t</type> *<parameter>metadata</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+Sets metadata on the connection <varname>self</varname> to <varname>metadata</varname>.
+Only MP3 streams support this type of metadata update. You may use this function
+on defined but closed connections (this is useful if you simply want to set the
+metadata for a stream provided by another process).
+
+<variablelist><title>Return Values</title>
+  <varlistentry>
+  <term><constant>SHOUTERR_SUCCESS</constant></term>
+  <listitem>Metadata was updated successfully.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_INSANE</constant></term>
+  <listitem><varname>self</varname> and/or <varname>metadata</varname> is invalid.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_MALLOC</constant></term>
+  <listitem>Couldn't allocate enough memory to complete the operation.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_NOCONNECT</constant></term>
+  <listitem>The server refused the connection attempt.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_NOLOGIN</constant></term>
+  <listitem>The server did not accept your authorization credentials.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_SOCKET</constant></term>
+  <listitem>An error occured talking to the server.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_METADATA</constant></term>
+  <listitem>The server returned any other error (eg bad mount point).</listitem>
+  </varlistentry>
+</variablelist>
+
+</section>
 
 </section>
 
