@@ -80,6 +80,9 @@ const char *shout_get_genre(shout_t *self);
 int shout_set_user(shout_t *self, const char *username);
 const char *shout_get_user(shout_t *self);
 
+int shout_set_agent(shout_t *self, const char *username);
+const char *shout_get_agent(shout_t *self);
+
 int shout_set_description(shout_t *self, const char *description);
 const char *shout_get_description(shout_t *self);
 

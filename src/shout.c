@@ -53,6 +53,7 @@ void shout_free(shout_t *self)
 	if (self->genre) free(self->genre);
 	if (self->description) free(self->description);
 	if (self->user) free(self->user);
+    if (self->useragent) free(self->useragent);
 
 	free(self);
 }
@@ -396,6 +397,32 @@ const char *shout_get_genre(shout_t *self)
 	return self->genre;
 }
 
+int shout_set_agent(shout_t *self, const char *agent)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	if (self->connected)
+		return self->error = SHOUTERR_CONNECTED;
+
+	if (self->useragent)
+		free(self->useragent);
+
+	if (! (self->useragent = util_strdup (agent)))
+		return self->error = SHOUTERR_MALLOC;
+
+	return self->error = SHOUTERR_SUCCESS;
+}
+
+const char *shout_get_agent(shout_t *self)
+{
+    if (!self)
+        return NULL;
+
+    return self->useragent;
+}
+
+
 int shout_set_user(shout_t *self, const char *username)
 {
 	if (!self)
@@ -564,6 +591,10 @@ static int send_http_request(shout_t *self, char *username, char *password)
 		if (!sock_write(self->socket, "ice-description: %s\r\n", self->description))
 			return SHOUTERR_SOCKET;
 	}
+    if (self->useragent) {
+        if (!sock_write(self->socket, "User-Agent: %s\r\n", self->useragent))
+            return SHOUTERR_SOCKET;
+    }
 	if (self->format == SHOUT_FORMAT_VORBIS) {
 		if (!sock_write(self->socket, "Content-Type: application/x-ogg\r\n"))
 			return SHOUTERR_SOCKET;

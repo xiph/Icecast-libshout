@@ -48,6 +48,8 @@ struct shout {
 	/* type of data being sent */
 	unsigned int format;
 
+    /* user-agent to use when doing HTTP login */
+    char *useragent;
 	/* mountpoint for this stream */
 	char *mount;
 	/* name of the stream */
