@@ -5,6 +5,9 @@ AUTOMAKE_OPTIONS = foreign
 SUBDIRS = include src examples
 
 EXTRA_DIST = README COPYING
+bin_SCRIPTS = shout-config
+
+shout-config.in: $(top_srcdir)/configure
 
 ##install-data-local:
 	##mkdir -p $(DESTDIR)$(includedir)/shout
