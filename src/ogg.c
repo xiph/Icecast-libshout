@@ -36,37 +36,69 @@
 #include "shout_private.h"
 
 /* -- local datatypes -- */
-typedef struct {
-	/* total pages broadcasted */
-	unsigned int pages;
-
-	unsigned int samplerate;
-
-	ogg_sync_state oy;
+typedef struct _ogg_codec_tag {
 	ogg_stream_state os;
 
-	int headers;
+	unsigned int headers;
+	uint64_t senttime;
+
+	void *codec_data;
+	int (*read_page)(struct _ogg_codec_tag *codec, ogg_page *page);
+	void (*free_data)(void *codec_data);
+
+	struct _ogg_codec_tag *next;
+} ogg_codec_t;
+
+typedef struct {
+	ogg_sync_state oy;
+	ogg_codec_t *codecs;
+	char bos;
+} ogg_data_t;
+
+typedef struct {
 	vorbis_info vi;
 	vorbis_comment vc;
 	int prevW;
-
-	long serialno;
-    int initialised;
 } vorbis_data_t;
 
 /* -- static prototypes -- */
 static int send_ogg(shout_t *self, const unsigned char *data, size_t len);
 static void close_ogg(shout_t *self);
+static int open_codec(ogg_codec_t *codec, ogg_page *page);
+static void free_codec(ogg_codec_t *codec);
+static void free_codecs(ogg_data_t *ogg_data);
+static int send_page(shout_t *self, ogg_page *page);
+
+/* vorbis handler */
+static int open_vorbis(ogg_codec_t *codec, ogg_page *page);
+static int read_vorbis_page(ogg_codec_t *codec, ogg_page *page);
+static void free_vorbis_data(void *codec_data);
+static int vorbis_blocksize(vorbis_data_t *vd, ogg_packet *p);
+
+#ifdef HAVE_THEORA
+/* theora handler */
+static int open_theora(ogg_codec_t *codec, ogg_page *page);
+#endif
+
+typedef int (*codec_open_t)(ogg_codec_t *codec, ogg_page *page);
+static codec_open_t codecs[] = {
+	open_vorbis,
+#ifdef HAVE_THEORA
+	open_theora,
+#endif
+	NULL
+};
 
 int shout_open_ogg(shout_t *self)
 {
-	vorbis_data_t *vorbis_data;
+	ogg_data_t *ogg_data;
 
-	if (!(vorbis_data = (vorbis_data_t *)calloc(1, sizeof(vorbis_data_t))))
-		return SHOUTERR_MALLOC;
-	self->format_data = vorbis_data;
+	if (!(ogg_data = (ogg_data_t *)calloc(1, sizeof(ogg_data_t))))
+		return self->error = SHOUTERR_MALLOC;
+	self->format_data = ogg_data;
 
-	ogg_sync_init(&vorbis_data->oy);
+	ogg_sync_init(&ogg_data->oy);
+	ogg_data->bos = 1;
 
 	self->send = send_ogg;
 	self->close = close_ogg;
@@ -74,7 +106,191 @@ int shout_open_ogg(shout_t *self)
 	return SHOUTERR_SUCCESS;
 }
 
-static int blocksize(vorbis_data_t *vd, ogg_packet *p)
+static int send_ogg(shout_t *self, const unsigned char *data, size_t len)
+{
+	ogg_data_t *ogg_data = (ogg_data_t *)self->format_data;
+	ogg_codec_t *codec;
+	char *buffer;
+	ogg_page page;
+
+	buffer = ogg_sync_buffer(&ogg_data->oy, len);
+	memcpy(buffer, data, len);
+	ogg_sync_wrote(&ogg_data->oy, len);
+
+	while (ogg_sync_pageout(&ogg_data->oy, &page) == 1) {
+		if (ogg_page_bos (&page)) {
+			if (! ogg_data->bos) {
+				free_codecs(ogg_data);
+				ogg_data->bos = 1;
+			}
+
+			ogg_codec_t *codec = calloc(1, sizeof(ogg_codec_t));
+			if (! codec)
+				return self->error = SHOUTERR_MALLOC;
+			
+			if ((self->error = open_codec(codec, &page)) != SHOUTERR_SUCCESS)
+				return self->error;
+
+			codec->headers = 1;
+			codec->senttime = self->senttime;
+			codec->next = ogg_data->codecs;
+			ogg_data->codecs = codec;
+		} else {
+			ogg_data->bos = 0;
+
+			codec = ogg_data->codecs;
+			while (codec) {
+				if (ogg_page_serialno(&page) == codec->os.serialno) {
+					if (codec->read_page) {
+						ogg_stream_pagein(&codec->os, &page);
+						codec->read_page(codec, &page);
+
+						if (self->senttime < codec->senttime)
+							self->senttime = codec->senttime;
+					}
+					
+					break;
+				}
+
+				codec = codec->next;
+			}
+		}
+
+		if ((self->error = send_page(self, &page)) != SHOUTERR_SUCCESS)
+			return self->error;
+	}
+
+	return self->error = SHOUTERR_SUCCESS;
+}
+
+static void close_ogg(shout_t *self)
+{
+	ogg_data_t *ogg_data = (ogg_data_t *)self->format_data;
+	free_codecs(ogg_data);
+	ogg_sync_clear(&ogg_data->oy);
+	free(ogg_data);
+}
+
+static int open_codec(ogg_codec_t *codec, ogg_page *page)
+{
+	codec_open_t open_codec;
+	int i = 0;
+
+	while ((open_codec = codecs[i])) {
+		ogg_stream_init(&codec->os, ogg_page_serialno(page));
+		ogg_stream_pagein(&codec->os, page);
+
+		if (open_codec(codec, page) == SHOUTERR_SUCCESS)
+			return SHOUTERR_SUCCESS;
+
+		ogg_stream_clear(&codec->os);
+		i++;
+	}
+	
+	/* if no handler is found, we currently just fall back to untimed send_raw */
+	return SHOUTERR_SUCCESS;
+}
+
+static void free_codecs(ogg_data_t *ogg_data)
+{
+	ogg_codec_t *codec, *next;
+
+	if (ogg_data == NULL)
+		return;
+
+	codec = ogg_data->codecs;
+	while (codec) {
+		next = codec->next;
+		free_codec(codec);
+		codec = next;
+	}
+	ogg_data->codecs = NULL;
+}
+
+static void free_codec(ogg_codec_t *codec)
+{
+	if (codec->free_data)
+		codec->free_data(codec->codec_data);
+	ogg_stream_clear(&codec->os);
+	free(codec);
+}
+
+static int send_page(shout_t *self, ogg_page *page)
+{
+	int ret;
+
+	ret = shout_send_raw(self, page->header, page->header_len);
+	if (ret != page->header_len)
+		return self->error = SHOUTERR_SOCKET;
+	ret = shout_send_raw(self, page->body, page->body_len);
+	if (ret != page->body_len)
+		return self->error = SHOUTERR_SOCKET;
+
+	return SHOUTERR_SUCCESS;
+}
+
+/* -- vorbis functions -- */
+static int open_vorbis(ogg_codec_t *codec, ogg_page *page)
+{
+	vorbis_data_t *vorbis_data = calloc(1, sizeof(vorbis_data_t));
+	ogg_packet packet;
+
+	if (!vorbis_data)
+		return SHOUTERR_MALLOC;
+
+	vorbis_info_init(&vorbis_data->vi);
+	vorbis_comment_init(&vorbis_data->vc);
+
+	ogg_stream_packetout(&codec->os, &packet);
+
+	if (vorbis_synthesis_headerin(&vorbis_data->vi, &vorbis_data->vc, &packet) < 0) {
+		free_vorbis_data(vorbis_data);
+		
+		return SHOUTERR_UNSUPPORTED;
+	}
+
+	codec->codec_data = vorbis_data;
+	codec->read_page = read_vorbis_page;
+	codec->free_data = free_vorbis_data;
+
+	return SHOUTERR_SUCCESS;
+}
+
+static int read_vorbis_page(ogg_codec_t *codec, ogg_page *page)
+{
+	ogg_packet packet;
+	vorbis_data_t *vorbis_data = codec->codec_data;
+
+	if (codec->headers < 3) {
+		while (ogg_stream_packetout (&codec->os, &packet) > 0) {
+			if (vorbis_synthesis_headerin(&vorbis_data->vi, &vorbis_data->vc, &packet) < 0)
+				return SHOUTERR_INSANE;
+			codec->headers++;
+		}
+
+		return SHOUTERR_SUCCESS;
+	}
+
+	uint64_t samples = 0;
+
+	while (ogg_stream_packetout (&codec->os, &packet) > 0)
+		samples += vorbis_blocksize(vorbis_data, &packet);
+
+	codec->senttime += ((samples * 1000000) / vorbis_data->vi.rate);
+
+	return SHOUTERR_SUCCESS;
+}
+
+static void free_vorbis_data(void *codec_data)
+{
+	vorbis_data_t *vorbis_data = (vorbis_data_t *)codec_data;
+
+	vorbis_info_clear(&vorbis_data->vi);
+	vorbis_comment_clear(&vorbis_data->vc);
+	free(vorbis_data);
+}
+
+static int vorbis_blocksize(vorbis_data_t *vd, ogg_packet *p)
 {
 	int this = vorbis_packet_blocksize(&vd->vi, p);
 	int ret = (this + vd->prevW)/4;
@@ -86,83 +302,4 @@ static int blocksize(vorbis_data_t *vd, ogg_packet *p)
 
 	vd->prevW = this;
 	return ret;
-}
-
-static int send_ogg(shout_t *self, const unsigned char *data, size_t len)
-{
-	vorbis_data_t *vorbis_data = (vorbis_data_t *)self->format_data;
-	int ret;
-	char *buffer;
-	ogg_page og;
-	ogg_packet op;
-	uint64_t samples;
-
-	buffer = ogg_sync_buffer(&vorbis_data->oy, len);
-	memcpy(buffer, data, len);
-	ogg_sync_wrote(&vorbis_data->oy, len);
-
-	while (ogg_sync_pageout(&vorbis_data->oy, &og) == 1) {
-		if (vorbis_data->serialno != ogg_page_serialno(&og) || 
-                !vorbis_data->initialised) 
-        {
-			/* Clear the old one - this is safe even if there was no previous
-			 * stream */
-			vorbis_comment_clear(&vorbis_data->vc);
-			vorbis_info_clear(&vorbis_data->vi);
-			ogg_stream_clear(&vorbis_data->os);
-
-			vorbis_data->serialno = ogg_page_serialno(&og);
-
-			ogg_stream_init(&vorbis_data->os, vorbis_data->serialno);
-
-			vorbis_info_init(&vorbis_data->vi);
-			vorbis_comment_init(&vorbis_data->vc);
-
-			vorbis_data->initialised = 1;
-
-			vorbis_data->headers = 1;
-		}
-
-		samples = 0;
-
-		ogg_stream_pagein(&vorbis_data->os, &og);
-		while(ogg_stream_packetout(&vorbis_data->os, &op) == 1) {
-			int size;
-
-			if(vorbis_data->headers > 0 && vorbis_data->headers <= 3) {
-				vorbis_synthesis_headerin(&vorbis_data->vi, &vorbis_data->vc, 
-							  &op);
-				if(vorbis_data->headers == 1)
-					vorbis_data->samplerate = vorbis_data->vi.rate;
-
-				vorbis_data->headers++;
-				continue;
-			}
-
-			vorbis_data->headers = 0;
-			size = blocksize(vorbis_data, &op);
-			samples += size;
-		}
-		self->senttime += (samples *  1000000) / 
-			(vorbis_data->samplerate);
-
-		ret = sock_write_bytes(self->socket, og.header, og.header_len);
-		if (ret != og.header_len)
-			return self->error = SHOUTERR_SOCKET;
-
-		ret = sock_write_bytes(self->socket, og.body, og.body_len);
-		if (ret != og.body_len)
-			return self->error = SHOUTERR_SOCKET;
-
-		vorbis_data->pages++;
-	}
-
-	return self->error = SHOUTERR_SUCCESS;
-}
-
-static void close_ogg(shout_t *self)
-{
-	vorbis_data_t *vorbis_data = (vorbis_data_t *)self->format_data;
-	ogg_sync_clear(&vorbis_data->oy);
-	free(vorbis_data);
 }
