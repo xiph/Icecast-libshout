@@ -77,7 +77,8 @@ int shout_open(shout_t *self)
     }
 
     if (self->protocol == SHOUT_PROTOCOL_HTTP) {
-        return login_http_basic(self);
+        if ((self->error = login_http_basic(self)) != SHOUTERR_SUCCESS)
+            return self->error;
     }
     else if (self->protocol == SHOUT_PROTOCOL_ICE) {
 		if ((self->error = login_ice(self)) != SHOUTERR_SUCCESS) {
