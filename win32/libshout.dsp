@@ -105,6 +105,10 @@ SOURCE=..\src\mp3.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\ogg.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\net\resolver.c
 # End Source File
 # Begin Source File
@@ -150,10 +154,6 @@ SOURCE=..\src\util.c
 # Begin Source File
 
 SOURCE=..\src\util.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\vorbis.c
 # End Source File
 # End Group
 # Begin Group "Header Files"
