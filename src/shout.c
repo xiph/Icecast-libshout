@@ -41,6 +41,7 @@
 /* -- local prototypes -- */
 static int queue_data(shout_t *self, const unsigned char *data, size_t len);
 static int queue_str(shout_t *self, const char *str);
+static int send_queue(shout_t *self);
 static int try_write (shout_t *self, const void *data, size_t len);
 
 static int login_xaudiocast(shout_t *self);
@@ -790,6 +791,7 @@ static int queue_data(shout_t *self, const unsigned char *data, size_t len)
 		plen = len > SHOUT_BUFSIZE - buf->len ? SHOUT_BUFSIZE - buf->len : len;
 		memcpy (buf->data + buf->len, data, plen);
 		buf->len += plen;
+		data += plen;
 		len -= plen;
 	}
 
@@ -863,7 +865,7 @@ static int send_queue(shout_t *self)
 
 	buf = self->queue;
 	while (buf) {
-		ret = try_write (self, buf + buf->pos, buf->len - buf->pos);
+		ret = try_write (self, buf->data + buf->pos, buf->len - buf->pos);
 		if (ret < 0)
 			return self->error;
 
