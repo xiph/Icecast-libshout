@@ -12,7 +12,7 @@ EXTRA_DIST = INSTALL m4/shout.m4 m4/ac_config_libconfig_in.m4 m4/acx_pthread.m4 
 DISTCLEANFILES = shout-config.in
 
 docdir = $(datadir)/doc/$(PACKAGE)
-doc_DATA = COPYING README examples/example.c
+doc_DATA = COPYING README examples/example.c examples/nonblocking.c
 
 m4datadir = $(datadir)/aclocal
 m4data_DATA = m4/shout.m4
