@@ -139,8 +139,12 @@ int shout_delay(shout_t *self);
   
 /* Sets MP3 metadata.
  * Returns:
- *   SHOUTERR_SUCCESS on success
- *   SHOUTERR_UNSUPPORTED if protocol isn't Icy or X-Audiocast
+ *   SHOUTERR_SUCCESS
+ *   SHOUTERR_UNSUPPORTED if format isn't MP3
+ *   SHOUTERR_MALLOC
+ *   SHOUTERR_INSANE
+ *   SHOUTERR_NOCONNECT
+ *   SHOUTERR_SOCKET
  */
 int shout_set_metadata(shout_t *self, shout_metadata_t *metadata);
 

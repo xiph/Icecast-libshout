@@ -291,8 +291,6 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 	if (!(encvalue = _shout_util_dict_urlencode(metadata, '&')))
 		return SHOUTERR_MALLOC;
 
-	if (!self->connected)
-		return SHOUTERR_UNCONNECTED;
 	if ((socket = sock_connect(self->host, self->port)) <= 0)
 		return SHOUTERR_NOCONNECT;
 
