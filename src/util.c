@@ -156,7 +156,7 @@ void util_dict_free(util_dict *dict)
 const char *util_dict_get(util_dict *dict, const char *key)
 {
 	while (dict) {
-		if (!strcmp(key, dict->key))
+		if (dict->key && !strcmp(key, dict->key))
 			return dict->val;
 		dict = dict->next;
 	}
