@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.40 2003/06/05 13:59:29 brendan Exp $
+# $Id: configure.in,v 1.41 2003/06/05 14:32:35 brendan Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -68,7 +68,7 @@ dnl Checks for programs.
 
 dnl Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([inttypes.h sys/socket.h])
+AC_CHECK_HEADERS([inttypes.h sys/socket.h sys/uio.h])
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
