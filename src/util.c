@@ -111,7 +111,7 @@ char *util_url_encode(const char *data) {
 		if (!isalnum((int)*p))
 			n += 2;
 	}
-	if (!(dest = malloc(n)))
+	if (!(dest = malloc(n+1)))
 		return NULL;
 		
 	for (p = data, q = dest; *p; p++, q++) {
