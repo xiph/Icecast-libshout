@@ -203,7 +203,7 @@ static int send_mp3(shout_t* self, const unsigned char* buff, size_t len)
 				end = pos - 1;
 				count = end - start + 1;
 				if (count > 0)
-					ret = sock_write_bytes(self->socket, (char *)&buff[start], count);
+					ret = shout_send_raw(self, (char *)&buff[start], count);
 				else
 					ret = 0;
 
@@ -234,7 +234,7 @@ static int send_mp3(shout_t* self, const unsigned char* buff, size_t len)
 		/* if there's no errors, lets send the frames */
 		count = end - start + 1;
 		if (count > 0)
-			ret = sock_write_bytes(self->socket, (char *)&buff[start], count);
+			ret = shout_send_raw(self, (char *)&buff[start], count);
 		else
 			ret = 0;
 
