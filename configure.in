@@ -1,6 +1,5 @@
-dnl Process this file with autoconf to produce a configure script.
-AC_INIT(src/shout.c)
-AM_CONFIG_HEADER(config.h)
+# Process this file with autoconf to produce a configure script.
+# $Id: configure.in,v 1.21 2003/03/11 05:11:19 brendan Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -8,6 +7,11 @@ m4_define(libshout_micro, 0)
 m4_define(libshout_version,
   m4_if(libshout_micro, 0, libshout_major.libshout_minor,
    libshout_major.libshout_minor.libshout_micro))
+
+AC_INIT([libshout], libshout_version, [icecast@xiph.org])
+AC_PREREQ(2.52)
+AC_CONFIG_SRCDIR([src/shout.c])
+AM_CONFIG_HEADER([config.h])
 
 AC_DEFINE([LIBSHOUT_MAJOR], libshout_major, ["Shout library major version"])
 AC_DEFINE([LIBSHOUT_MINOR], libshout_minor, ["Shout library minor version"])
@@ -51,37 +55,29 @@ dnl Checks for programs.
 
 dnl Checks for header files.
 AC_HEADER_STDC
+AC_CHECK_HEADERS([inttypes.h sys/socket.h])
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 
 dnl Check for types
-AC_CHECK_HEADERS(stdint.h inttypes.h)
-AC_MSG_CHECKING(for C99 integer types)
-dnl This is from autoconf-2.50's AC_CHECK_TYPE macro
-AC_TRY_COMPILE([
-#include <sys/types.h>
-#ifdef HAVE_STDINT_H
-#  include <stdint.h>
-#elif defined (HAVE_INTTYPES_H)
-#  include <inttypes.h>
-#endif], [
-if ((uint32_t *) 0)
-  return 0;
-if (sizeof (uint32_t))
-  return 0;
-], [
-  AC_DEFINE(HAVE_C99_INTTYPES, 1, [Define if you have the C99 integer types])
-  AC_MSG_RESULT(yes)
-], [
-  AC_MSG_RESULT(no)
-  AC_CHECK_SIZEOF(short)
-  AC_CHECK_SIZEOF(int)
-  AC_CHECK_SIZEOF(long)
-  AC_CHECK_SIZEOF(long long)
-])
-
-AC_CHECK_TYPE([socklen_t], int)
+AC_CHECK_TYPE([uint32_t],
+  [AC_DEFINE(HAVE_C99_INTTYPES, 1, [Define if you have the C99 integer types])],
+  [AC_CHECK_SIZEOF(short)
+   AC_CHECK_SIZEOF(int)
+   AC_CHECK_SIZEOF(long)
+   AC_CHECK_SIZEOF(long long)])
+AC_CHECK_TYPES([socklen_t],,,
+  [#if HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#if HAVE_SYS_SOCKET_H
+# include <sys/socket.h>
+#endif])
+AH_VERBATIM([HAVE_SOCKLEN_T],
+  [#ifndef HAVE_SOCKLEN_T
+typedef int socklen_t;
+#endif])
 
 dnl Checks for library functions.
 AC_CHECK_FUNCS(nanosleep)
