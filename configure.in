@@ -111,7 +111,6 @@ have_thread="no"
 if test "$enable_pthread" != "no"
 then
   ACX_PTHREAD([
-    AC_DEFINE([USE_THREAD], 1, [Define if you want to use the thread library])
     LIBS="$LIBS $PTHREAD_LIBS"
     CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
     CC="$PTHREAD_CC"
@@ -119,6 +118,10 @@ then
     ])
 fi
 AM_CONDITIONAL([HAVE_THREAD], [test "$have_thread" == "yes"])
+if test "$have_thread" != "yes"
+then
+  AC_DEFINE([NO_THREAD], 1, [Define if you don't want to use the thread library])
+fi
 
 XIPH_PATH_OGG
 XIPH_PATH_VORBIS
