@@ -49,6 +49,9 @@ fi
 dnl Checks for programs.
 
 dnl Checks for libraries.
+AC_SEARCH_LIBS(poll, poll, ,
+  AC_MSG_ERROR([This system appears to lack the poll function])
+)
 
 dnl Checks for header files.
 AC_HEADER_STDC
@@ -81,6 +84,9 @@ if (sizeof (uint32_t))
   AC_CHECK_SIZEOF(long)
   AC_CHECK_SIZEOF(long long)
 ])
+AC_CHECK_TYPE(socklen_t, ,
+  AC_DEFINE(socklen_t, int, [Define if you lack the socklen_t type])
+)
 
 dnl Checks for library functions.
 AC_CHECK_FUNCS(nanosleep)
