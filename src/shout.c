@@ -786,7 +786,12 @@ static int login_http_basic(shout_t *self)
 		return self->error = SHOUTERR_NOCONNECT;
 	}
 
+#if 0
 	if(send_http_request(self, NULL, NULL) != 0) {
+#else
+	/* assume we'll have to authenticate, saves round trips on basic */
+	if(send_http_request(self, self->user, self->password) != 0) {
+#endif
 		sock_close(self->socket);
 		return self->error = SHOUTERR_SOCKET;
 	}
@@ -806,6 +811,7 @@ static int login_http_basic(shout_t *self)
 			httpp_destroy(parser);
 			return SHOUTERR_SUCCESS;
 		}
+#if 0
 		else if(code == 401) {
 			/* Don't really use this right now other than to check that it's
 			* present.
@@ -841,6 +847,7 @@ static int login_http_basic(shout_t *self)
 				}
 			}
 		}
+#endif
 	}
 
 	httpp_destroy(parser);
