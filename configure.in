@@ -1,12 +1,12 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.56 2003/07/02 18:26:30 brendan Exp $
+# $Id: configure.in,v 1.57 2003/07/02 18:32:50 brendan Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
 m4_define(libshout_micro, 0)
 m4_define(libshout_version,
-  m4_if(libshout_micro, 0, libshout_major.libshout_minor[b1],
-   libshout_major.libshout_minor.libshout_micro[b1]))
+  m4_if(libshout_micro, 0, libshout_major.libshout_minor[b2],
+   libshout_major.libshout_minor.libshout_micro))
 
 AC_INIT([libshout], libshout_version, [icecast@xiph.org])
 AC_PREREQ([2.54])
