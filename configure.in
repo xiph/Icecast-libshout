@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.29 2003/03/17 16:47:20 karl Exp $
+# $Id: configure.in,v 1.30 2003/03/17 22:30:22 karl Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -57,23 +57,13 @@ dnl Checks for programs.
 
 dnl Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([inttypes.h])
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 
 dnl Check for types
-AC_CHECK_TYPE([uint32_t],
-  [AC_DEFINE(HAVE_C99_INTTYPES, 1, [Define if you have the C99 integer types])],
-  [AC_CHECK_SIZEOF(short)
-   AC_CHECK_SIZEOF(int)
-   AC_CHECK_SIZEOF(long)
-   AC_CHECK_SIZEOF(long long)])
-AC_CHECK_TYPES([socklen_t])
-AH_VERBATIM([X_HAVE_SOCKLEN_T],
-  [#ifndef HAVE_SOCKLEN_T
-typedef int socklen_t;
-#endif])
+TYPE_SOCKLEN_T
+AC_CREATE_STDINT_H(xiphint.h)
 
 dnl Checks for library functions.
 AC_CHECK_FUNCS(nanosleep)
