@@ -197,10 +197,9 @@ int util_dict_set(util_dict *dict, const char *key, const char *val)
 }
 
 /* given a dictionary, URL-encode each key and val and stringify them in order as
-  key=val;key=val... if val is set, or just key;key if val is NULL.
-  sep is the separator character (';' in the example above)
+  key=val&key=val... if val is set, or just key&key if val is NULL.
   TODO: Memory management needs overhaul. */
-char *util_dict_urlencode(util_dict *dict, char sep)
+char *util_dict_urlencode(util_dict *dict)
 {
 	char *res, *tmp;
 	char *enc;
@@ -230,7 +229,7 @@ char *util_dict_urlencode(util_dict *dict, char sep)
 				return NULL;
 			} else
 				res = tmp;
-			sprintf(res + strlen(res), "%c%s", sep, enc);
+			sprintf(res + strlen(res), "&%s", enc);
 			free(enc);
 		}
 

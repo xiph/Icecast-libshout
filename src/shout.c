@@ -240,7 +240,7 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 	if (!self || !metadata)
 		return SHOUTERR_INSANE;
 
-	if (!(encvalue = util_dict_urlencode(metadata, '&')))
+	if (!(encvalue = util_dict_urlencode(metadata)))
 		return SHOUTERR_MALLOC;
 
 	if (!self->connected)
@@ -683,9 +683,7 @@ unsigned int shout_get_protocol(shout_t *self)
 static int send_http_request(shout_t *self, char *username, char *password)
 {
 	char *auth;
-	const char *bitrate;
-
-	bitrate = shout_get_audio_info(self, SHOUT_AI_BITRATE);
+	const char *ai;
 
 	if (!sock_write(self->socket, "SOURCE %s HTTP/1.0\r\n", self->mount))
 		return SHOUTERR_SOCKET;
@@ -708,8 +706,19 @@ static int send_http_request(shout_t *self, char *username, char *password)
 		if (!sock_write(self->socket, "ice-genre: %s\r\n", self->genre))
 			return SHOUTERR_SOCKET;
 	}
+#if 0
+	ai = shout_get_audio_info(self, SHOUT_AI_BITRATE);
+
 	if (bitrate && !sock_write(self->socket, "ice-bitrate: %s\r\n", bitrate))
 		return SHOUTERR_SOCKET;
+#else
+	if (ai = util_dict_urlencode(self->audio_info)) {
+		if (!sock_write(self->socket, "ice-audio-info: %s\r\n", ai)) {
+			free(ai);
+			return SHOUTERR_SOCKET;
+		}
+	}
+#endif
 	if (!sock_write(self->socket, "ice-public: %d\r\n", self->public))
 		return SHOUTERR_SOCKET;
 	if (self->description) {

@@ -18,7 +18,7 @@ void util_dict_free(util_dict *dict);
 /* dict, key must not be NULL. */
 int util_dict_set(util_dict *dict, const char *key, const char *val);
 const char *util_dict_get(util_dict *dict, const char *key);
-char *util_dict_urlencode(util_dict *dict, char sep);
+char *util_dict_urlencode(util_dict *dict);
 
 char *util_base64_encode(char *data);
 char *util_url_encode(const char *data);
