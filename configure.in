@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.47 2003/06/12 16:59:43 brendan Exp $
+# $Id: configure.in,v 1.48 2003/06/18 03:55:40 brendan Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -153,17 +153,9 @@ then
   AC_DEFINE([NO_THREAD], 1, [Define if you don't want to use the thread library])
 fi
 
-XIPH_PATH_OGG
-if test -z "$OGG_LIBS"
-then
-  AC_MSG_ERROR([The Ogg library is required to build libshout])
-fi
 XIPH_PATH_VORBIS
-if test -z "$VORBIS_LIBS"
-then
-  AC_MSG_ERROR([The Vorbis library is required to build libshout])
-fi
-XIPH_CFLAGS="$XIPH_CFLAGS $VORBIS_CFLAGS $OGG_CFLAGS"
+VORBIS_LIBS="$VORBIS_LDFLAGS $VORBIS_LIBS"
+XIPH_CFLAGS="$XIPH_CFLAGS $VORBIS_CFLAGS"
 
 dnl pkgconfig/shout-config.
 dnl If pkgconfig is found, use it and disable shout-config, otherwise do the
@@ -185,8 +177,8 @@ AM_CONDITIONAL([HAVE_PKGCONFIG], [test "$PKGCONFIG" != "no"])
 # Build shout-config, shout.pc
 SHOUT_VERSION="$VERSION"
 SHOUT_LIBS="-lshout"
-XIPH_CLEAN_CCFLAGS([$VORBIS_LIBS $OGG_LIBS $PTHREAD_LIBS], [SHOUT_LIBDEPS])
-XIPH_CLEAN_CCFLAGS([$VORBIS_CFLAGS $OGG_CFLAGS $PTHREAD_CFLAGS], [SHOUT_CFLAGS])
+XIPH_CLEAN_CCFLAGS([$VORBIS_LIBS $PTHREAD_LIBS], [SHOUT_LIBDEPS])
+XIPH_CLEAN_CCFLAGS([$VORBIS_CFLAGS $PTHREAD_CFLAGS], [SHOUT_CFLAGS])
 AC_SUBST(SHOUT_LIBDEPS)
 AC_SUBST(SHOUT_CFLAGS)
 AC_CONFIG_LIBCONFIG_IN_STATIC

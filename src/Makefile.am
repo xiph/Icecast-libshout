@@ -16,7 +16,7 @@ libshout_la_SOURCES = shout.c util.c vorbis.c mp3.c
 AM_CFLAGS = @XIPH_CFLAGS@
 
 libshout_la_LIBADD = net/libicenet.la timing/libicetiming.la avl/libiceavl.la\
-		httpp/libicehttpp.la $(MAYBE_THREAD_LIB) $(VORBIS_LIBS) $(OGG_LIBS)
+		httpp/libicehttpp.la $(MAYBE_THREAD_LIB) $(VORBIS_LIBS)
 
 INCLUDES = -I$(top_srcdir)/include
 
