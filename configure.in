@@ -1,22 +1,20 @@
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/shout.c)
 
-LIBSHOUT_MAJOR=2
-LIBSHOUT_MINOR=0
-LIBSHOUT_MICRO=0
+m4_define(libshout_major, 2)
+m4_define(libshout_minor, 0)
+m4_define(libshout_micro, 0)
+m4_define(libshout_version,
+  m4_if(libshout_micro, 0, libshout_major.libshout_minor,
+   libshout_major.libshout_minor.libshout_micro))
 
-AC_DEFINE_UNQUOTED([LIBSHOUT_MAJOR], [$LIBSHOUT_MAJOR], ["Shout library major version"])
-AC_DEFINE_UNQUOTED([LIBSHOUT_MINOR], [$LIBSHOUT_MINOR], ["Shout library minor version"])
-AC_DEFINE_UNQUOTED([LIBSHOUT_MICRO], [$LIBSHOUT_MICRO], ["Shout library patch version"])
+AC_DEFINE([LIBSHOUT_MAJOR], libshout_major, ["Shout library major version"])
+AC_DEFINE([LIBSHOUT_MINOR], libshout_minor, ["Shout library minor version"])
+AC_DEFINE([LIBSHOUT_MICRO], libshout_micro, ["Shout library patch version"])
 
-if test "$LIBSHOUT_MICRO" != 0
-then
-  VERSION=$LIBSHOUT_MAJOR.$LIBSHOUT_MINOR.$LIBSHOUT_MICRO
-else
-  VERSION=$LIBSHOUT_MAJOR.$LIBSHOUT_MINOR
-fi
+VERSION=libshout_version
 
-AM_INIT_AUTOMAKE(libshout,$VERSION)
+AM_INIT_AUTOMAKE([libshout], libshout_version)
 
 AC_PROG_CC
 AM_PROG_LIBTOOL
@@ -111,6 +109,16 @@ fi
 
 XIPH_PATH_OGG
 XIPH_PATH_VORBIS
+LIBS="$LIBS $VORBIS_LIBS $OGG_LIBS"
+XIPH_CFLAGS="$XIPH_CFLAGS $VORBIS_CFLAGS $OGG_CFLAGS"
+
+# Build shout-config
+SHOUT_VERSION="$VERSION"
+SHOUT_LIBS="-lshout"
+SHOUT_LIBDEPS="$LIBS"
+SHOUT_CFLAGS="$XIPH_CFLAGS"
+AC_CONFIG_LIBCONFIG_IN_STATIC
+AC_CONFIG_LIBCONFIG_IN([shout])
 
 dnl Make substitutions
 
@@ -122,4 +130,6 @@ AC_SUBST(CFLAGS)
 AC_SUBST(PROFILE)
 AC_SUBST(XIPH_CFLAGS)
 
-AC_OUTPUT(Makefile include/Makefile include/shout/Makefile src/Makefile src/net/Makefile src/timing/Makefile src/thread/Makefile src/avl/Makefile src/httpp/Makefile examples/Makefile)
+AC_OUTPUT([Makefile include/Makefile include/shout/Makefile src/Makefile src/net/Makefile
+  src/timing/Makefile src/thread/Makefile src/avl/Makefile src/httpp/Makefile examples/Makefile
+  shout-config])
