@@ -861,9 +861,9 @@ static int get_response(shout_t *self)
 
 	rc = sock_read_bytes(self->socket, buf, sizeof(buf));
 
-	if (rc < 0 && sock_recoverable(rc))
+	if (rc < 0 && sock_recoverable(errno))
 		return SHOUTERR_BUSY;
-	if (!rc)
+	if (rc <= 0)
 		return SHOUTERR_SOCKET;
 
 	if ((rc = queue_data(&self->rqueue, buf, rc)))
@@ -922,8 +922,12 @@ static int try_connect (shout_t *self)
 
 	case SHOUT_STATE_CONNECT_PENDING:
 		if (shout_get_nonblocking(self)) {
-			if (!sock_connected(self->socket, 0))
-				return SHOUTERR_BUSY;
+			if ((rc = sock_connected(self->socket, 0)) < 1) {
+				if (!rc)
+					return SHOUTERR_BUSY;
+				else
+					return SHOUTERR_SOCKET;
+			}
 			if ((rc = create_request(self)) != SHOUTERR_SUCCESS)
 				return rc;
 		}
