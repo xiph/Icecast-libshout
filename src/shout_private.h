@@ -41,6 +41,14 @@ typedef struct _shout_buf {
 	struct _shout_buf *next;
 } shout_buf_t;
 
+typedef enum {
+	SHOUT_STATE_UNCONNECTED = 0,
+	SHOUT_STATE_CONNECT_PENDING,
+	SHOUT_STATE_REQ_PENDING,
+	SHOUT_STATE_RESP_PENDING,
+	SHOUT_STATE_CONNECTED
+} shout_state_e;
+	
 struct shout {
 	/* hostname or IP of icecast server */
 	char *host;
@@ -74,10 +82,10 @@ struct shout {
 	/* is this stream private? */
 	int public;
 
-	/* are we connected to a server? */
-	int connected;
 	/* socket the connection is on */
 	sock_t socket;
+	shout_state_e state;
+	int nonblocking;
 
 	void *format_data;
 	int (*send)(shout_t* self, const unsigned char* buff, size_t len);

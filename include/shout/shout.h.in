@@ -139,6 +139,11 @@ unsigned int shout_get_format(shout_t *self);
 int shout_set_protocol(shout_t *self, unsigned int protocol);
 unsigned int shout_get_protocol(shout_t *self);
 
+/* Instructs libshout to use nonblocking I/O. Must be called before
+ * shout_open (no switching back and forth midstream at the moment). */
+int shout_set_nonblocking(shout_t* self, unsigned int nonblocking);
+unsigned int shout_get_nonblocking(shout_t *self);
+
 /* Opens a connection to the server.  All parameters must already be set */
 int shout_open(shout_t *self);
 
