@@ -803,7 +803,7 @@ static int login_http_basic(shout_t *self)
 	self->error = SHOUTERR_SOCKET;
 
    	self->socket = sock_connect(self->host, self->port);
-	if (self->socket <= 0) {
+	if (self->socket < 0) {
 		return self->error = SHOUTERR_NOCONNECT;
 	}
 
