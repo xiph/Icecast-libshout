@@ -47,6 +47,9 @@ void shout_free(shout_t *self);
  * to occur.  Only valid until the next libshout call on this shout_t */
 const char *shout_get_error(shout_t *self);
 
+/* Return the error code (e.g. SHOUTERR_SOCKET) for this shout instance */
+int shout_get_errno(shout_t *self);
+
 /* Parameter manipulation functions.  libshout makes copies of all parameters,
  * the caller may free its copies after giving them to libshout.  May return
  * SHOUTERR_MALLOC */

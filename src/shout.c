@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #include "shout.h"
 #include "shout_private.h"
@@ -143,16 +144,22 @@ int shout_send(shout_t *self, const unsigned char *data, size_t len)
 ssize_t shout_send_raw(shout_t *self, const unsigned char *data, size_t len)
 {
 	ssize_t ret;
+    size_t remaining = len;
 
 	if (!self)
 		return SHOUTERR_INSANE;
 
-	if (len) {
-		ret = sock_write_bytes(self->socket, data, len);
-		if (ret < 0 || (size_t)ret != len) {
+	while(remaining) {
+		ret = sock_write_bytes(self->socket, data, remaining);
+        if(ret < (ssize_t)remaining && errno == EINTR) {
+            remaining -= (remaining>0)?remaining:0;
+            continue;
+        }
+		if (ret < 0 || (size_t)ret != remaining) {
 			self->error = SHOUTERR_SOCKET;
 			return ret;
 		}
+        remaining = 0;
 	}
 
 	self->error = SHOUTERR_SUCCESS;
@@ -174,6 +181,12 @@ void shout_sync(shout_t *self)
 	if (sleep > 0)
 		timing_sleep(sleep);
 }
+
+int shout_get_errno(shout_t *self)
+{
+    return self->error;
+}
+
 
 const char *shout_get_error(shout_t *self)
 {
