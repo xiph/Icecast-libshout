@@ -6,7 +6,7 @@ libdir=@libdir@
 includedir=@includedir@
 
 Name: Shout
-Description: Audio streaming library for icecast sources
+Description: Audio streaming library for icecast encoders
 Version: @VERSION@
 Libs: -L${libdir} -lshout @SHOUT_LIBDEPS@
-Cflags: -I${includedir} @SHOUT_CFLAGS@
+Cflags: @SHOUT_CFLAGS@

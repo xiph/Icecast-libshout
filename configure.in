@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.52 2003/06/24 21:35:44 brendan Exp $
+# $Id: configure.in,v 1.53 2003/06/26 16:03:37 brendan Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -126,11 +126,22 @@ fi
 AM_CONDITIONAL([HAVE_PKGCONFIG], [test "$PKGCONFIG" != "no"])
 
 # Build shout-config, shout.pc
+
+# I hate myself for doing this.
+save_prefix="$prefix"
+if test "$prefix" = "NONE"
+then
+  prefix="$ac_default_prefix"
+fi
+eval shout_includedir="$includedir"
+prefix="$save_prefix"
+
 SHOUT_VERSION="$VERSION"
+SHOUT_CFLAGS="-I$shout_includedir $VORBIS_CFLAGS $PTHREAD_CFLAGS $PTHREAD_CPPFLAGS"
 SHOUT_LIBS="-lshout"
+
+XIPH_CLEAN_CCFLAGS([$SHOUT_CFLAGS], [SHOUT_CFLAGS])
 XIPH_CLEAN_CCFLAGS([$VORBIS_LIBS $PTHREAD_LIBS $LIBS], [SHOUT_LIBDEPS])
-XIPH_CLEAN_CCFLAGS([$VORBIS_CFLAGS $PTHREAD_CFLAGS $PTHREAD_CPPFLAGS],
-  [SHOUT_CFLAGS])
 AC_SUBST(SHOUT_LIBDEPS)
 AC_SUBST(SHOUT_CFLAGS)
 AC_CONFIG_LIBCONFIG_IN_STATIC
