@@ -201,7 +201,23 @@ ssize_t shout_send_raw(shout_t *self, const unsigned char *data, size_t len)
 
 	self->error = SHOUTERR_SUCCESS;
 
-	queue_data(&self->wqueue, data, len);
+	/* send immediately if possible (should be the common case) */
+	if (len && ! self->wqueue) {
+		if ((ret = try_write(self, data, len)) < 0)
+			return self->error;
+		if (ret < len) {
+			self->error = queue_data(&self->wqueue, data + ret, len - ret);
+			if (self->error != SHOUTERR_SUCCESS)
+				return self->error;
+		}
+
+		return len;
+	}
+
+	self->error = queue_data(&self->wqueue, data, len);
+	if (self->error != SHOUTERR_SUCCESS)
+		return self->error;
+
 	ret = send_queue(self);
 	if (ret == SHOUTERR_SUCCESS || (len && ret == SHOUTERR_BUSY))
 		return len;
