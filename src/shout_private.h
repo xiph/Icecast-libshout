@@ -3,10 +3,10 @@
 #ifndef __LIBSHOUT_SHOUT_PRIVATE_H__
 #define __LIBSHOUT_SHOUT_PRIVATE_H__
 
-#include "shout.h"
+#include <shout/shout.h>
+#include <net/sock.h>
+#include <timing/timing.h>
 #include "util.h"
-#include "sock.h"
-#include "timing.h"
 
 #include <sys/types.h>
 #ifdef HAVE_STDINT_H

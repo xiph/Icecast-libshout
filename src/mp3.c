@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "shout.h"
+#include <shout/shout.h>
 #include "shout_private.h"
 
 /*

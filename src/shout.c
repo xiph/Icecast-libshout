@@ -9,13 +9,13 @@
 #include <string.h>
 #include <errno.h>
 
-#include "shout.h"
-#include "shout_private.h"
+#include <shout/shout.h>
+#include <net/sock.h>
+#include <timing/timing.h>
+#include <httpp/httpp.h>
 
-#include "sock.h"
-#include "timing.h"
+#include "shout_private.h"
 #include "util.h"
-#include "httpp/httpp.h"
 
 /* -- local prototypes -- */
 static int login_xaudiocast(shout_t *self);

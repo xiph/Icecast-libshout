@@ -11,7 +11,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-#include "shout.h"
+#include <shout/shout.h>
 #include "util.h"
 
 char *util_strdup(const char *s)

@@ -10,7 +10,7 @@
 #include <ogg/ogg.h>
 #include <vorbis/codec.h>
 
-#include "shout.h"
+#include <shout/shout.h>
 #include "shout_private.h"
 
 /* -- local datatypes -- */
