@@ -366,6 +366,8 @@ const char *shout_get_error(shout_t *self)
 		return "Cannot set parameter while connected";
 	case SHOUTERR_UNCONNECTED:
 		return "Not connected";
+        case SHOUTERR_BUSY:
+                return "Socket is busy";
 	case SHOUTERR_UNSUPPORTED:
 		return "This libshout doesn't support the requested option";
 	default:
