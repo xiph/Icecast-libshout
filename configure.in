@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.21 2003/03/11 05:11:19 brendan Exp $
+# $Id: configure.in,v 1.22 2003/03/11 05:20:17 brendan Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -70,6 +70,9 @@ AC_CHECK_TYPE([uint32_t],
 AC_CHECK_TYPES([socklen_t],,,
   [#if HAVE_SYS_TYPES_H
 # include <sys/types.h>
+#endif
+#if HAVE_UNISTD_H
+# include <unistd.h>
 #endif
 #if HAVE_SYS_SOCKET_H
 # include <sys/socket.h>
