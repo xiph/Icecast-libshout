@@ -35,6 +35,7 @@ typedef unsigned long long uint64_t;
 #define LIBSHOUT_DEFAULT_PORT 8000
 #define LIBSHOUT_DEFAULT_FORMAT SHOUT_FORMAT_VORBIS
 #define LIBSHOUT_DEFAULT_PROTOCOL SHOUT_PROTOCOL_ICE
+#define LIBSHOUT_DEFAULT_USER "source"
 
 struct shout {
 	/* hostname or IP of icecast server */

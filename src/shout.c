@@ -31,8 +31,14 @@ shout_t *shout_new(void)
 		return NULL;
 	}
 
-	if (!(self->host = util_strdup(LIBSHOUT_DEFAULT_HOST))) {
-		free(self);
+	if (shout_set_host(self, LIBSHOUT_DEFAULT_HOST) != SHOUTERR_SUCCESS) {
+		shout_free(self);
+
+		return NULL;
+	}
+	if (shout_set_user(self, LIBSHOUT_DEFAULT_USER) != SHOUTERR_SUCCESS) {
+		shout_free(self);
+
 		return NULL;
 	}
 
@@ -658,7 +664,7 @@ unsigned int shout_get_protocol(shout_t *self)
 
 static int send_http_request(shout_t *self, char *username, char *password)
 {
-    if (!sock_write(self->socket, "SOURCE %s HTTP/1.0\r\n", self->mount))
+	if (!sock_write(self->socket, "SOURCE %s HTTP/1.0\r\n", self->mount))
 		return SHOUTERR_SOCKET;
 
 	if (!sock_write(self->socket, "ice-name: %s\r\n", self->name != NULL ? self->name : "no name"))
@@ -679,10 +685,10 @@ static int send_http_request(shout_t *self, char *username, char *password)
 		if (!sock_write(self->socket, "ice-description: %s\r\n", self->description))
 			return SHOUTERR_SOCKET;
 	}
-    if (self->useragent) {
-        if (!sock_write(self->socket, "User-Agent: %s\r\n", self->useragent))
-            return SHOUTERR_SOCKET;
-    }
+	if (self->useragent) {
+		if (!sock_write(self->socket, "User-Agent: %s\r\n", self->useragent))
+			return SHOUTERR_SOCKET;
+	}
 	if (self->format == SHOUT_FORMAT_VORBIS) {
 		if (!sock_write(self->socket, "Content-Type: application/x-ogg\r\n"))
 			return SHOUTERR_SOCKET;
@@ -690,22 +696,22 @@ static int send_http_request(shout_t *self, char *username, char *password)
 		if (!sock_write(self->socket, "Content-Type: audio/mpeg\r\n"))
 			return SHOUTERR_SOCKET;
 	}
-    if (username && password) {
-        char *data;
-        int len = strlen(username) + strlen(password) + 2;
-        char *orig = malloc(len);
-        strcpy(orig, username);
-        strcat(orig, ":");
-        strcat(orig, password);
+	if (username && password) {
+		char *data;
+		int len = strlen(username) + strlen(password) + 2;
+		char *orig = malloc(len);
+		strcpy(orig, username);
+		strcat(orig, ":");
+		strcat(orig, password);
 
-        data = util_base64_encode(orig);
+		data = util_base64_encode(orig);
 
-        if(!sock_write(self->socket, "Authorization: Basic %s\r\n", data)) {
-            free(data);
-            return SHOUTERR_SOCKET;
-        }
-        free(data);
-    }
+		if(!sock_write(self->socket, "Authorization: Basic %s\r\n", data)) {
+			free(data);
+			return SHOUTERR_SOCKET;
+		}
+		free(data);
+	}
 
 	if (!sock_write(self->socket, "\r\n"))
 		return SHOUTERR_SOCKET;
