@@ -102,6 +102,10 @@ AC_CHECK_FUNCS(nanosleep)
 AC_CHECK_FUNCS(sethostent endhostent)
 AC_CHECK_FUNCS(getnameinfo getaddrinfo inet_pton)
 
+dnl Extra dependencies
+XIPH_PATH_OGG
+XIPH_PATH_VORBIS
+
 dnl Make substitutions
 
 AC_SUBST(LIBTOOL_DEPS)
