@@ -255,14 +255,15 @@ void shout_sync(shout_t *self)
 	if (self->senttime == 0)
 		return;
 
-	sleep = ((double)self->senttime / 1000) - (timing_get_time() - self->starttime);
-
+	sleep = self->senttime / 1000 - (timing_get_time() - self->starttime);
 	if (sleep > 0)
 		timing_sleep((uint64_t)sleep);
+		
 }
 
 int shout_delay(shout_t *self)
 {
+
 	if (!self)
 		return 0;
 
@@ -270,7 +271,7 @@ int shout_delay(shout_t *self)
 		return 0;
 
 	/* Is this cast to double needed? */
-	return (double)self->senttime / 1000 - (timing_get_time() - self->starttime);
+	return self->senttime / 1000 - (timing_get_time() - self->starttime);
 }
   
 shout_metadata_t *shout_metadata_new(void)

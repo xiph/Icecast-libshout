@@ -91,7 +91,7 @@ static int send_vorbis(shout_t *self, const unsigned char *data, size_t len)
 	char *buffer;
 	ogg_page og;
 	ogg_packet op;
-	int samples;
+	uint64_t samples;
 
 	buffer = ogg_sync_buffer(&vorbis_data->oy, len);
 	memcpy(buffer, data, len);
@@ -139,9 +139,8 @@ static int send_vorbis(shout_t *self, const unsigned char *data, size_t len)
 			size = blocksize(vorbis_data, &op);
 			samples += size;
 		}
-
-		self->senttime += ((double)samples * 1000000) / 
-			((double)vorbis_data->samplerate);
+		self->senttime += (samples *  1000000) / 
+			(vorbis_data->samplerate);
 
 		ret = sock_write_bytes(self->socket, og.header, og.header_len);
 		if (ret != og.header_len)

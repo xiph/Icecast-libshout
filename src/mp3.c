@@ -134,7 +134,7 @@ static int send_mp3(shout_t* self, const unsigned char* buff, size_t len)
 	if (mp3_data->frame_left > 0) {
 		/* is the rest of the frame here? */
 		if (mp3_data->frame_left <= len) {
-			self->senttime += ((double)mp3_data->frame_samples / (double)mp3_data->frame_samplerate * 1000000);
+			self->senttime += (int64_t)((double)mp3_data->frame_samples / (double)mp3_data->frame_samplerate * 1000000);
 			mp3_data->frames++;
 			pos += mp3_data->frame_left;
 			mp3_data->frame_left = 0;
@@ -187,7 +187,7 @@ static int send_mp3(shout_t* self, const unsigned char* buff, size_t len)
 
 			/* do we have a complete frame in this buffer? */
 			if (len - pos >= mh.framesize) {
-				self->senttime += ((double)mp3_data->frame_samples / (double)mp3_data->frame_samplerate * 1000000);
+				self->senttime += (int64_t)((double)mp3_data->frame_samples / (double)mp3_data->frame_samplerate * 1000000);
 				mp3_data->frames++;
 				pos += mh.framesize;
 			} else {
