@@ -42,7 +42,7 @@ static void free_theora_data(void *codec_data);
 static int theora_ilog(unsigned int v);
 
 /* -- theora functions -- */
-int open_theora(ogg_codec_t *codec, ogg_page *page)
+int _shout_open_theora(ogg_codec_t *codec, ogg_page *page)
 {
 	ogg_packet packet;
 

@@ -41,7 +41,7 @@ static void free_vorbis_data(void *codec_data);
 static int vorbis_blocksize(vorbis_data_t *vd, ogg_packet *p);
 
 /* -- vorbis functions -- */
-int open_vorbis(ogg_codec_t *codec, ogg_page *page)
+int _shout_open_vorbis(ogg_codec_t *codec, ogg_page *page)
 {
 	vorbis_data_t *vorbis_data = calloc(1, sizeof(vorbis_data_t));
 	ogg_packet packet;
