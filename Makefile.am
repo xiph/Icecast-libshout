@@ -9,8 +9,6 @@ EXTRA_DIST = README COPYING m4/ac_config_libconfig_in.m4 m4/acx_pthread.m4 \
 	m4/ogg.m4 m4/vorbis.m4
 bin_SCRIPTS = shout-config
 
-shout-config.in: $(top_srcdir)/configure
-
 ##install-data-local:
 	##mkdir -p $(DESTDIR)$(includedir)/shout
 	##mkdir -p $(DESTDIR)$(prefix)/doc/$(PACKAGE)-$(VERSION)/example

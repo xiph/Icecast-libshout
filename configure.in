@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.25 2003/03/11 07:23:52 brendan Exp $
+# $Id: configure.in,v 1.26 2003/03/11 07:43:34 brendan Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -13,9 +13,9 @@ AC_PREREQ(2.52)
 AC_CONFIG_SRCDIR([src/shout.c])
 AM_CONFIG_HEADER([config.h])
 
-AC_DEFINE([LIBSHOUT_MAJOR], libshout_major, ["Shout library major version"])
-AC_DEFINE([LIBSHOUT_MINOR], libshout_minor, ["Shout library minor version"])
-AC_DEFINE([LIBSHOUT_MICRO], libshout_micro, ["Shout library patch version"])
+AC_DEFINE([LIBSHOUT_MAJOR], libshout_major, [Shout library major version])
+AC_DEFINE([LIBSHOUT_MINOR], libshout_minor, [Shout library minor version])
+AC_DEFINE([LIBSHOUT_MICRO], libshout_micro, [Shout library patch version])
 
 VERSION=libshout_version
 
