@@ -19,8 +19,6 @@ static int login_xaudiocast(shout_t *self);
 static int login_icy(shout_t *self);
 static int login_http_basic(shout_t *self);
 
-static int set_metadata_xaudiocast(shout_t *self, shout_metadata_t *metadata);
-
 /* -- public functions -- */
 
 shout_t *shout_new(void)
@@ -37,6 +35,11 @@ shout_t *shout_new(void)
 		return NULL;
 	}
 	if (shout_set_user(self, LIBSHOUT_DEFAULT_USER) != SHOUTERR_SUCCESS) {
+		shout_free(self);
+
+		return NULL;
+	}
+	if (shout_set_agent(self, LIBSHOUT_DEFAULT_USERAGENT) != SHOUTERR_SUCCESS) {
 		shout_free(self);
 
 		return NULL;
@@ -257,18 +260,67 @@ int shout_metadata_add(shout_metadata_t *self, const char *name, const char *val
 	return SHOUTERR_SUCCESS;
 }
 
+/* open second socket to server, send HTTP request to change metadata.
+ * TODO: prettier error-handling. */
 int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 {
+	sock_t socket;
+	int rv;
+	char *encvalue;
+
 	if (!self || !metadata)
 		return SHOUTERR_INSANE;
 
 	if (!self->connected)
 		return SHOUTERR_UNCONNECTED;
+	if ((socket = sock_connect(self->host, self->port)) <= 0)
+		return SHOUTERR_NOCONNECT;
 
-	if (self->protocol == SHOUT_PROTOCOL_ICY || self->protocol == SHOUT_PROTOCOL_XAUDIOCAST)
-		return self->error = set_metadata_xaudiocast(self, metadata);
+	if (self->protocol == SHOUT_PROTOCOL_ICY)
+		rv = sock_write(socket, "GET /admin.cgi?mode=updinfo&pass=%s", self->password);
+	else if (self->protocol == SHOUT_PROTOCOL_HTTP)
+		rv = sock_write(socket, "GET /admin.cgi?mode=updinfo&mount=%s", self->mount);
+	else
+		rv = sock_write(socket, "GET /admin.cgi?mode=updinfo&pass=%s&mount=%s", self->password, self->mount);
+	if (!rv) {
+		sock_close(socket);
+		return SHOUTERR_SOCKET;
+	}
 
-	return self->error = SHOUTERR_UNSUPPORTED;
+	while (metadata) {
+		if (metadata->name) {
+			if (metadata->value) {
+				if (!(encvalue = util_url_encode(metadata->value))) {
+					rv = SHOUTERR_MALLOC;
+					break;
+				}
+				rv = sock_write(socket, "&%s=%s", metadata->name, encvalue);
+			} else
+				rv = sock_write(socket, "&%s", metadata->name);
+
+			free (encvalue);
+			
+			if (!rv) {
+				sock_close(socket);
+				return SHOUTERR_SOCKET;
+			}
+		}
+		rv = SHOUTERR_SUCCESS;
+		metadata = metadata->next;
+	}
+	if (rv != SHOUTERR_SUCCESS) {
+		sock_close(socket);
+		return rv;
+	}
+
+	if (!sock_write(socket, " HTTP/1.0\r\nUser-Agent: %s\r\n\r\n", shout_get_agent(self))) {
+		sock_close(socket);
+		return SHOUTERR_SOCKET;
+	}
+
+	sock_close(socket);
+
+	return SHOUTERR_SUCCESS;
 }
 
 /* getters/setters */
@@ -510,10 +562,10 @@ int shout_set_agent(shout_t *self, const char *agent)
 
 const char *shout_get_agent(shout_t *self)
 {
-    if (!self)
-        return NULL;
+	if (!self)
+		return NULL;
 
-    return self->useragent;
+	return self->useragent;
 }
 
 
@@ -536,10 +588,10 @@ int shout_set_user(shout_t *self, const char *username)
 
 const char *shout_get_user(shout_t *self)
 {
-    if (!self)
-        return NULL;
+	if (!self)
+		return NULL;
 
-    return self->user;
+	return self->user;
 }
 
 int shout_set_description(shout_t *self, const char *description)
@@ -722,78 +774,78 @@ static int send_http_request(shout_t *self, char *username, char *password)
 
 static int login_http_basic(shout_t *self)
 {
-    char header[4096];
-    http_parser_t *parser;
-    int code;
-    char *retcode, *realm;
+	char header[4096];
+	http_parser_t *parser;
+	int code;
+	char *retcode, *realm;
     
-    self->error = SHOUTERR_SOCKET;
+	self->error = SHOUTERR_SOCKET;
 
    	self->socket = sock_connect(self->host, self->port);
-    if (self->socket <= 0) {
-	    return self->error = SHOUTERR_NOCONNECT;
-    }
+	if (self->socket <= 0) {
+		return self->error = SHOUTERR_NOCONNECT;
+	}
 
-    if(send_http_request(self, NULL, NULL) != 0) {
-        sock_close(self->socket);
-        return self->error = SHOUTERR_SOCKET;
-    }
+	if(send_http_request(self, NULL, NULL) != 0) {
+		sock_close(self->socket);
+		return self->error = SHOUTERR_SOCKET;
+	}
 
-    if (util_read_header(self->socket, header, 4096) == 0) {
-        /* either we didn't get a complete header, or we timed out */
-        sock_close(self->socket);
-	    return self->error = SHOUTERR_SOCKET;
-    }
+	if (util_read_header(self->socket, header, 4096) == 0) {
+		/* either we didn't get a complete header, or we timed out */
+		sock_close(self->socket);
+		return self->error = SHOUTERR_SOCKET;
+	}
 
-    parser = httpp_create_parser();
-    httpp_initialize(parser, NULL);
-    if (httpp_parse_response(parser, header, strlen(header), self->mount)) {
-        retcode = httpp_getvar(parser, HTTPP_VAR_ERROR_CODE);
-        code = atoi(retcode);
-        if(code >= 200 && code < 300) {
-            httpp_destroy(parser);
-	        return SHOUTERR_SUCCESS;
-        }
-        else if(code == 401) {
-            /* Don't really use this right now other than to check that it's
-             * present.
-             */
-            realm = httpp_getvar(parser, "www-authenticate");
-            if(realm) {
-                httpp_destroy(parser);
-                sock_close(self->socket);
+	parser = httpp_create_parser();
+	httpp_initialize(parser, NULL);
+	if (httpp_parse_response(parser, header, strlen(header), self->mount)) {
+		retcode = httpp_getvar(parser, HTTPP_VAR_ERROR_CODE);
+		code = atoi(retcode);
+		if(code >= 200 && code < 300) {
+			httpp_destroy(parser);
+			return SHOUTERR_SUCCESS;
+		}
+		else if(code == 401) {
+			/* Don't really use this right now other than to check that it's
+			* present.
+			*/
+			realm = httpp_getvar(parser, "www-authenticate");
+			if(realm) {
+				httpp_destroy(parser);
+				sock_close(self->socket);
 
-   	            self->socket = sock_connect(self->host, self->port);
-                if (self->socket <= 0)
-            	    return self->error = SHOUTERR_NOCONNECT;
+				self->socket = sock_connect(self->host, self->port);
+				if (self->socket <= 0)
+					return self->error = SHOUTERR_NOCONNECT;
 
-                if(send_http_request(self, self->user, self->password) != 0) {
-                    sock_close(self->socket);
-                    return self->error = SHOUTERR_SOCKET;
-                }
+				if(send_http_request(self, self->user, self->password) != 0) {
+					sock_close(self->socket);
+					return self->error = SHOUTERR_SOCKET;
+				}
 
-                if (util_read_header(self->socket, header, 4096) == 0) {
-                    /* either we didn't get a complete header, or we timed out */
-                    sock_close(self->socket);
-	                return self->error = SHOUTERR_SOCKET;
-                }
-                parser = httpp_create_parser();
-                httpp_initialize(parser, NULL);
-                if (httpp_parse_response(parser, header, strlen(header), self->mount)) {
-                    retcode = httpp_getvar(parser, HTTPP_VAR_ERROR_CODE);
-                    code = atoi(retcode);
-                    if(code >= 200 && code < 300) {
-                        httpp_destroy(parser);
-            	        return SHOUTERR_SUCCESS;
-                    }
-                }
-            }
-        }
-    }
+				if (util_read_header(self->socket, header, 4096) == 0) {
+					/* either we didn't get a complete header, or we timed out */
+					sock_close(self->socket);
+					return self->error = SHOUTERR_SOCKET;
+				}
+				parser = httpp_create_parser();
+				httpp_initialize(parser, NULL);
+				if (httpp_parse_response(parser, header, strlen(header), self->mount)) {
+					retcode = httpp_getvar(parser, HTTPP_VAR_ERROR_CODE);
+					code = atoi(retcode);
+					if(code >= 200 && code < 300) {
+						httpp_destroy(parser);
+						return SHOUTERR_SUCCESS;
+					}
+				}
+			}
+		}
+	}
 
-    httpp_destroy(parser);
-    sock_close(self->socket);
-    return self->error = SHOUTERR_REFUSED;
+	httpp_destroy(parser);
+	sock_close(self->socket);
+	return self->error = SHOUTERR_REFUSED;
 }
 
 static int login_ice(shout_t *self)
@@ -903,62 +955,6 @@ int login_icy(shout_t *self)
 
 	if (!strstr(response, "OK"))
 		return SHOUTERR_NOLOGIN;
-
-	return SHOUTERR_SUCCESS;
-}
-
-/* open second socket to server, send HTTP request to change metadata.
- * TODO: prettier error-handling. */
-int set_metadata_xaudiocast(shout_t *self, shout_metadata_t *metadata)
-{
-	sock_t socket;
-	int rv;
-	char *encvalue;
-
-	if ((socket = sock_connect(self->host, self->port)) <= 0)
-		return SHOUTERR_NOCONNECT;
-
-	if (self->protocol == SHOUT_PROTOCOL_ICY)
-		rv = sock_write(socket, "GET /admin.cgi?mode=updinfo&pass=%s", self->password);
-	else
-		rv = sock_write(socket, "GET /admin.cgi?mode=updinfo&pass=%s&mount=%s", self->password, self->mount);
-	if (!rv) {
-		sock_close(socket);
-		return SHOUTERR_SOCKET;
-	}
-
-	while (metadata) {
-		if (metadata->name) {
-			if (metadata->value) {
-				if (!(encvalue = util_url_encode(metadata->value))) {
-					rv = SHOUTERR_MALLOC;
-					break;
-				}
-				rv = sock_write(socket, "&%s=%s", metadata->name, encvalue);
-			} else
-				rv = sock_write(socket, "&%s", metadata->name);
-
-			free (encvalue);
-			
-			if (!rv) {
-				sock_close(socket);
-				return SHOUTERR_SOCKET;
-			}
-		}
-		rv = SHOUTERR_SUCCESS;
-		metadata = metadata->next;
-	}
-	if (rv != SHOUTERR_SUCCESS) {
-		sock_close(socket);
-		return rv;
-	}
-
-	if (!sock_write(socket, " HTTP/1.0\r\nUser-Agent: libshout/" VERSION "\r\n\r\n")) {
-		sock_close(socket);
-		return SHOUTERR_SOCKET;
-	}
-
-	sock_close(socket);
 
 	return SHOUTERR_SUCCESS;
 }
