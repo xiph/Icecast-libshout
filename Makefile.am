@@ -5,7 +5,7 @@ ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = include src examples
 
-EXTRA_DIST = INSTALL shout.m4 m4/ac_config_libconfig_in.m4 m4/acx_pthread.m4 \
+EXTRA_DIST = INSTALL m4/shout.m4 m4/ac_config_libconfig_in.m4 m4/acx_pthread.m4 \
 	m4/ogg.m4 m4/vorbis.m4 m4/xiph_compiler.m4 m4/xiph_net.m4 \
 	m4/xiph_types.m4
 
@@ -13,7 +13,7 @@ docdir = $(datadir)/doc/$(PACKAGE)
 doc_DATA = COPYING README examples/example.c
 
 m4datadir = $(datadir)/aclocal
-m4data_DATA = shout.m4
+m4data_DATA = m4/shout.m4
 
 if HAVE_PKGCONFIG
   pkgconfigdir = $(libdir)/pkgconfig
