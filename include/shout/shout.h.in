@@ -165,4 +165,8 @@ int shout_metadata_add(shout_metadata_t *self, const char *name, const char *val
 }
 #endif
 
+/* --- Compiled features --- */
+
+#define SHOUT_THREADSAFE @SHOUT_THREADSAFE@
+
 #endif /* __LIBSHOUT_SHOUT_H__ */

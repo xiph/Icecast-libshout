@@ -3,4 +3,4 @@
 AUTOMAKE_OPTIONS = foreign
 
 includedir = $(prefix)/include/shout
-include_HEADERS = shout.h
+nodist_include_HEADERS = shout.h

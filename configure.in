@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.63 2003/07/09 01:35:38 brendan Exp $
+# $Id: configure.in,v 1.64 2003/07/11 00:59:56 brendan Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -41,11 +41,7 @@ dnl Set some options based on environment
 dnl openbsd headers break when _XOPEN_SOURCE is defined but without it seems
 dnl to be fine
 case "$ac_cv_host" in
-   *openbsd*)
-   ;;
-   *solaris*)
-   ;;
-   *irix*)
+   *openbsd* | *solaris* | *irix*)
    ;;
    *) AC_DEFINE(_XOPEN_SOURCE, 600, [Define if you have POSIX and XPG specifications])
    ;;
@@ -97,18 +93,19 @@ dnl Extra dependencies
 AC_ARG_ENABLE([thread],
   AC_HELP_STRING([--disable-thread],[do not build with thread support even if it is available]))
 
-have_thread="no"
+SHOUT_THREADSAFE="0"
 if test "$enable_thread" != "no"
 then
   ACX_PTHREAD([
     LIBS="$LIBS $PTHREAD_LIBS"
     XIPH_CFLAGS="$XIPH_CFLAGS $PTHREAD_CFLAGS $PTHREAD_CPPFLAGS"
     CC="$PTHREAD_CC"
-    have_thread="yes"
+    SHOUT_THREADSAFE="1"
     ])
 fi
-AM_CONDITIONAL([HAVE_THREAD], [test "$have_thread" = "yes"])
-if test "$have_thread" != "yes"
+AC_SUBST([SHOUT_THREADSAFE])
+AM_CONDITIONAL([HAVE_THREAD], [test "$SHOUT_THREADSAFE" = "1"])
+if test "$SHOUT_THREADSAFE" != "1"
 then
   AC_DEFINE([NO_THREAD], 1, [Define if you don't want to use the thread library])
 fi
@@ -169,6 +166,7 @@ AC_SUBST(CFLAGS)
 AC_SUBST(PROFILE)
 AC_SUBST(XIPH_CFLAGS)
 
-AC_OUTPUT([Makefile include/Makefile include/shout/Makefile src/Makefile
-  src/net/Makefile src/timing/Makefile src/thread/Makefile src/avl/Makefile
-  src/httpp/Makefile doc/Makefile examples/Makefile shout-config shout.pc])
+AC_OUTPUT([Makefile include/Makefile include/shout/Makefile
+  include/shout/shout.h src/Makefile src/net/Makefile src/timing/Makefile
+  src/thread/Makefile src/avl/Makefile src/httpp/Makefile doc/Makefile
+  examples/Makefile shout-config shout.pc])
