@@ -1282,7 +1282,7 @@ static int create_icy_request(shout_t *self)
 			break;
 		if (queue_printf(self, "icy-url:%s\n", self->url ? self->url : "http://www.icecast.org/"))
 			break;
-		if (queue_str(self, "icy-irc:\nicy-aim:icy-icq:\n"))
+		if (queue_str(self, "icy-irc:\nicy-aim:\nicy-icq:\n"))
 			break;
 		if (queue_printf(self, "icy-pub:%i\n", self->public))
 			break;
