@@ -19,13 +19,15 @@ static int login_xaudiocast(shout_t *self);
 static int login_icy(shout_t *self);
 static int login_http_basic(shout_t *self);
 
+static int set_metadata_xaudiocast(shout_t *self, shout_metadata_t *metadata);
+
 /* -- public functions -- */
 
 shout_t *shout_new(void)
 {
 	shout_t *self;
 
-	if (!(self = (struct shout *)calloc(1, sizeof(shout_t)))) {
+	if (!(self = (shout_t *)calloc(1, sizeof(shout_t)))) {
 		return NULL;
 	}
 
@@ -53,7 +55,7 @@ void shout_free(shout_t *self)
 	if (self->genre) free(self->genre);
 	if (self->description) free(self->description);
 	if (self->user) free(self->user);
-    if (self->useragent) free(self->useragent);
+	if (self->useragent) free(self->useragent);
 
 	free(self);
 }
@@ -67,20 +69,23 @@ int shout_open(shout_t *self)
 	if (!self->host || !self->password || !self->port || self->connected)
 		return self->error = SHOUTERR_INSANE;
 
-	if (self->format == SHOUT_FORMAT_VORBIS && self->protocol != SHOUT_PROTOCOL_ICE && self->protocol != SHOUT_PROTOCOL_HTTP)
+	if (self->format == SHOUT_FORMAT_VORBIS && 
+	    self->protocol != SHOUT_PROTOCOL_ICE && self->protocol != SHOUT_PROTOCOL_HTTP)
 		return self->error = SHOUTERR_UNSUPPORTED;
 
-    if(self->protocol != SHOUT_PROTOCOL_HTTP) {
-    	self->socket = sock_connect(self->host, self->port);
-	    if (self->socket <= 0)
-		    return self->error = SHOUTERR_NOCONNECT;
-    }
+	if(self->protocol != SHOUT_PROTOCOL_HTTP) {
+		self->socket = sock_connect(self->host, self->port);
+		if (self->socket <= 0)
+			return self->error = SHOUTERR_NOCONNECT;
+	}
 
-    if (self->protocol == SHOUT_PROTOCOL_HTTP) {
-        if ((self->error = login_http_basic(self)) != SHOUTERR_SUCCESS)
-            return self->error;
-    }
-    else if (self->protocol == SHOUT_PROTOCOL_ICE) {
+	if (self->protocol == SHOUT_PROTOCOL_HTTP) {
+		if ((self->error = login_http_basic(self)) != SHOUTERR_SUCCESS) {
+			sock_close(self->socket);
+			return self->error;
+		}
+	}
+	else if (self->protocol == SHOUT_PROTOCOL_ICE) {
 		if ((self->error = login_ice(self)) != SHOUTERR_SUCCESS) {
 			sock_close(self->socket);
 			return self->error;
@@ -195,11 +200,82 @@ void shout_sync(shout_t *self)
 		timing_sleep((uint64_t)sleep);
 }
 
-int shout_get_errno(shout_t *self)
+shout_metadata_t *shout_metadata_new(void)
 {
-    return self->error;
+	shout_metadata_t *self;
+
+	if (!(self = (shout_metadata_t *)calloc(1, sizeof(shout_metadata_t)))) {
+		return NULL;
+	}
+
+	return self;
 }
 
+void shout_metadata_free(shout_metadata_t *self)
+{
+	if (!self)
+		return;
+
+	free (self);
+}
+
+int shout_metadata_add(shout_metadata_t *self, const char *name, const char *value)
+{
+	if (!self || !name)
+		return SHOUTERR_INSANE;
+
+	while (self->next)
+		self = self->next;
+	/* If this is the first entry, name/value are null and available. Otherwise
+	 * create a new entry at the end. */
+	if (self->name) {
+		shout_metadata_t* tail;
+
+		if (!(tail = shout_metadata_new()))
+			return SHOUTERR_MALLOC;
+
+		self->next = tail;
+		self = self->next;
+	}
+	
+	if (!(self->name = util_strdup(name)))
+		return SHOUTERR_MALLOC;
+
+	if (!(self->value = util_strdup(value))) {
+		free (self->name);
+		self->name = NULL;
+
+		return SHOUTERR_MALLOC;
+	};
+
+	return SHOUTERR_SUCCESS;
+}
+
+int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
+{
+	if (!self || !metadata)
+		return SHOUTERR_INSANE;
+
+	if (!self->connected)
+		return SHOUTERR_UNCONNECTED;
+
+	if (self->protocol == SHOUT_PROTOCOL_ICY || self->protocol == SHOUT_PROTOCOL_XAUDIOCAST)
+		return self->error = set_metadata_xaudiocast(self, metadata);
+
+	return self->error = SHOUTERR_UNSUPPORTED;
+}
+
+/* getters/setters */
+/* TODO: Add major/minor/patch support */
+const char *shout_version(int *major, int *minor, int *patch)
+{
+	return VERSION;
+}
+
+int shout_get_errno(shout_t *self)
+{
+	return self->error;
+}
 
 const char *shout_get_error(shout_t *self)
 {
@@ -228,6 +304,14 @@ const char *shout_get_error(shout_t *self)
 	default:
 		return "Unknown error";
 	}
+}
+
+int shout_get_connected(shout_t *self)
+{
+	if (self->connected)
+		return SHOUTERR_CONNECTED;
+	else
+		return SHOUTERR_UNCONNECTED;
 }
 
 int shout_set_host(shout_t *self, const char *host)
@@ -554,7 +638,7 @@ int shout_set_protocol(shout_t *self, unsigned int protocol)
 	if (protocol != SHOUT_PROTOCOL_ICE &&
 	    protocol != SHOUT_PROTOCOL_XAUDIOCAST &&
 	    protocol != SHOUT_PROTOCOL_ICY &&
-        protocol != SHOUT_PROTOCOL_HTTP)
+	    protocol != SHOUT_PROTOCOL_HTTP)
 		return self->error = SHOUTERR_UNSUPPORTED;
 
 	self->protocol = protocol;
@@ -813,6 +897,62 @@ int login_icy(shout_t *self)
 
 	if (!strstr(response, "OK"))
 		return SHOUTERR_NOLOGIN;
+
+	return SHOUTERR_SUCCESS;
+}
+
+/* open second socket to server, send HTTP request to change metadata.
+ * TODO: prettier error-handling. */
+int set_metadata_xaudiocast(shout_t *self, shout_metadata_t *metadata)
+{
+	sock_t socket;
+	int rv;
+	char *encvalue;
+
+	if ((socket = sock_connect(self->host, self->port)) <= 0)
+		return SHOUTERR_NOCONNECT;
+
+	if (self->protocol == SHOUT_PROTOCOL_ICY)
+		rv = sock_write(socket, "GET /admin.cgi?mode=updinfo&pass=%s", self->password);
+	else
+		rv = sock_write(socket, "GET /admin.cgi?mode=updinfo&pass=%s&mount=%s", self->password, self->mount);
+	if (!rv) {
+		sock_close(socket);
+		return SHOUTERR_SOCKET;
+	}
+
+	while (metadata) {
+		if (metadata->name) {
+			if (metadata->value) {
+				if (!(encvalue = util_url_encode(metadata->value))) {
+					rv = SHOUTERR_MALLOC;
+					break;
+				}
+				rv = sock_write(socket, "&%s=%s", metadata->name, encvalue);
+			} else
+				rv = sock_write(socket, "&%s", metadata->name);
+
+			free (encvalue);
+			
+			if (!rv) {
+				sock_close(socket);
+				return SHOUTERR_SOCKET;
+			}
+		}
+		rv = SHOUTERR_SUCCESS;
+		metadata = metadata->next;
+	}
+	if (rv != SHOUTERR_SUCCESS) {
+		sock_close(socket);
+		return rv;
+	}
+
+	if (!sock_write(socket, " HTTP/1.0\r\nUser-Agent: libshout/" VERSION "\r\n\r\n")) {
+		sock_close(socket);
+		return SHOUTERR_SOCKET;
+	}
+
+	sock_close(socket);
 
 	return SHOUTERR_SUCCESS;
 }
