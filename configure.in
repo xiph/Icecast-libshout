@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.65 2003/07/13 16:36:37 brendan Exp $
+# $Id: configure.in,v 1.66 2003/08/04 08:27:58 keegan Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -166,7 +166,7 @@ AC_SUBST(CFLAGS)
 AC_SUBST(PROFILE)
 AC_SUBST(XIPH_CFLAGS)
 
-AC_OUTPUT([Makefile include/Makefile include/shout/Makefile
+AC_OUTPUT([Makefile debian/Makefile include/Makefile include/shout/Makefile
   include/shout/shout.h src/Makefile src/net/Makefile src/timing/Makefile
   src/thread/Makefile src/avl/Makefile src/httpp/Makefile doc/Makefile
   examples/Makefile shout-config shout.pc])

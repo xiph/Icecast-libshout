@@ -1,0 +1,3 @@
+version=2
+
+http://www.icecast.org/files/libshout/libshout-(.*)\.tar\.gz	debian	uupdate
