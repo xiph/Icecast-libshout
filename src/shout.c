@@ -1041,30 +1041,41 @@ static int login_xaudiocast(shout_t *self)
 {
 	char response[4096];
 	const char *bitrate;
+	int ret;
 
 	bitrate = shout_get_audio_info(self, SHOUT_AI_BITRATE);
 	if (!bitrate)
 		bitrate = "0";
 
-	if (!sock_write(self->socket, "SOURCE %s %s\n", self->password, self->mount))
-		return SHOUTERR_SOCKET;
-	if (!sock_write(self->socket, "x-audiocast-name: %s\n", self->name != NULL ? self->name : "unnamed"))
-		return SHOUTERR_SOCKET;
-	if (!sock_write(self->socket, "x-audiocast-url: %s\n", self->url != NULL ? self->url : "http://www.icecast.org/"))
-		return SHOUTERR_SOCKET;
-	if (!sock_write(self->socket, "x-audiocast-genre: %s\n", self->genre != NULL ? self->genre : "icecast"))
-		return SHOUTERR_SOCKET;
-	if (!sock_write(self->socket, "x-audiocast-bitrate: %s\n", bitrate))
-		return SHOUTERR_SOCKET;
-	if (!sock_write(self->socket, "x-audiocast-public: %i\n", self->public))
-		return SHOUTERR_SOCKET;
-	if (!sock_write(self->socket, "x-audiocast-description: %s\n", self->description != NULL ? self->description : "Broadcasting with the icecast streaming media server!"))
-		return SHOUTERR_SOCKET;
-	if (self->dumpfile && !sock_write(self->socket, "x-audiocast-dumpfile: %s\n", self->dumpfile))
-		return SHOUTERR_SOCKET;
+	ret = SHOUTERR_MALLOC;
+	do {
+		if (queue_printf(self, "SOURCE %s %s\n", self->password, self->mount))
+			break;
+		if (queue_printf(self, "x-audiocast-name: %s\n", self->name ? self->name : "unnamed"))
+			break;
+		if (queue_printf(self, "x-audiocast-url: %s\n", self->url ? self->url : "http://www.icecast.org/"))
+			break;
+		if (queue_printf(self, "x-audiocast-genre: %s\n", self->genre ? self->genre : "icecast"))
+			break;
+		if (queue_printf(self, "x-audiocast-bitrate: %s\n", bitrate))
+			break;
+		if (queue_printf(self, "x-audiocast-public: %i\n", self->public))
+			break;
+		if (queue_printf(self, "x-audiocast-description: %s\n", self->description ? self->description : "Broadcasting with the icecast streaming media server!"))
+			break;
+		if (self->dumpfile && queue_printf(self, "x-audiocast-dumpfile: %s\n", self->dumpfile))
+			break;
+		if (queue_str(self, "\n"))
+			break;
 
-	if (!sock_write(self->socket, "\n"))
-		return SHOUTERR_SOCKET;
+		ret = SHOUTERR_SUCCESS;
+	} while (0);
+		
+	if (ret != SHOUTERR_SUCCESS)
+		return ret;
+
+	if ((ret = send_queue(self)) != SHOUTERR_SUCCESS)
+		return ret;
 
 	if (!sock_read_line(self->socket, response, sizeof(response)))
 		return SHOUTERR_SOCKET;
@@ -1108,8 +1119,8 @@ int login_icy(shout_t *self)
 	if (ret != SHOUTERR_SUCCESS)
 		return ret;
 
-	if (send_queue(self) != SHOUTERR_SUCCESS)
-		return self->error;
+	if ((ret = send_queue(self)) != SHOUTERR_SUCCESS)
+		return ret;
 
 	if (!sock_read_line(self->socket, response, sizeof(response)))
 		return SHOUTERR_SOCKET;
