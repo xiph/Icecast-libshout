@@ -98,7 +98,7 @@ const char *shout_get_dumpfile(shout_t *self);
 int shout_set_audio_info(shout_t *self, const char *name, const char *value);
 const char *shout_get_audio_info(shout_t *self, const char *name);
 
-int shout_set_public(shout_t *self, unsigned int public);
+int shout_set_public(shout_t *self, unsigned int make_public);
 unsigned int shout_get_public(shout_t *self);
 
 /* takes a SHOUT_FORMAT_xxxx argument */
