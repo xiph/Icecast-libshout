@@ -5,6 +5,17 @@
 #ifndef __LIBSHOUT_SHOUT_H__
 #define __LIBSHOUT_SHOUT_H__
 
+#ifdef _WIN32
+typedef int64_t __int64
+typedef uint64_t unsigned __int64
+#else
+# ifdef __GLIBC__
+#  include <stdint.h>
+# endif
+#endif
+
+#include <sys/types.h>
+
 #include <ogg/ogg.h>
 
 #ifdef __cplusplus
@@ -36,8 +47,8 @@ typedef struct {
 	int error;
 	int pages;		/* total pages broadcasted */
 
-	long long _starttime;	/* start of this period's timeclock */
-	long long _senttime;	/* amout of data we've sent (in milliseconds) */
+	uint64_t _starttime;	/* start of this period's timeclock */
+	uint64_t _senttime;	/* amout of data we've sent (in milliseconds) */
 	int _samples;	        /* the number of samples for the current page */
 	int _oldsamples;
 	int _samplerate;  	/* the samplerate of the stream */

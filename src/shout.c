@@ -157,7 +157,7 @@ int shout_send_data(shout_conn_t *self, unsigned char *buff, unsigned long len)
 
 void shout_sleep(shout_conn_t *self)
 {
-	long long sleep;
+	uint64_t sleep;
 
 	if (self->_senttime == 0) return;
 
