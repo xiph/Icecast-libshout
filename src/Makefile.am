@@ -14,7 +14,7 @@ endif
 SUBDIRS = avl net timing httpp $(MAYBE_THREAD)
 
 lib_LTLIBRARIES = libshout.la
-libshout_la_LDFLAGS = -version-info 3:0:0
+libshout_la_LDFLAGS = -version-info 4:0:1
 
 EXTRA_DIST = theora.c
 noinst_HEADERS = shout_ogg.h shout_private.h util.h

@@ -6,7 +6,8 @@ libogg
 
 Both of these libraries must be installed before you can build
 libshout. If they aren't available in your OS's package system, you
-can find them at vorbis.com.
+can find them at vorbis.com. You may also want libtheora if you're
+interested in doing video streaming.
 
 Building
 --------
@@ -37,4 +38,4 @@ $(prefix)/lib/pkgconfig, otherwise it will place a shout-config script
 in $(prefix)/bin. You can force libshout to use shout-config instead
 of pkgconfig with the configure option --disable-pkgconfig.
 
-$Id: INSTALL,v 1.1 2003/06/13 23:04:23 brendan Exp $
+$Id$
