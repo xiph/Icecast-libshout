@@ -15,7 +15,7 @@
     </copyright>
     -->
     <orgname><ulink url="http://xiph.org/">Xiph.org</ulink></orgname>
-    <releaseinfo>$Id: libshout.xml,v 1.1 2003/07/04 02:20:41 brendan Exp $</releaseinfo>
+    <releaseinfo>$Id: libshout.xml,v 1.2 2003/07/05 02:48:09 brendan Exp $</releaseinfo>
     <date> 3 Jul 2003</date>
   </bookinfo>
 
@@ -39,31 +39,28 @@ servers. Currently it supports two audio formats and three protocols.
 
 </chapter>
 
-<chapter><title>Function Reference</title>
+<chapter><title>Reference</title>
 
+<section><title>Functions</title>
 <funcsynopsis id="shout_init">
 <funcprototype>
   <funcdef>void <function>shout_init</function></funcdef>
   <void/>
 </funcprototype>
-<funcsynopsisinfo>
+</funcsynopsis>
 Initializes the shout library. Currently this initializes the networking
 mutexes when the library is built with thread safety. This function must
 always be called before any other libshout function.
-</funcsynopsisinfo>
-</funcsynopsis>
 
 <funcsynopsis id="shout_shutdown">
 <funcprototype>
   <funcdef>void <function>shout_shutdown</function></funcdef>
   <void/>
 </funcprototype>
-<funcsynopsisinfo>
-Releases any resources which may have been allocated by a call to
-<link linkend="shout_init">shout_init</link>. An application should call this
-function after it has finished using libshout.
-</funcsynopsisinfo>
 </funcsynopsis>
+Releases any resources which may have been allocated by a call to
+<link linkend="shout_init"><function>shout_init</function></link>. An
+application should call this function after it has finished using libshout.
 
 <funcsynopsis id="shout_version">
 <funcprototype>
@@ -72,36 +69,167 @@ function after it has finished using libshout.
   <paramdef>int *<parameter>minor</parameter></paramdef>
   <paramdef>int *<parameter>patch</parameter></paramdef>
 </funcprototype>
-<funcsynopsisinfo>
+</funcsynopsis>
 Returns the version of the libshout library, both as a string via the
 return value, and as a set of integers corresponding to the major,
 minor and patch levels of the library. The application must allocate
 the integer parameters. If any parameter is NULL, libshout will not
 attempt to set it.
-</funcsynopsisinfo>
-</funcsynopsis>
 
 <funcsynopsis id="shout_new">
 <funcprototype>
   <funcdef><type>shout_t</type> <function>shout_new</function></funcdef>
   <void/>
 </funcprototype>
-<funcsynopsisinfo>
+</funcsynopsis>
 Allocates a new <type>shout_t</type> structure. May return NULL if no memory
 is available. The result should be disposed of with
-<link linkend="shout_free">shout_free</link> when you are finished with it.
-</funcsynopsisinfo>
-</funcsynopsis>
+<link linkend="shout_free"><function>shout_free</function></link> when you are
+finished with it.
 
 <funcsynopsis id="shout_free">
 <funcprototype>
   <funcdef>void <function>shout_free</function></funcdef>
   <paramdef><type>shout_t</type> <parameter>self</parameter></paramdef>
 </funcprototype>
-<funcsynopsisinfo>
-Frees a <type>shout_t</type> allocated by <link linkend="shout_new">shout_new</link>.
-</funcsynopsisinfo>
 </funcsynopsis>
+Frees a <type>shout_t</type> allocated by
+<link linkend="shout_new"><function>shout_new</function></link>.
+
+</section>
+
+<section><title>Data Types</title>
+
+<variablelist id="data_types">
+  <varlistentry id="shout_t">
+  <term><type>shout_t</type></term>
+  <listitem>Opaque data type that refers to a single server connection.</listitem>
+  </varlistentry>
+
+  <varlistentry id="shout_metadata_t">
+  <term><type>shout_metadata_t</type></term>
+  <listitem>Opaque data type that refers to a set of metadata attributes. Currently
+  the only defined attribute is <constant>song</constant>.</listitem>
+  </varlistentry>
+</variablelist>
+
+</section>
+
+<section><title>Constants</title>
+
+<variablelist id="error_constants"><title>Error Codes</title>
+  <varlistentry>
+  <term><constant>SHOUTERR_SUCCESS</constant></term>
+  <listitem>Indicates success.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_INSANE</constant></term>
+  <listitem>Indicates bad parameters, either nonsense or not applicable due to the current
+  state of the connection.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_MALLOC</constant></term>
+  <listitem>Indicates the function could not allocate the memory it required.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_NOCONNECT</constant></term>
+  <listitem>Indicates a connection with the server could not be established.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_NOLOGIN</constant></term>
+  <listitem>Indicates the server refused to accept a login attempt. This could be caused
+  by a bad user name or password.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_SOCKET</constant></term>
+  <listitem>Indicates an error sending or receiving data.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_METADATA</constant></term>
+  <listitem>Indicates an error updating metadata on the server.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_CONNECTED</constant></term>
+  <listitem>Indicates that, while connected, you attempted to call a function which only makes
+  sense before connection (eg you attempted to set the user name or stream name).</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_UNCONNECTED</constant></term>
+  <listitem>Indicates that you attempted to use a function that requires an open connection
+  (for example, <function>shout_send</function>) while you were not connected.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_UNSUPPORTED</constant></term>
+  <listitem>Indicates that you attempted to use a function which is unsupported in the
+  state of your connection. For example, attempting to set metadata while using the
+  Ogg Vorbis format is unsupported.</listitem>
+  </varlistentry>
+</variablelist>
+
+<variablelist id="format_constants"><title>Formats</title>
+  <varlistentry>
+  <term><constant>SHOUT_FORMAT_VORBIS</constant></term>
+  <listitem>The Ogg Vorbis format. This is the default format.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUT_FORMAT_MP3</constant></term>
+  <listitem>The MP3 format.</listitem>
+  </varlistentry>
+</variablelist>
+
+<variablelist id="protocol_constants"><title>Protocols</title>
+  <varlistentry>
+  <term><constant>SHOUT_PROTOCOL_HTTP</constant></term>
+  <listitem>The HTTP protocol. This is the native protocol of the
+  <application>icecast 2</application> server, and is the default.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUT_PROTOCOL_XAUDIOCAST</constant></term>
+  <listitem>The Audiocast format. This is the native protocol of
+  <application>icecast 1</application>.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUT_PROTOCOL_ICY</constant></term>
+  <listitem>The ShoutCast format. This is the native protocol of
+  <application>ShoutCast</application>.</listitem>
+  </varlistentry>
+</variablelist>
+
+<variablelist id="audio_info_constants"><title>Audio Parameters</title>
+  <varlistentry>
+  <term><constant>SHOUT_AI_BITRATE</constant></term>
+  <listitem>Used to specify the nominal bitrate of the stream.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUT_AI_SAMPLERATE</constant></term>
+  <listitem>Used to specify the samplerate of the stream.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUT_AI_CHANNELS</constant></term>
+  <listitem>Used to specify the number of channels (usually one or two).</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUT_AI_QUALITY</constant></term>
+  <listitem>Used to specify the Ogg Vorbis encoding quality of the stream.</listitem>
+  </varlistentry>
+</variablelist>
+
+</section>
 
 </chapter>
 
