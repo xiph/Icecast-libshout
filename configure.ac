@@ -111,7 +111,7 @@ then
   AC_DEFINE([NO_THREAD], 1, [Define if you don't want to use the thread library])
 fi
 
-XIPH_PATH_VORBIS
+XIPH_PATH_VORBIS(, [AC_MSG_ERROR([requisite Ogg Vorbis library not found])])
 VORBIS_LIBS="$VORBIS_LDFLAGS $VORBIS_LIBS"
 XIPH_CFLAGS="$XIPH_CFLAGS $VORBIS_CFLAGS"
 
