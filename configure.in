@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.in,v 1.36 2003/06/03 20:16:21 brendan Exp $
+# $Id: configure.in,v 1.37 2003/06/04 01:18:08 brendan Exp $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 0)
@@ -139,6 +139,11 @@ fi
 XIPH_PATH_OGG
 XIPH_PATH_VORBIS
 XIPH_CFLAGS="$XIPH_CFLAGS $VORBIS_CFLAGS $OGG_CFLAGS"
+
+dnl pkgconfig/shout-config tests. If pkgconfig is found, use it and disable
+dnl shout-config, otherwise do the opposite. TODO: make user-configurable
+AC_CHECK_PROG([PKGCONFIG], [pkg-config], [yes], [no])
+AM_CONDITIONAL([HAVE_PKGCONFIG], [test "$PKGCONFIG" != "no"])
 
 # Build shout-config, shout.pc
 SHOUT_VERSION="$VERSION"
