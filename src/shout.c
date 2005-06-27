@@ -1017,7 +1017,7 @@ static int try_write (shout_t *self, const void *data, size_t len)
         if (sock_recoverable (sock_error()))
         {
             self->error = SHOUTERR_BUSY;
-            return 0;
+            return pos;
         }
         self->error = SHOUTERR_SOCKET;
         return ret;
