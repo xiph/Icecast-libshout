@@ -99,12 +99,16 @@ static int read_theora_page(ogg_codec_t *codec, ogg_page *page)
 		iframe = granulepos >> theora_data->granule_shift;
 		pframe = granulepos - (iframe << theora_data->granule_shift);
 		frames = iframe + pframe;
-		new_time = (frames  * per_frame);
+		if (theora_data->prev_time == 0)
+			theora_data->prev_time = (frames - ogg_page_packets(page))*per_frame;
+		else
+		{
+			new_time = (frames  * per_frame);
+			duration = new_time - theora_data->prev_time;
+			theora_data->prev_time = new_time;
 
-		duration = new_time - theora_data->prev_time;
-		theora_data->prev_time = new_time;
-
-		codec->senttime += (uint64_t)(duration + 0.5);
+			codec->senttime += (uint64_t)(duration + 0.5);
+		}
 	}
 
 	return SHOUTERR_SUCCESS;
