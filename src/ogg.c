@@ -53,6 +53,9 @@ static codec_open_t codecs[] = {
 #ifdef HAVE_THEORA
 	_shout_open_theora,
 #endif
+#ifdef HAVE_SPEEX
+	_shout_open_speex,
+#endif
 	NULL
 };
 
@@ -140,14 +143,14 @@ static void close_ogg(shout_t *self)
 
 static int open_codec(ogg_codec_t *codec, ogg_page *page)
 {
-	codec_open_t open_codec;
+	codec_open_t this_codec;
 	int i = 0;
 
-	while ((open_codec = codecs[i])) {
+	while ((this_codec = codecs[i])) {
 		ogg_stream_init(&codec->os, ogg_page_serialno(page));
 		ogg_stream_pagein(&codec->os, page);
 
-		if (open_codec(codec, page) == SHOUTERR_SUCCESS)
+		if (this_codec(codec, page) == SHOUTERR_SUCCESS)
 			return SHOUTERR_SUCCESS;
 
 		ogg_stream_clear(&codec->os);

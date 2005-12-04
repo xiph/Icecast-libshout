@@ -48,5 +48,8 @@ int _shout_open_vorbis(ogg_codec_t *codec, ogg_page *page);
 #ifdef HAVE_THEORA
 int _shout_open_theora(ogg_codec_t *codec, ogg_page *page);
 #endif
+#ifdef HAVE_SPEEX
+int _shout_open_speex(ogg_codec_t *codec, ogg_page *page);
+#endif
 
 #endif
