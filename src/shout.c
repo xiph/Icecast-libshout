@@ -1181,7 +1181,7 @@ static int parse_response(shout_t *self)
 static int parse_http_response(shout_t *self)
 {
 	http_parser_t *parser;
-	char *header;
+	char *header = NULL;
 	int hlen = 0;
 	int code;
 	char *retcode;
@@ -1198,11 +1198,11 @@ static int parse_http_response(shout_t *self)
 	parser = httpp_create_parser();
 	httpp_initialize(parser, NULL);
 	if (httpp_parse_response(parser, header, hlen, self->mount)) {
-		free (header);
 		retcode = httpp_getvar(parser, HTTPP_VAR_ERROR_CODE);
 		code = atoi(retcode);
 		if(code >= 200 && code < 300) {
 			httpp_destroy(parser);
+			free (header);
 			return SHOUTERR_SUCCESS;
 		}
 	}
