@@ -824,7 +824,7 @@ static int queue_data(shout_queue_t *queue, const unsigned char *data, size_t le
 
 static inline int queue_str(shout_t *self, const char *str)
 {
-	return queue_data(&self->wqueue, str, strlen(str));
+	return queue_data(&self->wqueue, (const unsigned char*)str, strlen(str));
 }
 
 /* this should be shared with sock_write. Create libicecommon. */
@@ -845,12 +845,12 @@ static int queue_printf(shout_t *self, const char *fmt, ...)
 	self->error = SHOUTERR_SUCCESS;
 	if (len > 0) {
 		if ((size_t)len < sizeof(buffer))
-			queue_data(&self->wqueue, buf, len);
+			queue_data(&self->wqueue, (unsigned char*)buf, len);
 		else {
 			buf = malloc(++len);
 			if (buf) {
 				len = vsnprintf(buf, len, fmt, ap_retry);
-				queue_data(&self->wqueue, buf, len);
+				queue_data(&self->wqueue, (unsigned char*)buf, len);
 				free(buf);
 			} else
 				self->error = SHOUTERR_MALLOC;
@@ -890,19 +890,21 @@ static int get_response(shout_t *self)
 	if (rc <= 0)
 		return SHOUTERR_SOCKET;
 
-	if ((rc = queue_data(&self->rqueue, buf, rc)))
+	if ((rc = queue_data(&self->rqueue, (unsigned char*)buf, rc)))
 		return rc;
 
 	/* work from the back looking for \r?\n\r?\n. Anything else means more
 	 * is coming. */
 	for (queue = self->rqueue.head; queue->next; queue = queue->next);
-	pc = queue->data + queue->len - 1;
+	pc = (char*)queue->data + queue->len - 1;
 	blen = queue->len;
 	while (blen) {
 		if (*pc == '\n')
 			newlines++;
+		/* we may have to scan the entire queue if we got a response with
+		 * data after the head line (this can happen with eg 401) */
 		else if (*pc != '\r')
-			break;
+			newlines = 0;
 
 		if (newlines == 2)
 			return SHOUTERR_SUCCESS;
@@ -912,7 +914,7 @@ static int get_response(shout_t *self)
 
 		if (!blen && queue->prev) {
 			queue = queue->prev;
-			pc = queue->data + queue->len - 1;
+			pc = (char*)queue->data + queue->len - 1;
 			blen = queue->len;
 		}
 	}
