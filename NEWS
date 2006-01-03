@@ -1,0 +1,6 @@
+libshout 2.2 (20060103)
+
+* Speex support
+* Fix a double-free bug when login fails
+* More robust server response parser
+* Theora timing fix
