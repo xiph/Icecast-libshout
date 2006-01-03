@@ -26,6 +26,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef HAVE_INTTYPES_H
+#include <inttypes.h>
+#endif
+
 #include <ogg/ogg.h>
 
 #include <shout/shout.h>

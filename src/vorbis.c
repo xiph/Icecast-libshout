@@ -23,6 +23,10 @@
 # include <config.h>
 #endif
 
+#ifdef HAVE_INTTYPES_H
+#include <inttypes.h>
+#endif
+
 #include <vorbis/codec.h>
 
 #include "shout_private.h"
