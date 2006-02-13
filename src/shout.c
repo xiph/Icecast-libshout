@@ -312,6 +312,7 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 
 		rv = sock_write(socket, "GET /admin/metadata?mode=updinfo&mount=%s&%s HTTP/1.0\r\nUser-Agent: %s\r\n%s\r\n",
 		  self->mount, encvalue, shout_get_agent(self), auth ? auth : "");
+                free(auth);
 	} else
 		rv = sock_write(socket, "GET /admin.cgi?mode=updinfo&pass=%s&mount=%s&%s HTTP/1.0\r\nUser-Agent: %s\r\n\r\n",
 		  self->password, self->mount, encvalue, shout_get_agent(self));
