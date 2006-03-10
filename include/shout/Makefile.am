@@ -2,5 +2,5 @@
 
 AUTOMAKE_OPTIONS = foreign
 
-includedir = $(prefix)/include/shout
+pkgincludedir = $(includedir)/shout
 nodist_include_HEADERS = shout.h
