@@ -162,7 +162,7 @@ int shout_close(shout_t *self)
 	if (self->state == SHOUT_STATE_UNCONNECTED)
 		return self->error = SHOUTERR_UNCONNECTED;
 
-	if (self->close)
+	if (self->state == SHOUT_STATE_CONNECTED && self->close)
 		self->close(self);
 
 	sock_close(self->socket);
