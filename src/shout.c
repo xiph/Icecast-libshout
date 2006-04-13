@@ -952,11 +952,13 @@ static int try_connect (shout_t *self)
 			if ((rc = sock_connected(self->socket, 0)) < 1) {
 				if (!rc)
 					return SHOUTERR_BUSY;
-				else
-					return SHOUTERR_SOCKET;
+				else {
+                                        rc = SHOUTERR_SOCKET;
+                                        goto failure;
+                                }
 			}
 			if ((rc = create_request(self)) != SHOUTERR_SUCCESS)
-				return rc;
+                                goto failure;
 		}
 		self->state = SHOUT_STATE_REQ_PENDING;
 
@@ -964,36 +966,34 @@ static int try_connect (shout_t *self)
 		do
 			rc = send_queue(self);
 		while (!shout_get_nonblocking(self) && rc == SHOUTERR_BUSY);
+                if (rc == SHOUTERR_BUSY)
+                        return rc;
 		if (rc != SHOUTERR_SUCCESS)
-			return rc;
+                        goto failure;
 		self->state = SHOUT_STATE_RESP_PENDING;
 
 	case SHOUT_STATE_RESP_PENDING:
 		do
 			rc = get_response(self);
 		while (!shout_get_nonblocking(self) && rc == SHOUTERR_BUSY);
+                if (rc == SHOUTERR_BUSY)
+                        return rc;
+
 		if (rc != SHOUTERR_SUCCESS)
-			return rc;
+                        goto failure;
 
 		if ((rc = parse_response(self)) != SHOUTERR_SUCCESS)
-			return rc;
+                        goto failure;
 
 		if (self->format == SHOUT_FORMAT_OGG) {
-			if ((self->error = shout_open_ogg(self)) != SHOUTERR_SUCCESS) {
-				self->state = SHOUT_STATE_UNCONNECTED;
-				sock_close(self->socket);
-				return self->error;
-			}
+			if ((rc = self->error = shout_open_ogg(self)) != SHOUTERR_SUCCESS)
+                                goto failure;
 		} else if (self->format == SHOUT_FORMAT_MP3) {
-			if ((self->error = shout_open_mp3(self)) != SHOUTERR_SUCCESS) {
-				self->state = SHOUT_STATE_UNCONNECTED;
-				sock_close(self->socket);
-				return self->error;
-			}
+			if ((rc = self->error = shout_open_mp3(self)) != SHOUTERR_SUCCESS)
+                                goto failure;
 		} else {
-			self->state = SHOUT_STATE_UNCONNECTED;
-			sock_close(self->socket);
-			return self->error = SHOUTERR_INSANE;
+                        rc = SHOUTERR_INSANE;
+                        goto failure;
 		}
 
 	case SHOUT_STATE_CONNECTED:
@@ -1001,6 +1001,10 @@ static int try_connect (shout_t *self)
 	}
 	
 	return SHOUTERR_SUCCESS;
+
+failure:
+        shout_close(self);
+	return rc;
 }
 
 static int try_write (shout_t *self, const void *data, size_t len)
