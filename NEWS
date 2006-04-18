@@ -1,3 +1,10 @@
+libshout 2.2.1 (20060417)
+
+* Fix error handling while opening a connection, so that shout_open
+  can be retried.
+* pkgconfig fix for header installation
+* Fix a memory leak in HTTP authentication
+
 libshout 2.2 (20060103)
 
 * Speex support
