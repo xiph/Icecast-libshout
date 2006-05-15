@@ -37,7 +37,9 @@ typedef struct {
 	theora_info ti;
 	theora_comment tc;
 	uint32_t granule_shift;
-	double prev_time;
+	double per_frame;
+    uint64_t start_frame;
+    int get_start_time;
 } theora_data_t;
 
 /* -- local prototypes -- */
@@ -77,42 +79,46 @@ static int read_theora_page(ogg_codec_t *codec, ogg_page *page)
 {
 	theora_data_t *theora_data = codec->codec_data;
 	ogg_packet packet;
-	double per_frame, duration, new_time;
 	ogg_int64_t granulepos, iframe, pframe;
-	uint64_t frames;
 
-	if (ogg_page_granulepos(page) == 0)
+	granulepos = ogg_page_granulepos(page);
+
+	if (granulepos == 0)
 	{
 		while (ogg_stream_packetout(&codec->os, &packet) > 0) {
 			if (theora_decode_header(&theora_data->ti, &theora_data->tc, &packet) < 0)
 				return SHOUTERR_INSANE;
 			codec->headers++;
 		}
-		if (codec->headers == 3) {
-			theora_data->prev_time = 0;
+		if (codec->headers == 3)
+        {
 			theora_data->granule_shift = theora_ilog(theora_data->ti.keyframe_frequency_force - 1);
+            theora_data->per_frame = (double)theora_data->ti.fps_denominator / theora_data->ti.fps_numerator * 1000000;
+            theora_data->get_start_time = 1;
 		}
 
 		return SHOUTERR_SUCCESS;
 	}
 
-	per_frame = (double)theora_data->ti.fps_denominator / theora_data->ti.fps_numerator * 1000000;
-	granulepos = ogg_page_granulepos(page);
+	if (granulepos > 0 && codec->headers >= 3)
+    {
+        iframe = granulepos >> theora_data->granule_shift;
+        pframe = granulepos - (iframe << theora_data->granule_shift);
 
-	if (granulepos > 0) {
-		iframe = granulepos >> theora_data->granule_shift;
-		pframe = granulepos - (iframe << theora_data->granule_shift);
-		frames = iframe + pframe;
-		if (theora_data->prev_time == 0)
-			theora_data->prev_time = (frames - ogg_page_packets(page))*per_frame;
-		else
-		{
-			new_time = (frames  * per_frame);
-			duration = new_time - theora_data->prev_time;
-			theora_data->prev_time = new_time;
+        if (theora_data->get_start_time)
+        {
+            /* may need to improve mechanism for working out the start time, this
+             * doesn't include the first set of pages */
 
-			codec->senttime += (uint64_t)(duration + 0.5);
-		}
+            theora_data->start_frame = iframe + pframe;
+            codec->senttime = 0;
+            theora_data->get_start_time = 0;
+        }
+        else
+        {
+            uint64_t frames = ((iframe + pframe) - theora_data->start_frame);
+            codec->senttime = (uint64_t)(frames * theora_data->per_frame);
+        }
 	}
 
 	return SHOUTERR_SUCCESS;
