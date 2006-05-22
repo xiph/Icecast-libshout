@@ -39,7 +39,8 @@ typedef struct {
 	uint32_t granule_shift;
 	double per_frame;
     uint64_t start_frame;
-    int get_start_time;
+    int initial_frames;
+    int get_start_frame;
 } theora_data_t;
 
 /* -- local prototypes -- */
@@ -71,6 +72,7 @@ int _shout_open_theora(ogg_codec_t *codec, ogg_page *page)
 	codec->read_page = read_theora_page;
 	codec->free_data = free_theora_data;
 	codec->headers = 1;
+    theora_data->initial_frames = 0;
 
 	return SHOUTERR_SUCCESS;
 }
@@ -94,25 +96,28 @@ static int read_theora_page(ogg_codec_t *codec, ogg_page *page)
         {
 			theora_data->granule_shift = theora_ilog(theora_data->ti.keyframe_frequency_force - 1);
             theora_data->per_frame = (double)theora_data->ti.fps_denominator / theora_data->ti.fps_numerator * 1000000;
-            theora_data->get_start_time = 1;
+            theora_data->get_start_frame = 1;
 		}
 
 		return SHOUTERR_SUCCESS;
 	}
 
+    while (ogg_stream_packetout(&codec->os, &packet) > 0)
+    {
+        if (theora_data->get_start_frame)
+            theora_data->initial_frames++;
+    }
 	if (granulepos > 0 && codec->headers >= 3)
     {
         iframe = granulepos >> theora_data->granule_shift;
         pframe = granulepos - (iframe << theora_data->granule_shift);
 
-        if (theora_data->get_start_time)
+        if (theora_data->get_start_frame)
         {
-            /* may need to improve mechanism for working out the start time, this
-             * doesn't include the first set of pages */
-
-            theora_data->start_frame = iframe + pframe;
+            /* work out the real start frame, which may not be 0 */
+            theora_data->start_frame = iframe + pframe - theora_data->initial_frames;
             codec->senttime = 0;
-            theora_data->get_start_time = 0;
+            theora_data->get_start_frame = 0;
         }
         else
         {
