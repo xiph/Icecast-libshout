@@ -950,12 +950,11 @@ static int try_connect (shout_t *self)
 	case SHOUT_STATE_CONNECT_PENDING:
 		if (shout_get_nonblocking(self)) {
 			if ((rc = sock_connected(self->socket, 0)) < 1) {
-				if (!rc)
-					return SHOUTERR_BUSY;
-				else {
+				if (rc == SOCK_ERROR) {
                                         rc = SHOUTERR_SOCKET;
                                         goto failure;
-                                }
+				} else
+					return SHOUTERR_BUSY;
 			}
 			if ((rc = create_request(self)) != SHOUTERR_SUCCESS)
                                 goto failure;
