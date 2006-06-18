@@ -89,7 +89,8 @@ int main()
 				break;
 			}
 			if (shout_queuelen(shout) > 0)
-				printf("DEBUG: queue length: %d\n", shout_queuelen(shout));
+				printf("DEBUG: queue length: %d\n", 
+                                        (int)shout_queuelen(shout));
 
 			shout_sync(shout);
 		}
