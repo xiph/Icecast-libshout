@@ -1,3 +1,12 @@
+libshout 2.2.2 (20060619)
+
+* Handle Oggs that don't begin with zero granulepos.
+* Install header in correct location (broken in 2.2.1).
+* Theora memory leak fix.
+* Non-blocking shout_open was failing unnecessarily in the
+  connect_pending state.
+* Cast some size_ts to ints for display purposes.
+
 libshout 2.2.1 (20060417)
 
 * Fix error handling while opening a connection, so that shout_open
