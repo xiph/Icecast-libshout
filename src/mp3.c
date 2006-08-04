@@ -296,8 +296,8 @@ static int mp3_header(uint32_t head, mp3_header_t *mh)
 	if ((mh->syncword & 0x0ffe) != 0x0ffe)
 		return 0;
 
-	/* check for the right layer */
-	if (mh->layer != 2)
+	/* check that layer is valid */
+	if (mh->layer == 0)
 		return 0;
 
 	/* make sure bitrate is sane */
