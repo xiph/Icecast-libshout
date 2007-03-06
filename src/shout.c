@@ -24,6 +24,7 @@
  #include <config.h>
 #endif
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,6 +37,14 @@
 
 #include "shout_private.h"
 #include "util.h"
+
+#ifdef _WIN32
+# ifndef va_copy
+#  define va_copy(ap1, ap2) memcpy(&ap1, &ap2, sizeof(va_list))
+# endif
+# define vsnprintf	_vsnprintf
+# define inline 	_inline
+#endif
 
 /* -- local prototypes -- */
 static int queue_data(shout_queue_t *queue, const unsigned char *data, size_t len);
@@ -1006,10 +1015,11 @@ failure:
 	return rc;
 }
 
-static int try_write (shout_t *self, const void *data, size_t len)
+static int try_write (shout_t *self, const void *data_p, size_t len)
 {
     int ret;
     size_t pos = 0;
+    unsigned char *data = (unsigned char *)data_p;
 
     /* loop until whole buffer is written (unless it would block) */
     do {

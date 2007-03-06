@@ -26,6 +26,7 @@
 #ifdef HAVE_INTTYPES_H
 #include <inttypes.h>
 #endif
+#include <stdlib.h>
 
 #include <vorbis/codec.h>
 
