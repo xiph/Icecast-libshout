@@ -117,17 +117,22 @@ PKG_CHECK_MODULES(VORBIS, vorbis, [
     HAVE_VORBIS="yes"
     SHOUT_REQUIRES="$SHOUT_REQUIRES, vorbis"
   ], [
-    XIPH_PATH_VORBIS(, [AC_MSG_ERROR([requisite Ogg Vorbis library not found])])
+    XIPH_PATH_VORBIS(, [AC_MSG_ERROR([required Ogg Vorbis library not found])])
   ])
 VORBIS_LIBS="$VORBIS_LDFLAGS $VORBIS_LIBS"
 XIPH_CFLAGS="$XIPH_CFLAGS $VORBIS_CFLAGS"
 
+AC_ARG_ENABLE([theora],
+  AC_HELP_STRING([--disable-theora],[do not build with Theora support]))
+
+if test "x$enable_theora" != "xno"; then
 PKG_CHECK_MODULES(THEORA, theora, [
     HAVE_THEORA="yes"
     SHOUT_REQUIRES="$SHOUT_REQUIRES, theora"
   ], [
     XIPH_PATH_THEORA(, [AC_MSG_WARN([Theora library not found, disabling])])
   ])
+fi
 XIPH_VAR_APPEND([XIPH_CPPFLAGS],[$THEORA_CFLAGS])
 XIPH_VAR_PREPEND([XIPH_LIBS],[$THEORA LDFLAGS $THEORA_LIBS])
 AM_CONDITIONAL([HAVE_THEORA], [test -n "$THEORA_LIBS"])
@@ -136,12 +141,17 @@ then
   AC_DEFINE([HAVE_THEORA], 1, [Define if you want theora streams supported])
 fi
 
+AC_ARG_ENABLE([speex],
+  AC_HELP_STRING([--disable-speex],[do not build with Speex support]))
+
+if test "x$enable_speex" != "xno"; then
 PKG_CHECK_MODULES(SPEEX, speex, [
     HAVE_SPEEX="yes"
     SHOUT_REQUIRES="$SHOUT_REQUIRES, speex"
   ], [
     XIPH_PATH_SPEEX(, [AC_MSG_WARN([Speex library not found, disabling])])
   ])
+fi
 XIPH_VAR_APPEND([XIPH_CPPFLAGS],[$SPEEX_CFLAGS])
 XIPH_VAR_PREPEND([XIPH_LIBS],[$SPEEX LDFLAGS $SPEEX_LIBS])
 AM_CONDITIONAL([HAVE_SPEEX], [test -n "$SPEEX_LIBS"])
