@@ -75,7 +75,7 @@ dnl Checks for programs.
 
 dnl Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([strings.h])
+AC_CHECK_HEADERS([strings.h sys/timeb.h])
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -83,6 +83,7 @@ AC_C_INLINE
 XIPH_C99_INTTYPES
 
 dnl Checks for library functions.
+AC_CHECK_FUNCS([gettimeofday ftime])
 AC_SEARCH_LIBS([nanosleep], [rt],
   [AC_DEFINE([HAVE_NANOSLEEP], [1],
     [Define if you have the nanosleep function])])
