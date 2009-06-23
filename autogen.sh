@@ -18,7 +18,7 @@ DIE=0
         echo "or get the source tarball at ftp://ftp.gnu.org/pub/gnu/"
         DIE=1
 }
-VERSIONGREP="sed -e s/.*[^0-9\.]\([0-9]\.[0-9]\).*/\1/"
+VERSIONGREP="sed -e s/.*[^0-9\.]\([0-9]\.[0-9]\{1,\}\).*/\1/"
                                                                                 
 # do we need automake?
 if test -r Makefile.am; then
