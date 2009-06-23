@@ -38,7 +38,7 @@
 #include "shout_private.h"
 #include "util.h"
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 # ifndef va_copy
 #  define va_copy(ap1, ap2) memcpy(&ap1, &ap2, sizeof(va_list))
 # endif
