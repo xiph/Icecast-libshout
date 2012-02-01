@@ -41,6 +41,7 @@
 
 #define SHOUT_FORMAT_OGG	(0)
 #define SHOUT_FORMAT_MP3	(1)
+#define SHOUT_FORMAT_WEBM	(2)
 /* backward-compatibility alias */
 #define SHOUT_FORMAT_VORBIS	SHOUT_FORMAT_OGG
 
