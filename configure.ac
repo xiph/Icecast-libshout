@@ -4,9 +4,7 @@
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 3)
 m4_define(libshout_micro, 0)
-m4_define(libshout_version,
-  m4_if(libshout_micro, 0, libshout_major.libshout_minor,
-   libshout_major.libshout_minor.libshout_micro))
+m4_define(libshout_version, libshout_major.libshout_minor.libshout_micro)
 
 AC_INIT([libshout], libshout_version, [icecast-dev@xiph.org])
 AC_PREREQ([2.54])
