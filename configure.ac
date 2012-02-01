@@ -159,9 +159,7 @@ then
   AC_DEFINE([HAVE_SPEEX], 1, [Define if you want speex streams supported])
 fi
 
-dnl pkgconfig/shout-config.
-dnl If pkgconfig is found, use it and disable shout-config, otherwise do the
-dnl opposite, unless the user overrides.
+dnl If pkgconfig is found, install a shout.pc file.
 
 AC_ARG_ENABLE([pkgconfig],
   AC_HELP_STRING([--disable-pkgconfig],[disable pkgconfig data files (auto)]),
@@ -176,7 +174,7 @@ else
 fi
 AM_CONDITIONAL([HAVE_PKGCONFIG], [test "$PKGCONFIG" != "no"])
 
-# Build shout-config, shout.pc
+# Collect flags for shout.pc
 
 # I hate myself for doing this.
 save_prefix="$prefix"
@@ -200,8 +198,6 @@ AC_SUBST(SHOUT_LIBDEPS)
 AC_SUBST(SHOUT_REQUIRES)
 AC_SUBST(SHOUT_CPPFLAGS)
 AC_SUBST(SHOUT_CFLAGS)
-AC_CONFIG_LIBCONFIG_IN_STATIC
-AC_CONFIG_LIBCONFIG_IN([shout])
 
 dnl Make substitutions
 
@@ -217,4 +213,4 @@ AC_SUBST(XIPH_CPPFLAGS)
 AC_OUTPUT([Makefile debian/Makefile include/Makefile include/shout/Makefile
   include/shout/shout.h src/Makefile src/net/Makefile src/timing/Makefile
   src/thread/Makefile src/avl/Makefile src/httpp/Makefile doc/Makefile
-  examples/Makefile win32/Makefile shout-config shout.pc])
+  examples/Makefile win32/Makefile shout.pc])
