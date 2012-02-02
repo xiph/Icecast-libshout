@@ -1,6 +1,6 @@
 /* -*- c-basic-offset: 8; -*- */
 /* webm.c: WebM data handler
- * $Id: ogg.c 10686 2006-01-03 18:47:54Z brendan $
+ * $Id$
  *
  *  Copyright (C) 2002-2012 the Icecast team <team@icecast.org>
  *
