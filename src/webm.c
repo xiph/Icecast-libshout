@@ -34,9 +34,8 @@
 #include "shout_private.h"
 
 /* -- local datatypes -- */
-typedef struct {
-  /* no local state */
-} webm_data_t;
+
+/* no local state */
 
 /* -- static prototypes -- */
 static int send_webm(shout_t *self, const unsigned char *data, size_t len);
@@ -64,5 +63,5 @@ static int send_webm(shout_t *self, const unsigned char *data, size_t len)
 
 static void close_webm(shout_t *self)
 {
-	/* no private state */
+	/* no local state */
 }
