@@ -1,3 +1,8 @@
+libshout 2.3.0 (20120201)
+
+* Rough WebM support
+* removed the shout-config script
+
 libshout 2.2.2 (20060619)
 
 * Handle Oggs that don't begin with zero granulepos.
