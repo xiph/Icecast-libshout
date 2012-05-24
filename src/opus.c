@@ -209,70 +209,70 @@ static int packet_get_nb_frames(const unsigned char packet[], int32_t len)
 /* -- opus functions -- */
 int _shout_open_opus(ogg_codec_t *codec, ogg_page *page)
 {
-	opus_data_t *opus_data = calloc(1, sizeof(opus_data_t));
-	ogg_packet packet;
+   opus_data_t *opus_data = calloc(1, sizeof(opus_data_t));
+   ogg_packet packet;
 
-	if (!opus_data)
-		return SHOUTERR_MALLOC;
+   if (!opus_data)
+      return SHOUTERR_MALLOC;
 
-	ogg_stream_packetout(&codec->os, &packet);
+   ogg_stream_packetout(&codec->os, &packet);
 
-	if (!opus_header_parse(packet.packet,packet.bytes,&opus_data->oh)) {
-		free_opus_data(opus_data);
+   if (!opus_header_parse(packet.packet,packet.bytes,&opus_data->oh)) {
+      free_opus_data(opus_data);
+      return SHOUTERR_UNSUPPORTED;
+   }
+   opus_data->skipped = 0;
 
-		return SHOUTERR_UNSUPPORTED;
-	}
-        opus_data->skipped = 0;
+   codec->codec_data = opus_data;
+   codec->read_page = read_opus_page;
+   codec->free_data = free_opus_data;
 
-	codec->codec_data = opus_data;
-	codec->read_page = read_opus_page;
-	codec->free_data = free_opus_data;
-
-	return SHOUTERR_SUCCESS;
+   return SHOUTERR_SUCCESS;
 }
 
 static int read_opus_page(ogg_codec_t *codec, ogg_page *page)
 {
-	ogg_packet packet;
-	opus_data_t *opus_data = codec->codec_data;
+   ogg_packet packet;
+   opus_data_t *opus_data = codec->codec_data;
 
-        /*We use the strategy of counting the packet times and ignoring
-          the granpos. This has the advantage of needing less code to
-          sanely handle non-zero starttimes and slightly saner behavior
-          on files with holes.*/
-	while (ogg_stream_packetout (&codec->os, &packet) > 0){
-	  if(packet.bytes>0 && memcmp(packet.packet, "Op",2)!=0){
-	      int32_t spf;
-	      spf = packet_get_samples_per_frame(packet.packet,48000);
-	      if(spf>0){
-	          int32_t spp;
-	          spp=packet_get_nb_frames(packet.packet,packet.bytes);
-	          if(spp>0){
-	              int needskip;
-	              needskip=opus_data->oh.preskip-opus_data->skipped;
-	              spp*=spf;
-	              /*Opus files can begin with some frames which are
-	                just there to prime the decoder and are not played
-	                these should just be sent as fast as we get them.*/
-	              if(needskip>0){
-	                  int skip;
-	                  skip = spp<needskip?spp:needskip;
-	                  spp-=skip;
-	                  opus_data->skipped+=skip;
-	              }
-	              codec->senttime += ((spp * 1000000ULL) / 48000ULL);
-	          }
-	      }else if (packet.bytes>=19 && memcmp(packet.packet, "OpusHead",8)==0){
-              /*We appear to be chaining, reset skip to burst the pregap.*/
-              if(opus_header_parse(packet.packet,packet.bytes,&opus_data->oh))opus_data->skipped=0;
+   /* We use the strategy of counting the packet times and ignoring
+      the granpos. This has the advantage of needing less code to
+      sanely handle non-zero starttimes and slightly saner behavior
+      on files with holes. */
+   while (ogg_stream_packetout (&codec->os, &packet) > 0){
+      if(packet.bytes>0 && memcmp(packet.packet, "Op",2)!=0){
+         int32_t spf;
+         spf = packet_get_samples_per_frame(packet.packet,48000);
+         if(spf>0){
+            int32_t spp;
+            spp=packet_get_nb_frames(packet.packet,packet.bytes);
+            if(spp>0){
+               int needskip;
+               needskip=opus_data->oh.preskip-opus_data->skipped;
+               spp*=spf;
+               /*Opus files can begin with some frames which are
+                 just there to prime the decoder and are not played
+                 these should just be sent as fast as we get them.*/
+               if(needskip>0){
+                  int skip;
+                  skip = spp<needskip?spp:needskip;
+                  spp-=skip;
+                  opus_data->skipped+=skip;
+               }
+               codec->senttime += ((spp * 1000000ULL) / 48000ULL);
             }
-          }
-        }
+         }else if (packet.bytes>=19 && memcmp(packet.packet, "OpusHead",8)==0){
+            /* We appear to be chaining, reset skip to burst the pregap. */
+            if(opus_header_parse(packet.packet,packet.bytes,&opus_data->oh))
+               opus_data->skipped=0;
+         }
+      }
+   }
 
-	return SHOUTERR_SUCCESS;
+   return SHOUTERR_SUCCESS;
 }
 
 static void free_opus_data(void *codec_data)
 {
-	free(codec_data);
+   free(codec_data);
 }
