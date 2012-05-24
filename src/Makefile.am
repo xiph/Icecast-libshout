@@ -22,7 +22,7 @@ libshout_la_LDFLAGS = -version-info 5:0:2
 
 EXTRA_DIST = theora.c speex.c
 noinst_HEADERS = shout_ogg.h shout_private.h util.h
-libshout_la_SOURCES = shout.c util.c ogg.c vorbis.c mp3.c webm.c $(MAYBE_THEORA) $(MAYBE_SPEEX)
+libshout_la_SOURCES = shout.c util.c ogg.c vorbis.c mp3.c webm.c opus.c $(MAYBE_THEORA) $(MAYBE_SPEEX)
 AM_CFLAGS = @XIPH_CFLAGS@
 
 libshout_la_LIBADD = net/libicenet.la timing/libicetiming.la avl/libiceavl.la\
