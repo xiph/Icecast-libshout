@@ -271,7 +271,6 @@ int shout_delay(shout_t *self)
 	if (self->senttime == 0)
 		return 0;
 
-	/* Is this cast to double needed? */
 	return self->senttime / 1000 - (timing_get_time() - self->starttime);
 }
   
