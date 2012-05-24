@@ -11,6 +11,7 @@ test -z "$srcdir" && srcdir=.
 cd "$srcdir"
 DIE=0
 
+echo "checking for autoconf... "
 (autoconf --version) < /dev/null > /dev/null 2>&1 || {
         echo
         echo "You must have autoconf installed to compile $package."
@@ -18,59 +19,73 @@ DIE=0
         echo "or get the source tarball at ftp://ftp.gnu.org/pub/gnu/"
         DIE=1
 }
-VERSIONGREP="sed -e s/.*[^0-9\.]\([0-9]\.[0-9]\{1,\}\).*/\1/"
-                                                                                
+
+VERSIONGREP="sed -e s/.*[^0-9\.]\([0-9]\.[0-9]*\).*/\1/"
+VERSIONMKINT="sed -e s/[^0-9]//"
+
 # do we need automake?
 if test -r Makefile.am; then
-    echo Checking for automake version
-    options=`fgrep AUTOMAKE_OPTIONS Makefile.am`
-    AM_NEEDED=`echo "$options" | $VERSIONGREP`
-    AM_PROGS=automake
-    AC_PROGS=aclocal
-    if test -n "$AM_NEEDED" && test "x$AM_NEEDED" != "x$options"
-    then
-        AM_PROGS="automake-$AM_NEEDED automake$AM_NEEDED $AM_PROGS"
-        AC_PROGS="aclocal-$AM_NEEDED aclocal$AM_NEEDED $AC_PROGS"
+  AM_OPTIONS=`fgrep AUTOMAKE_OPTIONS Makefile.am`
+  AM_NEEDED=`echo $AM_OPTIONS | $VERSIONGREP`
+  if test "$AM_NEEDED" = "$AM_OPTIONS"; then
+    AM_NEEDED=""
+  fi
+  if test -z $AM_NEEDED; then
+    echo -n "checking for automake... "
+    AUTOMAKE=automake
+    ACLOCAL=aclocal
+    if ($AUTOMAKE --version < /dev/null > /dev/null 2>&1); then
+      echo "yes"
     else
-        AM_NEEDED=""
+      echo "no"
+      AUTOMAKE=
     fi
-    AM_PROGS="$AUTOMAKE $AM_PROGS"
-    AC_PROGS="$ACLOCAL $AC_PROGS"
-    for am in $AM_PROGS; do
-      ($am --version > /dev/null 2>&1) 2>/dev/null || continue
-      ver=`$am --version | head -1 | $VERSIONGREP`
-      AWK_RES=`echo $ver $AM_NEEDED | awk '{ if ( $1 >= $2 ) print "yes"; else print "no" }'`
-      if test "$AWK_RES" = "yes"; then
+  else
+    echo -n "checking for automake $AM_NEEDED or later... "
+    for am in automake-$AM_NEEDED automake$AM_NEEDED automake; do
+      ($am --version < /dev/null > /dev/null 2>&1) || continue
+      ver=`$am --version < /dev/null | head -n 1 | $VERSIONGREP | $VERSIONMKINT`
+      verneeded=`echo $AM_NEEDED | $VERSIONMKINT`
+      if test $ver -ge $verneeded; then
         AUTOMAKE=$am
-        echo "  found $AUTOMAKE"
+        echo $AUTOMAKE
         break
       fi
     done
-    for ac in $AC_PROGS; do
-      ($ac --version > /dev/null 2>&1) 2>/dev/null || continue
-      ver=`$ac --version < /dev/null | head -1 | $VERSIONGREP`
-      AWK_RES=`echo $ver $AM_NEEDED | awk '{ if ( $1 >= $2 ) print "yes"; else print "no" }'`
-      if test "$AWK_RES" = "yes"; then
+    test -z $AUTOMAKE &&  echo "no"
+    echo -n "checking for aclocal $AM_NEEDED or later... "
+    for ac in aclocal-$AM_NEEDED aclocal$AM_NEEDED aclocal; do
+      ($ac --version < /dev/null > /dev/null 2>&1) || continue
+      ver=`$ac --version < /dev/null | head -n 1 | $VERSIONGREP | $VERSIONMKINT`
+      verneeded=`echo $AM_NEEDED | $VERSIONMKINT`
+      if test $ver -ge $verneeded; then
         ACLOCAL=$ac
-        echo "  found $ACLOCAL"
+        echo $ACLOCAL
         break
       fi
     done
-    test -z $AUTOMAKE || test -z $ACLOCAL && {
+    test -z $ACLOCAL && echo "no"
+  fi
+  test -z $AUTOMAKE || test -z $ACLOCAL && {
         echo
-        if test -n "$AM_NEEDED"; then
-            echo "You must have automake version $AM_NEEDED installed"
-            echo "to compile $package."
-        else
-            echo "You must have automake installed to compile $package."
-        fi
+        echo "You must have automake installed to compile $package."
         echo "Download the appropriate package for your distribution,"
         echo "or get the source tarball at ftp://ftp.gnu.org/pub/gnu/"
-        DIE=1
-      }
+        exit 1
+  }
 fi
 
-(libtoolize --version)  > /dev/null 2>&1 || {
+echo -n "checking for libtool... "
+for LIBTOOLIZE in libtoolize glibtoolize nope; do
+  ($LIBTOOLIZE --version) < /dev/null > /dev/null 2>&1 && break
+done
+if test x$LIBTOOLIZE = xnope; then
+  echo "nope."
+  LIBTOOLIZE=libtoolize
+else
+  echo $LIBTOOLIZE
+fi
+($LIBTOOLIZE --version) < /dev/null > /dev/null 2>&1 || {
 	echo
 	echo "You must have libtool installed to compile $package."
 	echo "Download the appropriate package for your system,"
@@ -86,28 +101,16 @@ fi
 echo "Generating configuration files for $package, please wait...."
 
 ACLOCAL_FLAGS="$ACLOCAL_FLAGS -I m4"
-if test -n "$ACLOCAL"; then
-  echo "  $ACLOCAL $ACLOCAL_FLAGS"
-  $ACLOCAL $ACLOCAL_FLAGS
-fi
-
+echo "  $ACLOCAL $ACLOCAL_FLAGS"
+$ACLOCAL $ACLOCAL_FLAGS || exit 1
 echo "  autoheader"
-autoheader
-
-echo "  libtoolize --automake"
-libtoolize --automake
-
-if test -n "$AUTOMAKE"; then
-  echo "  $AUTOMAKE --add-missing"
-  $AUTOMAKE --add-missing 
-fi
-
+autoheader || exit 1
+echo "  $LIBTOOLIZE --automake"
+$LIBTOOLIZE --automake || exit 1
+echo "  $AUTOMAKE --add-missing $AUTOMAKE_FLAGS"
+$AUTOMAKE --add-missing $AUTOMAKE_FLAGS || exit 1
 echo "  autoconf"
-autoconf
+autoconf || exit 1
 
-if test -z "$*"; then
-        echo "I am going to run ./configure with no arguments - if you wish "
-        echo "to pass any to it, please specify them on the $0 command line."
-fi
 cd $olddir
-$srcdir/configure "$@" && echo
+#$srcdir/configure "$@" && echo
