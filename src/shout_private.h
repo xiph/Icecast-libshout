@@ -109,5 +109,6 @@ struct shout {
 
 int shout_open_ogg(shout_t *self);
 int shout_open_mp3(shout_t *self);
+int shout_open_webm(shout_t *self);
 
 #endif /* __LIBSHOUT_SHOUT_PRIVATE_H__ */
