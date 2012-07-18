@@ -728,7 +728,8 @@ int shout_set_format(shout_t *self, unsigned int format)
 
 	if (format != SHOUT_FORMAT_OGG
          && format != SHOUT_FORMAT_MP3
-	 && format != SHOUT_FORMAT_WEBM)
+	 && format != SHOUT_FORMAT_WEBM
+	 && format != SHOUT_FORMAT_WEBMAUDIO)
 		return self->error = SHOUTERR_UNSUPPORTED;
 
 	self->format = format;
@@ -1004,6 +1005,7 @@ static int try_connect (shout_t *self)
                                 goto failure;
 			break;
 		case SHOUT_FORMAT_WEBM:
+		case SHOUT_FORMAT_WEBMAUDIO:
 			if ((rc = self->error = shout_open_webm(self)) != SHOUTERR_SUCCESS)
 				goto failure;
 			break;
@@ -1139,6 +1141,8 @@ static int create_http_request(shout_t *self)
 		if (self->format == SHOUT_FORMAT_MP3 && queue_printf(self, "Content-Type: audio/mpeg\r\n"))
 			break;
 		if (self->format == SHOUT_FORMAT_WEBM && queue_printf(self, "Content-Type: video/webm\r\n"))
+			break;
+		if (self->format == SHOUT_FORMAT_WEBMAUDIO && queue_printf(self, "Content-Type: audio/webm\r\n"))
 			break;
 		if (queue_printf(self, "ice-name: %s\r\n", self->name ? self->name : "no name"))
 			break;

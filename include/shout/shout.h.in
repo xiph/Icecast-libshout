@@ -42,6 +42,7 @@
 #define SHOUT_FORMAT_OGG		(0) /* application/ogg */
 #define SHOUT_FORMAT_MP3		(1) /* audio/mpeg */
 #define SHOUT_FORMAT_WEBM		(2) /* video/webm */
+#define SHOUT_FORMAT_WEBMAUDIO		(3) /* audio/webm audio only */
 
 /* backward-compatibility alias */
 #define SHOUT_FORMAT_VORBIS	SHOUT_FORMAT_OGG
