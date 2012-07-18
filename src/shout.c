@@ -217,7 +217,7 @@ ssize_t shout_send_raw(shout_t *self, const unsigned char *data, size_t len)
 	if (len && ! self->wqueue.len) {
 		if ((ret = try_write(self, data, len)) < 0)
 			return self->error;
-		if (ret < len) {
+		if (ret < (ssize_t)len) {
 			self->error = queue_data(&self->wqueue, data + ret, len - ret);
 			if (self->error != SHOUTERR_SUCCESS)
 				return self->error;
@@ -994,16 +994,20 @@ static int try_connect (shout_t *self)
 		if ((rc = parse_response(self)) != SHOUTERR_SUCCESS)
                         goto failure;
 
-		if (self->format == SHOUT_FORMAT_OGG) {
+		switch (self->format) {
+		case SHOUT_FORMAT_OGG:
 			if ((rc = self->error = shout_open_ogg(self)) != SHOUTERR_SUCCESS)
                                 goto failure;
-		} else if (self->format == SHOUT_FORMAT_MP3) {
+			break;
+		case SHOUT_FORMAT_MP3:
 			if ((rc = self->error = shout_open_mp3(self)) != SHOUTERR_SUCCESS)
                                 goto failure;
-		} else if (self->format == SHOUT_FORMAT_WEBM) {
+			break;
+		case SHOUT_FORMAT_WEBM:
 			if ((rc = self->error = shout_open_webm(self)) != SHOUTERR_SUCCESS)
 				goto failure;
-		} else {
+			break;
+		default:
                         rc = SHOUTERR_INSANE;
                         goto failure;
 		}
@@ -1206,10 +1210,7 @@ static int parse_http_response(shout_t *self)
 	char *header = NULL;
 	int hlen = 0;
 	int code;
-	char *retcode;
-#if 0
-	char *realm;
-#endif
+	const char *retcode;
 
 	/* all this copying! */
 	hlen = collect_queue(self->rqueue.head, &header);

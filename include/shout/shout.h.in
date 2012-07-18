@@ -39,9 +39,10 @@
 
 #define SHOUTERR_BUSY		(-10)
 
-#define SHOUT_FORMAT_OGG	(0)
-#define SHOUT_FORMAT_MP3	(1)
-#define SHOUT_FORMAT_WEBM	(2)
+#define SHOUT_FORMAT_OGG		(0) /* application/ogg */
+#define SHOUT_FORMAT_MP3		(1) /* audio/mpeg */
+#define SHOUT_FORMAT_WEBM		(2) /* video/webm */
+
 /* backward-compatibility alias */
 #define SHOUT_FORMAT_VORBIS	SHOUT_FORMAT_OGG
 
