@@ -26,18 +26,17 @@
 #include <os.h>
 #endif
 
-#define SHOUTERR_SUCCESS	(0)
-#define SHOUTERR_INSANE		(-1)
-#define SHOUTERR_NOCONNECT	(-2)
-#define SHOUTERR_NOLOGIN	(-3)
-#define SHOUTERR_SOCKET		(-4)
-#define SHOUTERR_MALLOC		(-5)
-#define SHOUTERR_METADATA	(-6)
-#define SHOUTERR_CONNECTED	(-7)
-#define SHOUTERR_UNCONNECTED	(-8)
-#define SHOUTERR_UNSUPPORTED	(-9)
-
-#define SHOUTERR_BUSY		(-10)
+#define SHOUTERR_SUCCESS		(0) /* No error */
+#define SHOUTERR_INSANE			(-1) /* Nonsensical arguments e.g. self being NULL */ 
+#define SHOUTERR_NOCONNECT		(-2) /* Couldn't connect */
+#define SHOUTERR_NOLOGIN		(-3) /* Login failed */
+#define SHOUTERR_SOCKET			(-4) /* Socket error */
+#define SHOUTERR_MALLOC			(-5) /* Out of memory */
+#define SHOUTERR_METADATA		(-6)
+#define SHOUTERR_CONNECTED		(-7) /* Cannot set parameter while connected */
+#define SHOUTERR_UNCONNECTED		(-8) /* Not connected */
+#define SHOUTERR_UNSUPPORTED		(-9) /* This libshout doesn't support the requested option */
+#define SHOUTERR_BUSY			(-10) /* Socket is busy */
 
 #define SHOUT_FORMAT_OGG		(0) /* application/ogg */
 #define SHOUT_FORMAT_MP3		(1) /* audio/mpeg */
