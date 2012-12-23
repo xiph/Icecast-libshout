@@ -1,6 +1,23 @@
 /* -*- c-basic-offset: 8; -*- */
 /* shout.h: Private libshout data structures and declarations
  *
+ *  Copyright (C) 2002-2004 the Icecast team <team@icecast.org>,
+ *  Copyright (C) 2012      Philipp "ph3-der-loewe" Schafft <lion@lion.leolix.org>
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Library General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Library General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Library General Public
+ *  License along with this library; if not, write to the Free
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
  * $Id$
  */
 
@@ -72,14 +89,8 @@ struct shout {
 	char *useragent;
 	/* mountpoint for this stream */
 	char *mount;
-	/* name of the stream */
-	char *name;
-	/* homepage of the stream */
-	char *url;
-	/* genre of the stream */
-	char *genre;
-	/* description of the stream */
-	char *description;
+	/* all the meta data about the stream */
+        util_dict *meta;
 	/* icecast 1.x dumpfile */
 	char *dumpfile;
 	/* username to use for HTTP auth. */

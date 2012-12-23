@@ -1,7 +1,8 @@
 /* -*- c-basic-offset: 8; -*- */
 /* shout.c: Implementation of public libshout interface shout.h
  *
- *  Copyright (C) 2002-2004 the Icecast team <team@icecast.org>
+ *  Copyright (C) 2002-2004 the Icecast team <team@icecast.org>,
+ *  Copyright (C) 2012      Philipp "ph3-der-loewe" Schafft <lion@lion.leolix.org>
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -121,6 +122,17 @@ shout_t *shout_new(void)
 
 		return NULL;
 	}
+	if (!(self->meta = _shout_util_dict_new())) {
+		shout_free(self);
+
+		return NULL;
+	}
+	if (shout_set_meta(self, "name", "no name") != SHOUTERR_SUCCESS) {
+		shout_free(self);
+
+		return NULL;
+	}
+
 
 	self->port = LIBSHOUT_DEFAULT_PORT;
 	self->format = LIBSHOUT_DEFAULT_FORMAT;
@@ -136,13 +148,10 @@ void shout_free(shout_t *self)
 	if (self->host) free(self->host);
 	if (self->password) free(self->password);
 	if (self->mount) free(self->mount);
-	if (self->name) free(self->name);
-	if (self->url) free(self->url);
-	if (self->genre) free(self->genre);
-	if (self->description) free(self->description);
 	if (self->user) free(self->user);
 	if (self->useragent) free(self->useragent);
 	if (self->audio_info) _shout_util_dict_free (self->audio_info);
+	if (self->meta) _shout_util_dict_free (self->meta);
 
 	free(self);
 }
@@ -513,77 +522,32 @@ const char *shout_get_mount(shout_t *self)
 
 int shout_set_name(shout_t *self, const char *name)
 {
-	if (!self)
-		return SHOUTERR_INSANE;
-
-	if (self->state != SHOUT_STATE_UNCONNECTED)
-		return self->error = SHOUTERR_CONNECTED;
-
-	if (self->name)
-		free(self->name);
-
-	if (!(self->name = _shout_util_strdup(name)))
-		return self->error = SHOUTERR_MALLOC;
-
-	return self->error = SHOUTERR_SUCCESS;
+	return shout_set_meta(self, "name", name);
 }
 
 const char *shout_get_name(shout_t *self)
 {
-	if (!self)
-		return NULL;
-
-	return self->name;
+	return shout_get_meta(self, "name");
 }
 
 int shout_set_url(shout_t *self, const char *url)
 {
-	if (!self)
-		return SHOUTERR_INSANE;
-
-	if (self->state != SHOUT_STATE_UNCONNECTED)
-		return self->error = SHOUTERR_CONNECTED;
-
-	if (self->url)
-		free(self->url);
-
-	if (!(self->url = _shout_util_strdup(url)))
-		return self->error = SHOUTERR_MALLOC;
-
-	return self->error = SHOUTERR_SUCCESS;
+	return shout_set_meta(self, "url", url);
 }
 
 const char *shout_get_url(shout_t *self)
 {
-	if (!self)
-		return NULL;
-
-	return self->url;
+	return shout_get_meta(self, "url");
 }
 
 int shout_set_genre(shout_t *self, const char *genre)
 {
-	if (!self)
-		return SHOUTERR_INSANE;
-
-	if (self->state != SHOUT_STATE_UNCONNECTED)
-		return self->error = SHOUTERR_CONNECTED;
-
-	if (self->genre)
-		free(self->genre);
-
-	if (! (self->genre = _shout_util_strdup (genre)))
-		return self->error = SHOUTERR_MALLOC;
-
-	return self->error = SHOUTERR_SUCCESS;
+	return shout_set_meta(self, "genre", genre);
 }
 
 const char *shout_get_genre(shout_t *self)
 {
-	if (!self)
-		return NULL;
-
-	return self->genre;
+	return shout_get_meta(self, "genre");
 }
 
 int shout_set_agent(shout_t *self, const char *agent)
@@ -639,27 +603,12 @@ const char *shout_get_user(shout_t *self)
 
 int shout_set_description(shout_t *self, const char *description)
 {
-	if (!self)
-		return SHOUTERR_INSANE;
-
-	if (self->state != SHOUT_STATE_UNCONNECTED)
-		return self->error = SHOUTERR_CONNECTED;
-
-	if (self->description)
-		free(self->description);
-
-	if (! (self->description = _shout_util_strdup (description)))
-		return self->error = SHOUTERR_MALLOC;
-
-	return self->error = SHOUTERR_SUCCESS;
+	return shout_set_meta(self, "description", description);
 }
 
 const char *shout_get_description(shout_t *self)
 {
-	if (!self)
-		return NULL;
-
-	return self->description;
+	return shout_get_meta(self, "description");
 }
 
 int shout_set_dumpfile(shout_t *self, const char *dumpfile)
@@ -689,12 +638,43 @@ const char *shout_get_dumpfile(shout_t *self)
 
 int shout_set_audio_info(shout_t *self, const char *name, const char *value)
 {
+	if (!self)
+		return SHOUTERR_INSANE;
+
 	return self->error = _shout_util_dict_set(self->audio_info, name, value);
 }
 
 const char *shout_get_audio_info(shout_t *self, const char *name)
 {
+	if (!self)
+		return NULL;
+
 	return _shout_util_dict_get(self->audio_info, name);
+}
+
+int shout_set_meta(shout_t *self, const char *name, const char *value)
+{
+	size_t i;
+
+	if (!self || !name)
+		return SHOUTERR_INSANE;
+
+	if (self->state != SHOUT_STATE_UNCONNECTED)
+		return self->error = SHOUTERR_CONNECTED;
+
+	for (i = 0; name[i]; i++)
+		if ((name[i] < 'a' || name[i] > 'z') && (name[i] < '0' || name[i] > '9'))
+			return self->error = SHOUTERR_INSANE;
+
+	return self->error = _shout_util_dict_set(self->meta, name, value);
+}
+
+const char *shout_get_meta(shout_t *self, const char *name)
+{
+	if (!self)
+		return NULL;
+
+	return _shout_util_dict_get(self->meta, name);
 }
 
 int shout_set_public(shout_t *self, unsigned int public)
@@ -1119,6 +1099,8 @@ static int create_http_request(shout_t *self)
 	char *auth;
 	char *ai;
 	int ret = SHOUTERR_MALLOC;
+	util_dict *dict;
+	const char *key, *val;
 
 	/* this is lazy code that relies on the only error from queue_* being
 	 * SHOUTERR_MALLOC */
@@ -1144,15 +1126,14 @@ static int create_http_request(shout_t *self)
 			break;
 		if (self->format == SHOUT_FORMAT_WEBMAUDIO && queue_printf(self, "Content-Type: audio/webm\r\n"))
 			break;
-		if (queue_printf(self, "ice-name: %s\r\n", self->name ? self->name : "no name"))
-			break;
 		if (queue_printf(self, "ice-public: %d\r\n", self->public))
 			break;
 
-		if (self->url && queue_printf(self, "ice-url: %s\r\n", self->url))
-			break;
-		if (self->genre && queue_printf(self, "ice-genre: %s\r\n", self->genre))
-			break;
+		_SHOUT_DICT_FOREACH(self->meta, dict, key, val) {
+			if (val && queue_printf(self, "ice-%s: %s\r\n", key, val))
+				break;
+		}
+
 		if ((ai = _shout_util_dict_urlencode(self->audio_info, ';'))) {
 			if (queue_printf(self, "ice-audio-info: %s\r\n", ai)) {
 				free(ai);
@@ -1160,8 +1141,6 @@ static int create_http_request(shout_t *self)
 			}
 			free(ai);
 		}
-		if (self->description && queue_printf(self, "ice-description: %s\r\n", self->description))
-			break;
 		if (queue_str(self, "\r\n"))
 			break;
 		
@@ -1242,6 +1221,7 @@ static int parse_http_response(shout_t *self)
 static int create_xaudiocast_request(shout_t *self)
 {
 	const char *bitrate;
+	const char *val;
 	int ret;
 
 	bitrate = shout_get_audio_info(self, SHOUT_AI_BITRATE);
@@ -1252,17 +1232,20 @@ static int create_xaudiocast_request(shout_t *self)
 	do {
 		if (queue_printf(self, "SOURCE %s %s\n", self->password, self->mount))
 			break;
-		if (queue_printf(self, "x-audiocast-name: %s\n", self->name ? self->name : "unnamed"))
+		if (queue_printf(self, "x-audiocast-name: %s\n", shout_get_meta(self, "name")))
 			break;
-		if (queue_printf(self, "x-audiocast-url: %s\n", self->url ? self->url : "http://www.icecast.org/"))
+		val = shout_get_meta(self, "url");
+		if (queue_printf(self, "x-audiocast-url: %s\n", val ? val : "http://www.icecast.org/"))
 			break;
-		if (queue_printf(self, "x-audiocast-genre: %s\n", self->genre ? self->genre : "icecast"))
+		val = shout_get_meta(self, "genre");
+		if (queue_printf(self, "x-audiocast-genre: %s\n", val ? val : "icecast"))
 			break;
 		if (queue_printf(self, "x-audiocast-bitrate: %s\n", bitrate))
 			break;
 		if (queue_printf(self, "x-audiocast-public: %i\n", self->public))
 			break;
-		if (queue_printf(self, "x-audiocast-description: %s\n", self->description ? self->description : "Broadcasting with the icecast streaming media server!"))
+		val = shout_get_meta(self, "description");
+		if (queue_printf(self, "x-audiocast-description: %s\n", val ? val : "Broadcasting with the icecast streaming media server!"))
 			break;
 		if (self->dumpfile && queue_printf(self, "x-audiocast-dumpfile: %s\n", self->dumpfile))
 			break;
@@ -1295,6 +1278,7 @@ static int parse_xaudiocast_response(shout_t *self)
 static int create_icy_request(shout_t *self)
 {
 	const char *bitrate;
+	const char *val;
 	int ret;
 
 	bitrate = shout_get_audio_info(self, SHOUT_AI_BITRATE);
@@ -1305,15 +1289,24 @@ static int create_icy_request(shout_t *self)
 	do {
 		if (queue_printf(self, "%s\n", self->password))
 			break;
-		if (queue_printf(self, "icy-name:%s\n", self->name ? self->name : "unnamed"))
+		if (queue_printf(self, "icy-name:%s\n", shout_get_meta(self, "name")))
 			break;
-		if (queue_printf(self, "icy-url:%s\n", self->url ? self->url : "http://www.icecast.org/"))
+		val = shout_get_meta(self, "url");
+		if (queue_printf(self, "icy-url:%s\n", val ? val : "http://www.icecast.org/"))
 			break;
-		if (queue_str(self, "icy-irc:\nicy-aim:\nicy-icq:\n"))
+		val = shout_get_meta(self, "irc");
+		if (queue_printf(self, "icy-irc:%s\n", val ? val : ""))
+			break;
+		val = shout_get_meta(self, "aim");
+		if (queue_printf(self, "icy-aim:%s\n", val ? val : ""))
+			break;
+		val = shout_get_meta(self, "icq");
+		if (queue_printf(self, "icy-icq:%s\n", val ? val : ""))
 			break;
 		if (queue_printf(self, "icy-pub:%i\n", self->public))
 			break;
-		if (queue_printf(self, "icy-genre:%s\n", self->genre ? self->genre : "icecast"))
+		val = shout_get_meta(self, "genre");
+		if (queue_printf(self, "icy-genre:%s\n", val ? val : "icecast"))
 			break;
 		if (queue_printf(self, "icy-br:%s\n\n", bitrate))
 			break;

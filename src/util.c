@@ -1,6 +1,7 @@
 /* util.c: libshout utility/portability functions
  *
- *  Copyright (C) 2002-2003 the Icecast team <team@icecast.org>
+ *  Copyright (C) 2002-2003 the Icecast team <team@icecast.org>,
+ *  Copyright (C) 2012      Philipp "ph3-der-loewe" Schafft <lion@lion.leolix.org>
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -302,4 +303,20 @@ char *_shout_util_dict_urlencode(util_dict *dict, char delim)
 	}
 
 	return res;
+}
+
+const char *_shout_util_dict_next(util_dict **dict, const char **key, const char **val) {
+	*key = NULL;
+	*val = NULL;
+
+	if (!dict)
+		return NULL;
+	*dict = (*dict)->next;
+	while (*dict && !(*dict)->key)
+		*dict = (*dict)->next;
+	if (!*dict)
+		return NULL;
+	*key = (*dict)->key;
+	*val = (*dict)->val;
+	return *key;
 }
