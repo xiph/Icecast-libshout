@@ -507,7 +507,7 @@ int shout_set_mount(shout_t *self, const char *mount)
 	if (!(self->mount = malloc(len)))
 		return self->error = SHOUTERR_MALLOC;
 
-	sprintf (self->mount, "%s%s", mount[0] == '/' ? "" : "/", mount);
+	snprintf (self->mount, len, "%s%s", mount[0] == '/' ? "" : "/", mount);
 
 	return self->error = SHOUTERR_SUCCESS;
 }
@@ -1161,7 +1161,7 @@ static char *http_basic_authorization(shout_t *self)
 	len = strlen(self->user) + strlen(self->password) + 2;
 	if (!(in = malloc(len)))
 		return NULL;
-	sprintf(in, "%s:%s", self->user, self->password);
+	snprintf(in, len, "%s:%s", self->user, self->password);
 	out = _shout_util_base64_encode(in);
 	free(in);
 
@@ -1170,7 +1170,7 @@ static char *http_basic_authorization(shout_t *self)
 		free(out);
 		return NULL;
 	}
-	sprintf(in, "Authorization: Basic %s\r\n", out);
+	snprintf(in, len, "Authorization: Basic %s\r\n", out);
 	free(out);
 	
 	return in;

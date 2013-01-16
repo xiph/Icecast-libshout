@@ -252,6 +252,7 @@ int _shout_util_dict_set(util_dict *dict, const char *key, const char *val)
   TODO: Memory management needs overhaul. */
 char *_shout_util_dict_urlencode(util_dict *dict, char delim)
 {
+	size_t reslen, resoffset;
 	char *res, *tmp;
 	char *enc;
 	int start = 1;
@@ -266,21 +267,24 @@ char *_shout_util_dict_urlencode(util_dict *dict, char delim)
 			return NULL;
 		}
 		if (start) {
-			if (!(res = malloc(strlen(enc) + 1))) {
+			reslen = strlen(enc) + 1;
+			if (!(res = malloc(reslen))) {
 				free(enc);
 				return NULL;
 			}
-			sprintf(res, "%s", enc);
+			snprintf(res, reslen, "%s", enc);
 			free(enc);
 			start = 0;
 		} else {
-			if (!(tmp = realloc(res, strlen(res) + strlen(enc) + 2))) {
+			resoffset = strlen(res);
+			reslen = resoffset + strlen(enc) + 2;
+			if (!(tmp = realloc(res, reslen))) {
 				free(enc);
 				free(res);
 				return NULL;
 			} else
 				res = tmp;
-			sprintf(res + strlen(res), "%c%s", delim, enc);
+			snprintf(res + resoffset, reslen - resoffset, "%c%s", delim, enc);
 			free(enc);
 		}
 
@@ -292,13 +296,15 @@ char *_shout_util_dict_urlencode(util_dict *dict, char delim)
 			return NULL;
 		}
 
-		if (!(tmp = realloc(res, strlen(res) + strlen(enc) + 2))) {
+		resoffset = strlen(res);
+		reslen = resoffset + strlen(enc) + 2;
+		if (!(tmp = realloc(res, reslen))) {
 			free(enc);
 			free(res);
 			return NULL;
 		} else
 			res = tmp;
-		sprintf(res + strlen(res), "=%s", enc);
+		snprintf(res + resoffset, reslen - resoffset, "=%s", enc);
 		free(enc);
 	}
 
