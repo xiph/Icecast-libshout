@@ -211,6 +211,6 @@ AC_SUBST(XIPH_CFLAGS)
 AC_SUBST(XIPH_CPPFLAGS)
 
 AC_OUTPUT([Makefile debian/Makefile include/Makefile include/shout/Makefile
-  include/shout/shout.h src/Makefile src/net/Makefile src/timing/Makefile
-  src/thread/Makefile src/avl/Makefile src/httpp/Makefile doc/Makefile
+  include/shout/shout.h src/Makefile src/common/net/Makefile src/common/timing/Makefile
+  src/common/thread/Makefile src/common/avl/Makefile src/common/httpp/Makefile doc/Makefile
   examples/Makefile win32/Makefile shout.pc])

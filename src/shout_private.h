@@ -29,8 +29,8 @@
 #endif
 
 #include <shout/shout.h>
-#include <net/sock.h>
-#include <timing/timing.h>
+#include <common/net/sock.h>
+#include <common/timing/timing.h>
 #include "util.h"
 
 #include <sys/types.h>

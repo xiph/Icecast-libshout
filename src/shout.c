@@ -32,9 +32,9 @@
 #include <errno.h>
 
 #include <shout/shout.h>
-#include <net/sock.h>
-#include "timing/timing.h"
-#include "httpp/httpp.h"
+#include <common/net/sock.h>
+#include "common/timing/timing.h"
+#include "common/httpp/httpp.h"
 
 #include "shout_private.h"
 #include "util.h"
