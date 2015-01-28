@@ -40,12 +40,17 @@
 #  include <inttypes.h>
 #endif
 
+#ifdef HAVE_OPENSSL
+#include <openssl/ssl.h>
+#endif
+
 #define LIBSHOUT_DEFAULT_HOST "localhost"
 #define LIBSHOUT_DEFAULT_PORT 8000
 #define LIBSHOUT_DEFAULT_FORMAT SHOUT_FORMAT_OGG
 #define LIBSHOUT_DEFAULT_PROTOCOL SHOUT_PROTOCOL_HTTP
 #define LIBSHOUT_DEFAULT_USER "source"
 #define LIBSHOUT_DEFAULT_USERAGENT "libshout/" VERSION
+#define LIBSHOUT_DEFAULT_ALLOWED_CIPHERS "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!3DES:!MD5:!PSK"
 
 #define SHOUT_BUFSIZE 4096
 
@@ -66,6 +71,7 @@ typedef struct {
 typedef enum {
 	SHOUT_STATE_UNCONNECTED = 0,
 	SHOUT_STATE_CONNECT_PENDING,
+	SHOUT_STATE_TLS_PENDING,
 	SHOUT_STATE_REQ_PENDING,
 	SHOUT_STATE_RESP_PENDING,
 	SHOUT_STATE_CONNECTED
@@ -98,6 +104,18 @@ struct shout {
 	/* is this stream private? */
 	int public;
 
+        /* TLS options */
+#ifdef HAVE_OPENSSL
+        int tls_mode;
+        char *ca_directory;
+        char *ca_certificate;
+        char *allowed_ciphers;
+        char *client_certificate;
+        SSL_CTX *ssl_ctx;
+        SSL *ssl;
+        int ssl_ret;
+#endif
+
 	/* socket the connection is on */
 	sock_t socket;
 	shout_state_e state;
@@ -121,5 +139,13 @@ struct shout {
 int shout_open_ogg(shout_t *self);
 int shout_open_mp3(shout_t *self);
 int shout_open_webm(shout_t *self);
+
+#ifdef HAVE_OPENSSL
+int shout_tls_try_connect(shout_t *self);
+int shout_tls_close(shout_t *self);
+ssize_t shout_tls_read(shout_t *self, void *buf, size_t len);
+ssize_t shout_tls_write(shout_t *self, const void *buf, size_t len);
+int shout_tls_recoverable(shout_t *self);
+#endif
 
 #endif /* __LIBSHOUT_SHOUT_PRIVATE_H__ */
