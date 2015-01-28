@@ -103,18 +103,28 @@ int shout_get_connected(shout_t *self);
  * the caller may free its copies after giving them to libshout.  May return
  * SHOUTERR_MALLOC */
 
+/* Connection parameters */
 int shout_set_host(shout_t *self, const char *host);
 const char *shout_get_host(shout_t *self);
 
 int shout_set_port(shout_t *self, unsigned short port);
 unsigned short shout_get_port(shout_t *self);
 
+int shout_set_agent(shout_t *self, const char *agent);
+const char *shout_get_agent(shout_t *self);
+
+/* Authentication parameters */
+int shout_set_user(shout_t *self, const char *username);
+const char *shout_get_user(shout_t *self);
+
 int shout_set_password(shout_t *, const char *password);
 const char *shout_get_password(shout_t *self);
 
+/* Mount parameters */
 int shout_set_mount(shout_t *self, const char *mount);
 const char *shout_get_mount(shout_t *self);
 
+/* Other parameters */
 int shout_set_name(shout_t *self, const char *name); // obsolete
 const char *shout_get_name(shout_t *self); // obsolete
 
@@ -123,12 +133,6 @@ const char *shout_get_url(shout_t *self); // obsolete
 
 int shout_set_genre(shout_t *self, const char *genre); // obsolete
 const char *shout_get_genre(shout_t *self); // obsolete
-
-int shout_set_user(shout_t *self, const char *username);
-const char *shout_get_user(shout_t *self);
-
-int shout_set_agent(shout_t *self, const char *agent);
-const char *shout_get_agent(shout_t *self);
 
 int shout_set_description(shout_t *self, const char *description); // obsolete
 const char *shout_get_description(shout_t *self); // obsolete
