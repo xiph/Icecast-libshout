@@ -1101,6 +1101,25 @@ static int create_http_request(shout_t *self)
 	int ret = SHOUTERR_MALLOC;
 	util_dict *dict;
 	const char *key, *val;
+	const char *mimetype;
+
+	switch (self->format) {
+	case SHOUT_FORMAT_OGG:
+		mimetype = "application/ogg";
+		break;
+	case SHOUT_FORMAT_MP3:
+		mimetype = "";
+		break;
+	case SHOUT_FORMAT_WEBM:
+		mimetype = "";
+		break;
+	case SHOUT_FORMAT_WEBMAUDIO:
+		mimetype = "";
+		break;
+	default:
+		return SHOUTERR_INSANE;
+		break;
+	}
 
 	/* this is lazy code that relies on the only error from queue_* being
 	 * SHOUTERR_MALLOC */
@@ -1118,13 +1137,7 @@ static int create_http_request(shout_t *self)
 		}
 		if (self->useragent && queue_printf(self, "User-Agent: %s\r\n", self->useragent))
 			break;
-		if (self->format == SHOUT_FORMAT_OGG && queue_printf(self, "Content-Type: application/ogg\r\n"))
-			break;
-		if (self->format == SHOUT_FORMAT_MP3 && queue_printf(self, "Content-Type: audio/mpeg\r\n"))
-			break;
-		if (self->format == SHOUT_FORMAT_WEBM && queue_printf(self, "Content-Type: video/webm\r\n"))
-			break;
-		if (self->format == SHOUT_FORMAT_WEBMAUDIO && queue_printf(self, "Content-Type: audio/webm\r\n"))
+		if (queue_printf(self, "Content-Type: %s\r\n", mimetype))
 			break;
 		if (queue_printf(self, "ice-public: %d\r\n", self->public))
 			break;
