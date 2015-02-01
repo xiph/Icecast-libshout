@@ -933,9 +933,7 @@ static int try_connect (shout_t *self)
 		} else {
 			if ((self->socket = sock_connect(self->host, port)) < 0)
 				return self->error = SHOUTERR_NOCONNECT;
-			if ((rc = create_request(self)) != SHOUTERR_SUCCESS)
-				return rc;
-			self->state = SHOUT_STATE_REQ_PENDING;
+			self->state = SHOUT_STATE_CONNECT_PENDING;
 		}
 
 	case SHOUT_STATE_CONNECT_PENDING:
@@ -947,9 +945,12 @@ static int try_connect (shout_t *self)
 				} else
 					return SHOUTERR_BUSY;
 			}
-			if ((rc = create_request(self)) != SHOUTERR_SUCCESS)
-                                goto failure;
 		}
+		self->state = SHOUT_STATE_REQ_PENDING;
+
+	case SHOUT_STATE_REQ_CREATION:
+		if ((rc = create_request(self)) != SHOUTERR_SUCCESS)
+			goto failure;
 		self->state = SHOUT_STATE_REQ_PENDING;
 
 	case SHOUT_STATE_REQ_PENDING:
