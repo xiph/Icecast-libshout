@@ -47,6 +47,24 @@
 #define LIBSHOUT_DEFAULT_USER "source"
 #define LIBSHOUT_DEFAULT_USERAGENT "libshout/" VERSION
 
+/* server capabilities.
+   0x000000XXUL -> Methods.
+   0x0000XX00UL -> HTTP Options
+   0x000X0000UL -> TLS Related
+   0xX0000000UL -> State related
+   0x0XX00000UL -> Reserved
+ */
+#define LIBSHOUT_CAP_SOURCE      0x00000001UL
+#define LIBSHOUT_CAP_PUT         0x00000002UL
+#define LIBSHOUT_CAP_GET         0x00000004UL
+#define LIBSHOUT_CAP_POST        0x00000008UL
+#define LIBSHOUT_CAP_CHUNKED     0x00000100UL
+#define LIBSHOUT_CAP_100CONTINUE 0x00000200UL
+#define LIBSHOUT_CAP_UPGRADETLS  0x00010000UL
+#define LIBSHOUT_CAP_GOTCAPS     0x80000000UL
+
+#define LIBSHOUT_MAX_RETRY       2
+
 #define SHOUT_BUFSIZE 4096
 
 typedef struct _shout_buf {
@@ -66,9 +84,11 @@ typedef struct {
 typedef enum {
 	SHOUT_STATE_UNCONNECTED = 0,
 	SHOUT_STATE_CONNECT_PENDING,
+	SHOUT_STATE_REQ_CREATION,
 	SHOUT_STATE_REQ_PENDING,
 	SHOUT_STATE_RESP_PENDING,
-	SHOUT_STATE_CONNECTED
+	SHOUT_STATE_CONNECTED,
+	SHOUT_STATE_RECONNECT
 } shout_state_e;
 	
 struct shout {
@@ -97,6 +117,12 @@ struct shout {
 	char *user;
 	/* is this stream private? */
 	int public;
+
+        /* server capabilities (LIBSHOUT_CAP_*) */
+        uint32_t server_caps;
+
+        /* Should we retry on error? */
+        int retry;
 
 	/* socket the connection is on */
 	sock_t socket;
