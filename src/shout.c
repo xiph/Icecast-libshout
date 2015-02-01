@@ -1108,13 +1108,13 @@ static int create_http_request(shout_t *self)
 		mimetype = "application/ogg";
 		break;
 	case SHOUT_FORMAT_MP3:
-		mimetype = "";
+		mimetype = "audio/mpeg";
 		break;
 	case SHOUT_FORMAT_WEBM:
-		mimetype = "";
+		mimetype = "video/webm";
 		break;
 	case SHOUT_FORMAT_WEBMAUDIO:
-		mimetype = "";
+		mimetype = "audio/webm";
 		break;
 	default:
 		return SHOUTERR_INSANE;
