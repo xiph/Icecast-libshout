@@ -1116,6 +1116,8 @@ static int create_http_request(shout_t *self)
 			}
 			free(auth);
 		}
+		if (self->useragent && queue_printf(self, "Host: %s:%i\r\n", self->host, self->port))
+			break;
 		if (self->useragent && queue_printf(self, "User-Agent: %s\r\n", self->useragent))
 			break;
 		if (self->format == SHOUT_FORMAT_OGG && queue_printf(self, "Content-Type: application/ogg\r\n"))
