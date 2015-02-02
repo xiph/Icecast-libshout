@@ -58,6 +58,7 @@
 #define SHOUT_TLS_AUTO                  (1)  /* Autodetect which TLS mode to use if any */
 #define SHOUT_TLS_AUTO_NO_PLAIN         (2)  /* Like SHOUT_TLS_AUTO_NO_PLAIN but does not allow plain connections */
 #define SHOUT_TLS_OVER_TLS              (13) /* Use TLS for transport layer like HTTPS [RFC2818] does. */
+#define SHOUT_TLS_UPGRADE               (14) /* Use TLS via HTTP Upgrade:-header [RFC2817]. */
 
 #define SHOUT_AI_BITRATE	"bitrate"
 #define SHOUT_AI_SAMPLERATE	"samplerate"
