@@ -1133,6 +1133,7 @@ static int try_connect (shout_t *self)
 	int port;
 
 	/* the breaks between cases are omitted intentionally */
+retry:
 	switch (self->state) {
 	case SHOUT_STATE_UNCONNECTED:
 		port = self->port;
@@ -1184,6 +1185,12 @@ static int try_connect (shout_t *self)
 		while (!shout_get_nonblocking(self) && rc == SHOUTERR_BUSY);
                 if (rc == SHOUTERR_BUSY)
                         return rc;
+
+                if (rc == SHOUTERR_SOCKET && self->retry) {
+			self->state = SHOUT_STATE_RECONNECT;
+			goto retry;
+		}
+
 		if (rc != SHOUTERR_SUCCESS)
                         goto failure;
 		self->state = SHOUT_STATE_RESP_PENDING;
@@ -1195,11 +1202,21 @@ static int try_connect (shout_t *self)
                 if (rc == SHOUTERR_BUSY)
                         return rc;
 
+                if (rc == SHOUTERR_SOCKET && self->retry) {
+			self->state = SHOUT_STATE_RECONNECT;
+			goto retry;
+		}
+
 		if (rc != SHOUTERR_SUCCESS)
                         goto failure;
 
-		if ((rc = parse_response(self)) != SHOUTERR_SUCCESS)
+		if ((rc = parse_response(self)) != SHOUTERR_SUCCESS) {
+			if (self->retry) {
+				self->state = SHOUT_STATE_TLS_PENDING;
+				goto retry;
+			}
                         goto failure;
+		}
 
 		switch (self->format) {
 		case SHOUT_FORMAT_OGG:
@@ -1222,6 +1239,14 @@ static int try_connect (shout_t *self)
 
 	case SHOUT_STATE_CONNECTED:
 		self->state = SHOUT_STATE_CONNECTED;
+	break;
+
+	/* special case, no fallthru to this */
+	case SHOUT_STATE_RECONNECT:
+		sock_close(self->socket);
+		self->state = SHOUT_STATE_UNCONNECTED;
+		goto retry;
+	break;
 	}
 	
 	return SHOUTERR_SUCCESS;
@@ -1352,13 +1377,32 @@ static int create_http_request(shout_t *self)
 	int ret = SHOUTERR_MALLOC;
 	util_dict *dict;
 	const char *key, *val;
+	const char *mimetype;
+
+	switch (self->format) {
+	case SHOUT_FORMAT_OGG:
+		mimetype = "application/ogg";
+		break;
+	case SHOUT_FORMAT_MP3:
+		mimetype = "audio/mpeg";
+		break;
+	case SHOUT_FORMAT_WEBM:
+		mimetype = "video/webm";
+		break;
+	case SHOUT_FORMAT_WEBMAUDIO:
+		mimetype = "audio/webm";
+		break;
+	default:
+		return SHOUTERR_INSANE;
+		break;
+	}
 
 	/* this is lazy code that relies on the only error from queue_* being
 	 * SHOUTERR_MALLOC */
 	do {
 		if (queue_printf(self, "SOURCE %s HTTP/1.0\r\n", self->mount))
 			break;
-		if (self->password) {
+		if (self->password && (self->server_caps & LIBSHOUT_CAP_GOTCAPS)) {
 			if (! (auth = http_basic_authorization(self)))
 				break;
 			if (queue_str(self, auth)) {
@@ -1369,13 +1413,7 @@ static int create_http_request(shout_t *self)
 		}
 		if (self->useragent && queue_printf(self, "User-Agent: %s\r\n", self->useragent))
 			break;
-		if (self->format == SHOUT_FORMAT_OGG && queue_printf(self, "Content-Type: application/ogg\r\n"))
-			break;
-		if (self->format == SHOUT_FORMAT_MP3 && queue_printf(self, "Content-Type: audio/mpeg\r\n"))
-			break;
-		if (self->format == SHOUT_FORMAT_WEBM && queue_printf(self, "Content-Type: video/webm\r\n"))
-			break;
-		if (self->format == SHOUT_FORMAT_WEBMAUDIO && queue_printf(self, "Content-Type: audio/webm\r\n"))
+		if (queue_printf(self, "Content-Type: %s\r\n", mimetype))
 			break;
 		if (queue_printf(self, "ice-public: %d\r\n", self->public))
 			break;
@@ -1438,6 +1476,56 @@ static int parse_response(shout_t *self)
 	return self->error = SHOUTERR_UNSUPPORTED;
 }
 
+static inline void parse_http_response_caps(shout_t *self, const char *header, const char *str) {
+	const char * end;
+	size_t len;
+	char buf[64];
+
+	if (!self || !header || !str)
+		return;
+
+	do {
+		for (; *str == ' '; str++);
+		end = strstr(str, ",");
+		if (end) {
+			len = end - str;
+		} else {
+			len = strlen(str);
+		}
+
+		if (len > (sizeof(buf) - 1))
+			return;
+		memcpy(buf, str, len);
+		buf[len] = 0;
+
+		if (strcmp(header, "Allow") == 0){
+			if (strcasecmp(buf, "SOURCE") == 0) {
+				self->server_caps |= LIBSHOUT_CAP_SOURCE;
+			} else if (strcasecmp(buf, "PUT") == 0) {
+				self->server_caps |= LIBSHOUT_CAP_PUT;
+			} else if (strcasecmp(buf, "POST") == 0) {
+				self->server_caps |= LIBSHOUT_CAP_POST;
+			} else if (strcasecmp(buf, "GET") == 0) {
+				self->server_caps |= LIBSHOUT_CAP_GET;
+			}
+		} else if (strcmp(header, "Accept-Encoding") == 0){
+			if (strcasecmp(buf, "chunked") == 0) {
+				self->server_caps |= LIBSHOUT_CAP_CHUNKED;
+			}
+		} else if (strcmp(header, "Upgrade") == 0){
+			if (strcasecmp(buf, "TLS/1.0") == 0) {
+				self->server_caps |= LIBSHOUT_CAP_UPGRADETLS;
+			}
+		} else {
+			return; /* unknown header */
+		}
+
+		str += len + 1;
+	} while (end);
+
+	return;
+}
+
 static int parse_http_response(shout_t *self)
 {
 	http_parser_t *parser;
@@ -1455,12 +1543,26 @@ static int parse_http_response(shout_t *self)
 	parser = httpp_create_parser();
 	httpp_initialize(parser, NULL);
 	if (httpp_parse_response(parser, header, hlen, self->mount)) {
+		/* TODO: Headers to Handle:
+		 * Allow:, Accept-Encoding:, Warning:, Upgrade:
+		 */
+		parse_http_response_caps(self, "Allow", httpp_getvar(parser, "allow"));
+		parse_http_response_caps(self, "Accept-Encoding", httpp_getvar(parser, "accept-encoding"));
+		parse_http_response_caps(self, "Upgrade", httpp_getvar(parser, "ullow"));
+		self->server_caps |= LIBSHOUT_CAP_GOTCAPS;
 		retcode = httpp_getvar(parser, HTTPP_VAR_ERROR_CODE);
 		code = atoi(retcode);
 		if(code >= 200 && code < 300) {
 			httpp_destroy(parser);
 			free (header);
 			return SHOUTERR_SUCCESS;
+		} else if (code == 401 || code == 405) {
+			/* TODO: we should add "426 Upgrade Required" to the list once we support upgrade protocol */
+			self->retry++;
+			if (self->retry > LIBSHOUT_MAX_RETRY)
+				self->retry = 0;
+		} else {
+			self->retry = 0;
 		}
 	}
 
