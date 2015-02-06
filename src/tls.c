@@ -90,7 +90,7 @@ static inline int tls_setup_mode(shout_t *self)
 	if (self->tls_mode == SHOUT_TLS_DISABLED)
 		return SHOUTERR_SUCCESS;
 
-	if (self->tls_mode == SHOUT_TLS_OVER_TLS)
+	if (self->tls_mode == SHOUT_TLS_RFC2818)
 		return tls_setup(self);
 
 	return SHOUTERR_UNSUPPORTED;

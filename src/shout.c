@@ -813,7 +813,7 @@ int shout_set_tls(shout_t *self, int mode)
 	if (mode != SHOUT_TLS_DISABLED &&
 	    mode != SHOUT_TLS_AUTO &&
 	    mode != SHOUT_TLS_AUTO_NO_PLAIN &&
-	    mode != SHOUT_TLS_OVER_TLS)
+	    mode != SHOUT_TLS_RFC2818)
 		return self->error = SHOUTERR_UNSUPPORTED;
 
 	self->tls_mode = mode;
@@ -1174,7 +1174,7 @@ retry:
 			if (self->server_caps & LIBSHOUT_CAP_GOTCAPS) {
 				/* We had a probe allready, otherwise just do nothing to poke the server. */
 				if (self->server_caps & LIBSHOUT_CAP_UPGRADETLS) {
-					self->tls_mode = SHOUT_TLS_UPGRADE;
+					self->tls_mode = SHOUT_TLS_RFC2817;
 				} else {
 					if (self->tls_mode == SHOUT_TLS_AUTO_NO_PLAIN)
 						return SHOUTERR_NOTLS;
@@ -1184,14 +1184,14 @@ retry:
 				goto retry;
 			}
 		break;
-		case SHOUT_TLS_OVER_TLS:
+		case SHOUT_TLS_RFC2818:
 			if ((rc = shout_tls_try_connect(self)) != SHOUTERR_SUCCESS) {
 				if (rc == SHOUTERR_BUSY)
 					return SHOUTERR_BUSY;
 				goto failure;
 			}
 		break;
-		case SHOUT_TLS_UPGRADE:
+		case SHOUT_TLS_RFC2817:
 			if ((rc = create_http_request_upgrade(self, "TLS/1.0")) != SHOUTERR_SUCCESS) {
 				if (rc == SHOUTERR_BUSY)
 					return SHOUTERR_BUSY;
@@ -1243,7 +1243,7 @@ retry:
 		} else if (rc == SHOUTERR_SOCKET && !(self->server_caps & LIBSHOUT_CAP_GOTCAPS) &&
 			   (self->tls_mode == SHOUT_TLS_AUTO || self->tls_mode == SHOUT_TLS_AUTO_NO_PLAIN)) {
 			self->state = SHOUT_STATE_RECONNECT;
-			self->tls_mode = SHOUT_TLS_OVER_TLS;
+			self->tls_mode = SHOUT_TLS_RFC2818;
 			goto retry;
 #endif
 		}
@@ -1669,8 +1669,8 @@ static int parse_http_response(shout_t *self)
 			}
 #ifdef HAVE_OPENSSL
 			switch (code) {
-			case 426: self->tls_mode = SHOUT_TLS_UPGRADE;  break;
-			case 101: self->tls_mode = SHOUT_TLS_OVER_TLS; break;
+			case 426: self->tls_mode = SHOUT_TLS_RFC2817;  break;
+			case 101: self->tls_mode = SHOUT_TLS_RFC2818; break;
 			}
 #endif
 			self->retry++;
