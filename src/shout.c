@@ -1239,6 +1239,13 @@ retry:
                 if (rc == SHOUTERR_SOCKET && self->retry) {
 			self->state = SHOUT_STATE_RECONNECT;
 			goto retry;
+#ifdef HAVE_OPENSSL
+		} else if (rc == SHOUTERR_SOCKET && !(self->server_caps & LIBSHOUT_CAP_GOTCAPS) &&
+			   (self->tls_mode == SHOUT_TLS_AUTO || self->tls_mode == SHOUT_TLS_AUTO_NO_PLAIN)) {
+			self->state = SHOUT_STATE_RECONNECT;
+			self->tls_mode = SHOUT_TLS_OVER_TLS;
+			goto retry;
+#endif
 		}
 
 		if (rc != SHOUTERR_SUCCESS)
