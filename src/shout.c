@@ -1667,12 +1667,16 @@ static int parse_http_response(shout_t *self)
 			self->retry++;
 			if (self->retry > LIBSHOUT_MAX_RETRY)
 				self->retry = 0;
+
+			goto retry;
 		} else {
 			self->retry = 0;
 		}
 	}
 
 failure:
+	self->retry = 0;
+retry:
 	free(header);
 	httpp_destroy(parser);
 	return self->error = SHOUTERR_NOLOGIN;
