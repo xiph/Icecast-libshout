@@ -38,6 +38,8 @@
 #define SHOUTERR_UNCONNECTED		(-8) /* Not connected */
 #define SHOUTERR_UNSUPPORTED		(-9) /* This libshout doesn't support the requested option */
 #define SHOUTERR_BUSY			(-10) /* Socket is busy */
+#define SHOUTERR_NOTLS                  (-11) /* TLS requested but not supported by peer */
+#define SHOUTERR_TLSBADCERT             (-12) /* TLS connection can not be established because of bad certificate */
 
 #define SHOUT_FORMAT_OGG		(0) /* application/ogg */
 #define SHOUT_FORMAT_MP3		(1) /* audio/mpeg */
@@ -50,6 +52,13 @@
 #define SHOUT_PROTOCOL_HTTP		(0)
 #define SHOUT_PROTOCOL_XAUDIOCAST	(1)
 #define SHOUT_PROTOCOL_ICY		(2)
+
+/* Possible TLS modes */
+#define SHOUT_TLS_DISABLED              (0)  /* Do not use TLS at all */
+#define SHOUT_TLS_AUTO                  (1)  /* Autodetect which TLS mode to use if any */
+#define SHOUT_TLS_AUTO_NO_PLAIN         (2)  /* Like SHOUT_TLS_AUTO_NO_PLAIN but does not allow plain connections */
+#define SHOUT_TLS_OVER_TLS              (13) /* Use TLS for transport layer like HTTPS [RFC2818] does. */
+#define SHOUT_TLS_UPGRADE               (14) /* Use TLS via HTTP Upgrade:-header [RFC2817]. */
 
 #define SHOUT_AI_BITRATE	"bitrate"
 #define SHOUT_AI_SAMPLERATE	"samplerate"
@@ -113,12 +122,27 @@ unsigned short shout_get_port(shout_t *self);
 int shout_set_agent(shout_t *self, const char *agent);
 const char *shout_get_agent(shout_t *self);
 
+int shout_set_tls(shout_t *self, int mode);
+int shout_get_tls(shout_t *self);
+
+int shout_set_ca_directory(shout_t *self, const char *directory);
+const char *shout_get_ca_directory(shout_t *self);
+
+int shout_set_ca_certificate(shout_t *self, const char *certificate);
+const char *shout_get_ca_certificate(shout_t *self);
+
+int shout_set_allowed_ciphers(shout_t *self, const char *ciphers);
+const char *shout_get_allowed_ciphers(shout_t *self);
+
 /* Authentication parameters */
 int shout_set_user(shout_t *self, const char *username);
 const char *shout_get_user(shout_t *self);
 
 int shout_set_password(shout_t *, const char *password);
 const char *shout_get_password(shout_t *self);
+
+int shout_set_client_certificate(shout_t *self, const char *certificate);
+const char *shout_get_client_certificate(shout_t *self);
 
 /* Mount parameters */
 int shout_set_mount(shout_t *self, const char *mount);
@@ -219,5 +243,6 @@ int shout_metadata_add(shout_metadata_t *self, const char *name, const char *val
 /* --- Compiled features --- */
 
 #define SHOUT_THREADSAFE @SHOUT_THREADSAFE@
+#define SHOUT_TLS        @SHOUT_TLS@
 
 #endif /* __LIBSHOUT_SHOUT_H__ */

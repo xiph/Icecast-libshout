@@ -40,12 +40,35 @@
 #  include <inttypes.h>
 #endif
 
+#ifdef HAVE_OPENSSL
+#include <openssl/ssl.h>
+#endif
+
 #define LIBSHOUT_DEFAULT_HOST "localhost"
 #define LIBSHOUT_DEFAULT_PORT 8000
 #define LIBSHOUT_DEFAULT_FORMAT SHOUT_FORMAT_OGG
 #define LIBSHOUT_DEFAULT_PROTOCOL SHOUT_PROTOCOL_HTTP
 #define LIBSHOUT_DEFAULT_USER "source"
 #define LIBSHOUT_DEFAULT_USERAGENT "libshout/" VERSION
+#define LIBSHOUT_DEFAULT_ALLOWED_CIPHERS "ALL"
+
+/* server capabilities.
+   0x000000XXUL -> Methods.
+   0x0000XX00UL -> HTTP Options
+   0x000X0000UL -> TLS Related
+   0xX0000000UL -> State related
+   0x0XX00000UL -> Reserved
+ */
+#define LIBSHOUT_CAP_SOURCE      0x00000001UL
+#define LIBSHOUT_CAP_PUT         0x00000002UL
+#define LIBSHOUT_CAP_GET         0x00000004UL
+#define LIBSHOUT_CAP_POST        0x00000008UL
+#define LIBSHOUT_CAP_CHUNKED     0x00000100UL
+#define LIBSHOUT_CAP_100CONTINUE 0x00000200UL
+#define LIBSHOUT_CAP_UPGRADETLS  0x00010000UL
+#define LIBSHOUT_CAP_GOTCAPS     0x80000000UL
+
+#define LIBSHOUT_MAX_RETRY       2
 
 #define SHOUT_BUFSIZE 4096
 
@@ -66,10 +89,12 @@ typedef struct {
 typedef enum {
 	SHOUT_STATE_UNCONNECTED = 0,
 	SHOUT_STATE_CONNECT_PENDING,
+	SHOUT_STATE_TLS_PENDING,
 	SHOUT_STATE_REQ_CREATION,
 	SHOUT_STATE_REQ_PENDING,
 	SHOUT_STATE_RESP_PENDING,
-	SHOUT_STATE_CONNECTED
+	SHOUT_STATE_CONNECTED,
+	SHOUT_STATE_RECONNECT
 } shout_state_e;
 	
 struct shout {
@@ -99,6 +124,24 @@ struct shout {
 	/* is this stream private? */
 	int public;
 
+        /* TLS options */
+#ifdef HAVE_OPENSSL
+        int tls_mode;
+        char *ca_directory;
+        char *ca_certificate;
+        char *allowed_ciphers;
+        char *client_certificate;
+        SSL_CTX *ssl_ctx;
+        SSL *ssl;
+        int ssl_ret;
+#endif
+
+        /* server capabilities (LIBSHOUT_CAP_*) */
+        uint32_t server_caps;
+
+        /* Should we retry on error? */
+        int retry;
+
 	/* socket the connection is on */
 	sock_t socket;
 	shout_state_e state;
@@ -122,5 +165,13 @@ struct shout {
 int shout_open_ogg(shout_t *self);
 int shout_open_mp3(shout_t *self);
 int shout_open_webm(shout_t *self);
+
+#ifdef HAVE_OPENSSL
+int shout_tls_try_connect(shout_t *self);
+int shout_tls_close(shout_t *self);
+ssize_t shout_tls_read(shout_t *self, void *buf, size_t len);
+ssize_t shout_tls_write(shout_t *self, const void *buf, size_t len);
+int shout_tls_recoverable(shout_t *self);
+#endif
 
 #endif /* __LIBSHOUT_SHOUT_PRIVATE_H__ */

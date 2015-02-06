@@ -59,6 +59,7 @@ static int try_write (shout_t *self, const void *data, size_t len);
 
 static int create_request(shout_t *self);
 static int create_http_request(shout_t *self);
+static int create_http_request_upgrade(shout_t *self, const char *proto);
 static int create_xaudiocast_request(shout_t *self);
 static int create_icy_request(shout_t *self);
 static int parse_response(shout_t *self);
@@ -66,6 +67,10 @@ static int parse_http_response(shout_t *self);
 static int parse_xaudiocast_response(shout_t *self);
 
 static char *http_basic_authorization(shout_t *self);
+
+static ssize_t conn_read(shout_t *self, void *buf, size_t len);
+static ssize_t conn_write(shout_t *self, const void *buf, size_t len);
+static int conn_recoverable(shout_t *self);
 
 /* -- static data -- */
 static int _initialized = 0;
@@ -133,6 +138,14 @@ shout_t *shout_new(void)
 		return NULL;
 	}
 
+#ifdef HAVE_OPENSSL
+	if (shout_set_allowed_ciphers(self, LIBSHOUT_DEFAULT_ALLOWED_CIPHERS) != SHOUTERR_SUCCESS) {
+		shout_free(self);
+
+		return NULL;
+	}
+        self->tls_mode = SHOUT_TLS_AUTO;
+#endif
 
 	self->port = LIBSHOUT_DEFAULT_PORT;
 	self->format = LIBSHOUT_DEFAULT_FORMAT;
@@ -145,6 +158,8 @@ void shout_free(shout_t *self)
 {
 	if (!self) return;
 
+        if (self->state != SHOUT_STATE_UNCONNECTED) return;
+
 	if (self->host) free(self->host);
 	if (self->password) free(self->password);
 	if (self->mount) free(self->mount);
@@ -152,6 +167,13 @@ void shout_free(shout_t *self)
 	if (self->useragent) free(self->useragent);
 	if (self->audio_info) _shout_util_dict_free (self->audio_info);
 	if (self->meta) _shout_util_dict_free (self->meta);
+
+#ifdef HAVE_OPENSSL
+	if (self->ca_directory) free(self->ca_directory);
+	if (self->ca_certificate) free(self->ca_certificate);
+	if (self->allowed_ciphers) free(self->allowed_ciphers);
+	if (self->client_certificate) free(self->client_certificate);
+#endif
 
 	free(self);
 }
@@ -182,6 +204,11 @@ int shout_close(shout_t *self)
 
 	if (self->state == SHOUT_STATE_CONNECTED && self->close)
 		self->close(self);
+
+#ifdef HAVE_OPENSSL
+	if (self->tls_mode != SHOUT_TLS_DISABLED)
+		shout_tls_close(self);
+#endif
 
 	sock_close(self->socket);
 	self->state = SHOUT_STATE_UNCONNECTED;
@@ -388,6 +415,10 @@ const char *shout_get_error(shout_t *self)
                 return "Socket is busy";
 	case SHOUTERR_UNSUPPORTED:
 		return "This libshout doesn't support the requested option";
+	case SHOUTERR_NOTLS:
+		return "TLS requested but not supported by peer";
+	case SHOUTERR_TLSBADCERT:
+		return "TLS connection can not be established because of bad certificate";
 	default:
 		return "Unknown error";
 	}
@@ -772,6 +803,189 @@ unsigned int shout_get_nonblocking(shout_t *self)
 	return self->nonblocking;
 }
 
+/* TLS functions */
+#ifdef HAVE_OPENSSL
+int shout_set_tls(shout_t *self, int mode)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	if (mode != SHOUT_TLS_DISABLED &&
+	    mode != SHOUT_TLS_AUTO &&
+	    mode != SHOUT_TLS_AUTO_NO_PLAIN &&
+	    mode != SHOUT_TLS_OVER_TLS)
+		return self->error = SHOUTERR_UNSUPPORTED;
+
+	self->tls_mode = mode;
+	return SHOUTERR_SUCCESS;
+}
+int shout_get_tls(shout_t *self)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	return self->tls_mode;
+}
+
+int shout_set_ca_directory(shout_t *self, const char *directory)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	if (self->state != SHOUT_STATE_UNCONNECTED)
+		return self->error = SHOUTERR_CONNECTED;
+
+	if (self->ca_directory)
+		free (self->ca_directory);
+
+	if (!(self->ca_directory = _shout_util_strdup(directory)))
+		return self->error = SHOUTERR_MALLOC;
+
+	return self->error = SHOUTERR_SUCCESS;
+}
+
+const char *shout_get_ca_directory(shout_t *self)
+{
+	if (!self)
+		return NULL;
+
+	return self->ca_directory;
+}
+
+int shout_set_ca_certificate(shout_t *self, const char *certificate)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	if (self->state != SHOUT_STATE_UNCONNECTED)
+		return self->error = SHOUTERR_CONNECTED;
+
+	if (self->ca_certificate)
+		free (self->ca_certificate);
+
+	if (!(self->ca_certificate = _shout_util_strdup(certificate)))
+		return self->error = SHOUTERR_MALLOC;
+
+	return self->error = SHOUTERR_SUCCESS;
+}
+
+const char *shout_get_ca_certificate(shout_t *self)
+{
+	if (!self)
+		return NULL;
+
+	return self->ca_certificate;
+}
+
+int shout_set_allowed_ciphers(shout_t *self, const char *ciphers)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	if (self->state != SHOUT_STATE_UNCONNECTED)
+		return self->error = SHOUTERR_CONNECTED;
+
+	if (self->allowed_ciphers)
+		free (self->allowed_ciphers);
+
+	if (!(self->allowed_ciphers = _shout_util_strdup(ciphers)))
+		return self->error = SHOUTERR_MALLOC;
+
+	return self->error = SHOUTERR_SUCCESS;
+}
+
+const char *shout_get_allowed_ciphers(shout_t *self)
+{
+	if (!self)
+		return NULL;
+
+	return self->allowed_ciphers;
+}
+
+int shout_set_client_certificate(shout_t *self, const char *certificate)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	if (self->state != SHOUT_STATE_UNCONNECTED)
+		return self->error = SHOUTERR_CONNECTED;
+
+	if (self->client_certificate)
+		free (self->client_certificate);
+
+	if (!(self->client_certificate = _shout_util_strdup(certificate)))
+		return self->error = SHOUTERR_MALLOC;
+
+	return self->error = SHOUTERR_SUCCESS;
+}
+
+const char *shout_get_client_certificate(shout_t *self)
+{
+	if (!self)
+		return NULL;
+
+	return self->client_certificate;
+}
+#else
+int shout_set_tls(shout_t *self, int mode)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	if (mode == SHOUT_TLS_DISABLED)
+		return SHOUTERR_SUCCESS;
+
+	return self->error = SHOUTERR_UNSUPPORTED;
+}
+int shout_get_tls(shout_t *self)
+{
+	return SHOUT_TLS_DISABLED;
+}
+int shout_set_ca_directory(shout_t *self, const char *directory)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+	return self->error = SHOUTERR_UNSUPPORTED;
+}
+const char *shout_get_ca_directory(shout_t *self)
+{
+	return NULL;
+}
+
+int shout_set_ca_certificate(shout_t *self, const char *certificate)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+	return self->error = SHOUTERR_UNSUPPORTED;
+}
+const char *shout_get_ca_certificate(shout_t *self)
+{
+	return NULL;
+}
+
+int shout_set_allowed_ciphers(shout_t *self, const char *ciphers)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+	return self->error = SHOUTERR_UNSUPPORTED;
+}
+const char *shout_get_allowed_ciphers(shout_t *self)
+{
+	return NULL;
+}
+
+int shout_set_client_certificate(shout_t *self, const char *certificate)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+	return self->error = SHOUTERR_UNSUPPORTED;
+}
+const char *shout_get_client_certificate(shout_t *self)
+{
+	return NULL;
+}
+#endif
+
 /* -- static function definitions -- */
 
 /* queue data in pages of SHOUT_BUFSIZE bytes */
@@ -875,9 +1089,9 @@ static int get_response(shout_t *self)
 	shout_buf_t *queue;
 	int newlines = 0;
 
-	rc = sock_read_bytes(self->socket, buf, sizeof(buf));
+	rc = conn_read(self, buf, sizeof(buf));
 
-	if (rc < 0 && sock_recoverable(sock_error()))
+	if (rc < 0 && conn_recoverable(self))
 		return SHOUTERR_BUSY;
 	if (rc <= 0)
 		return SHOUTERR_SOCKET;
@@ -920,6 +1134,7 @@ static int try_connect (shout_t *self)
 	int port;
 
 	/* the breaks between cases are omitted intentionally */
+retry:
 	switch (self->state) {
 	case SHOUT_STATE_UNCONNECTED:
 		port = self->port;
@@ -946,7 +1161,52 @@ static int try_connect (shout_t *self)
 					return SHOUTERR_BUSY;
 			}
 		}
-		self->state = SHOUT_STATE_REQ_PENDING;
+		self->state = SHOUT_STATE_TLS_PENDING;
+
+	case SHOUT_STATE_TLS_PENDING:
+#ifdef HAVE_OPENSSL
+		switch (self->tls_mode) {
+		case SHOUT_TLS_DISABLED:
+			/* nothing to be done */
+		break;
+		case SHOUT_TLS_AUTO:
+		case SHOUT_TLS_AUTO_NO_PLAIN:
+			if (self->server_caps & LIBSHOUT_CAP_GOTCAPS) {
+				/* We had a probe allready, otherwise just do nothing to poke the server. */
+				if (self->server_caps & LIBSHOUT_CAP_UPGRADETLS) {
+					self->tls_mode = SHOUT_TLS_UPGRADE;
+				} else {
+					if (self->tls_mode == SHOUT_TLS_AUTO_NO_PLAIN)
+						return SHOUTERR_NOTLS;
+					self->tls_mode = SHOUT_TLS_DISABLED;
+				}
+				self->state = SHOUT_STATE_TLS_PENDING;
+				goto retry;
+			}
+		break;
+		case SHOUT_TLS_OVER_TLS:
+			if ((rc = shout_tls_try_connect(self)) != SHOUTERR_SUCCESS) {
+				if (rc == SHOUTERR_BUSY)
+					return SHOUTERR_BUSY;
+				goto failure;
+			}
+		break;
+		case SHOUT_TLS_UPGRADE:
+			if ((rc = create_http_request_upgrade(self, "TLS/1.0")) != SHOUTERR_SUCCESS) {
+				if (rc == SHOUTERR_BUSY)
+					return SHOUTERR_BUSY;
+				goto failure;
+			}
+			self->state = SHOUT_STATE_REQ_PENDING;
+			goto retry;
+		break;
+		default:
+                        rc = SHOUTERR_INSANE;
+                        goto failure;
+		break;
+		}
+#endif
+		self->state = SHOUT_STATE_REQ_CREATION;
 
 	case SHOUT_STATE_REQ_CREATION:
 		if ((rc = create_request(self)) != SHOUTERR_SUCCESS)
@@ -959,6 +1219,12 @@ static int try_connect (shout_t *self)
 		while (!shout_get_nonblocking(self) && rc == SHOUTERR_BUSY);
                 if (rc == SHOUTERR_BUSY)
                         return rc;
+
+                if (rc == SHOUTERR_SOCKET && self->retry) {
+			self->state = SHOUT_STATE_RECONNECT;
+			goto retry;
+		}
+
 		if (rc != SHOUTERR_SUCCESS)
                         goto failure;
 		self->state = SHOUT_STATE_RESP_PENDING;
@@ -970,11 +1236,28 @@ static int try_connect (shout_t *self)
                 if (rc == SHOUTERR_BUSY)
                         return rc;
 
+                if (rc == SHOUTERR_SOCKET && self->retry) {
+			self->state = SHOUT_STATE_RECONNECT;
+			goto retry;
+#ifdef HAVE_OPENSSL
+		} else if (rc == SHOUTERR_SOCKET && !(self->server_caps & LIBSHOUT_CAP_GOTCAPS) &&
+			   (self->tls_mode == SHOUT_TLS_AUTO || self->tls_mode == SHOUT_TLS_AUTO_NO_PLAIN)) {
+			self->state = SHOUT_STATE_RECONNECT;
+			self->tls_mode = SHOUT_TLS_OVER_TLS;
+			goto retry;
+#endif
+		}
+
 		if (rc != SHOUTERR_SUCCESS)
                         goto failure;
 
-		if ((rc = parse_response(self)) != SHOUTERR_SUCCESS)
+		if ((rc = parse_response(self)) != SHOUTERR_SUCCESS) {
+			if (self->retry) {
+				self->state = SHOUT_STATE_TLS_PENDING;
+				goto retry;
+			}
                         goto failure;
+		}
 
 		switch (self->format) {
 		case SHOUT_FORMAT_OGG:
@@ -997,6 +1280,14 @@ static int try_connect (shout_t *self)
 
 	case SHOUT_STATE_CONNECTED:
 		self->state = SHOUT_STATE_CONNECTED;
+	break;
+
+	/* special case, no fallthru to this */
+	case SHOUT_STATE_RECONNECT:
+		sock_close(self->socket);
+		self->state = SHOUT_STATE_UNCONNECTED;
+		goto retry;
+	break;
 	}
 	
 	return SHOUTERR_SUCCESS;
@@ -1014,14 +1305,14 @@ static int try_write (shout_t *self, const void *data_p, size_t len)
 
     /* loop until whole buffer is written (unless it would block) */
     do {
-        ret = sock_write_bytes (self->socket, data + pos, len - pos);
+        ret = conn_write(self, data + pos, len - pos);
         if (ret > 0)
             pos += ret;
     } while (pos < len && ret >= 0);
 
     if (ret < 0)
     {
-        if (sock_recoverable (sock_error()))
+        if (conn_recoverable(self))
         {
             self->error = SHOUTERR_BUSY;
             return pos;
@@ -1031,6 +1322,31 @@ static int try_write (shout_t *self, const void *data_p, size_t len)
     }
 
     return pos;
+}
+
+static ssize_t conn_read(shout_t *self, void *buf, size_t len)
+{
+#ifdef HAVE_OPENSSL
+	if (self->ssl)
+		return shout_tls_read(self, buf, len);
+#endif
+	return sock_read_bytes(self->socket, buf, len);
+}
+static ssize_t conn_write(shout_t *self, const void *buf, size_t len)
+{
+#ifdef HAVE_OPENSSL
+	if (self->ssl)
+		return shout_tls_write(self, buf, len);
+#endif
+	return sock_write_bytes(self->socket, buf, len);
+}
+static int conn_recoverable(shout_t *self)
+{
+#ifdef HAVE_OPENSSL
+	if (self->ssl)
+		return shout_tls_recoverable(self);
+#endif
+	return sock_recoverable(sock_error());
 }
 
 /* collect nodes of a queue into a single buffer */
@@ -1102,13 +1418,32 @@ static int create_http_request(shout_t *self)
 	int ret = SHOUTERR_MALLOC;
 	util_dict *dict;
 	const char *key, *val;
+	const char *mimetype;
+
+	switch (self->format) {
+	case SHOUT_FORMAT_OGG:
+		mimetype = "application/ogg";
+		break;
+	case SHOUT_FORMAT_MP3:
+		mimetype = "audio/mpeg";
+		break;
+	case SHOUT_FORMAT_WEBM:
+		mimetype = "video/webm";
+		break;
+	case SHOUT_FORMAT_WEBMAUDIO:
+		mimetype = "audio/webm";
+		break;
+	default:
+		return SHOUTERR_INSANE;
+		break;
+	}
 
 	/* this is lazy code that relies on the only error from queue_* being
 	 * SHOUTERR_MALLOC */
 	do {
 		if (queue_printf(self, "SOURCE %s HTTP/1.0\r\n", self->mount))
 			break;
-		if (self->password) {
+		if (self->password && (self->server_caps & LIBSHOUT_CAP_GOTCAPS)) {
 			if (! (auth = http_basic_authorization(self)))
 				break;
 			if (queue_str(self, auth)) {
@@ -1121,13 +1456,7 @@ static int create_http_request(shout_t *self)
 			break;
 		if (self->useragent && queue_printf(self, "User-Agent: %s\r\n", self->useragent))
 			break;
-		if (self->format == SHOUT_FORMAT_OGG && queue_printf(self, "Content-Type: application/ogg\r\n"))
-			break;
-		if (self->format == SHOUT_FORMAT_MP3 && queue_printf(self, "Content-Type: audio/mpeg\r\n"))
-			break;
-		if (self->format == SHOUT_FORMAT_WEBM && queue_printf(self, "Content-Type: video/webm\r\n"))
-			break;
-		if (self->format == SHOUT_FORMAT_WEBMAUDIO && queue_printf(self, "Content-Type: audio/webm\r\n"))
+		if (queue_printf(self, "Content-Type: %s\r\n", mimetype))
 			break;
 		if (queue_printf(self, "ice-public: %d\r\n", self->public))
 			break;
@@ -1151,6 +1480,24 @@ static int create_http_request(shout_t *self)
 	} while (0);
 
 	return ret;
+}
+
+static int create_http_request_upgrade(shout_t *self, const char *proto)
+{
+	do {
+		if (queue_str(self, "GET / HTTP/1.1\r\nConnection: Upgrade\r\n"))
+			break;
+		if (queue_printf(self, "Upgrade: %s\r\n", proto))
+			break;
+		/* Send Host:-header as this one may be used to select cert! */
+		if (queue_printf(self, "Host: %s:%i\r\n", self->host, self->port))
+			break;
+		if (queue_str(self, "\r\n"))
+			break;
+		return SHOUTERR_SUCCESS;
+	} while (0);
+
+	return SHOUTERR_MALLOC;
 }
 
 static char *http_basic_authorization(shout_t *self)
@@ -1190,6 +1537,100 @@ static int parse_response(shout_t *self)
 	return self->error = SHOUTERR_UNSUPPORTED;
 }
 
+static inline void parse_http_response_caps(shout_t *self, const char *header, const char *str) {
+	const char * end;
+	size_t len;
+	char buf[64];
+
+	if (!self || !header || !str)
+		return;
+
+	do {
+		for (; *str == ' '; str++);
+		end = strstr(str, ",");
+		if (end) {
+			len = end - str;
+		} else {
+			len = strlen(str);
+		}
+
+		if (len > (sizeof(buf) - 1))
+			return;
+		memcpy(buf, str, len);
+		buf[len] = 0;
+
+		if (strcmp(header, "Allow") == 0){
+			if (strcasecmp(buf, "SOURCE") == 0) {
+				self->server_caps |= LIBSHOUT_CAP_SOURCE;
+			} else if (strcasecmp(buf, "PUT") == 0) {
+				self->server_caps |= LIBSHOUT_CAP_PUT;
+			} else if (strcasecmp(buf, "POST") == 0) {
+				self->server_caps |= LIBSHOUT_CAP_POST;
+			} else if (strcasecmp(buf, "GET") == 0) {
+				self->server_caps |= LIBSHOUT_CAP_GET;
+			}
+		} else if (strcmp(header, "Accept-Encoding") == 0){
+			if (strcasecmp(buf, "chunked") == 0) {
+				self->server_caps |= LIBSHOUT_CAP_CHUNKED;
+			}
+		} else if (strcmp(header, "Upgrade") == 0){
+			if (strcasecmp(buf, "TLS/1.0") == 0) {
+				self->server_caps |= LIBSHOUT_CAP_UPGRADETLS;
+			}
+		} else {
+			return; /* unknown header */
+		}
+
+		str += len + 1;
+	} while (end);
+
+	return;
+}
+
+static inline int eat_body(shout_t *self, ssize_t len, const char *buf, size_t buflen)
+{
+	const char *p;
+	size_t header_len = 0;
+	char buffer[256];
+	ssize_t got;
+
+	if (!len)
+		return 0;
+
+	for (p = buf; p < (buf+buflen-3); p++) {
+		if (p[0] == '\r' && p[1] == '\n' && p[2] == '\r' && p[3] == '\n') {
+			header_len = p - buf + 4;
+			break;
+		} else if (p[0] == '\n' && p[1] == '\n') {
+			header_len = p - buf + 2;
+			break;
+		}
+	}
+	if (!header_len && buflen >= 3 && buf[buflen-2] == '\n' && buf[buflen-3] == '\n') {
+		header_len = buflen - 1;
+	} else if (!header_len && buflen >= 2 && buf[buflen-1] == '\n' && buf[buflen-2] == '\n') {
+		header_len = buflen;
+	}
+
+	if ( (buflen - header_len) > len)
+		return -1;
+
+	len -= buflen - header_len;
+
+	while (len) {
+		got = conn_read(self, buffer, len > sizeof(buffer) ? sizeof(buffer) : len);
+		if (got == -1 && conn_recoverable(self)) {
+			continue;
+		} else if (got == -1) {
+			return -1;
+		}
+
+		len -= got;
+	}
+
+	return 0;
+}
+
 static int parse_http_response(shout_t *self)
 {
 	http_parser_t *parser;
@@ -1207,15 +1648,44 @@ static int parse_http_response(shout_t *self)
 	parser = httpp_create_parser();
 	httpp_initialize(parser, NULL);
 	if (httpp_parse_response(parser, header, hlen, self->mount)) {
+		/* TODO: Headers to Handle:
+		 * Allow:, Accept-Encoding:, Warning:, Upgrade:
+		 */
+		parse_http_response_caps(self, "Allow", httpp_getvar(parser, "allow"));
+		parse_http_response_caps(self, "Accept-Encoding", httpp_getvar(parser, "accept-encoding"));
+		parse_http_response_caps(self, "Upgrade", httpp_getvar(parser, "upgrade"));
+		self->server_caps |= LIBSHOUT_CAP_GOTCAPS;
 		retcode = httpp_getvar(parser, HTTPP_VAR_ERROR_CODE);
 		code = atoi(retcode);
 		if(code >= 200 && code < 300) {
 			httpp_destroy(parser);
 			free (header);
 			return SHOUTERR_SUCCESS;
+		} else if (code == 401 || code == 405 || code == 426 || code == 101) {
+			const char *content_length = httpp_getvar(parser, "content-length");
+			if (content_length) {
+				if (eat_body(self, atoi(content_length), header, hlen) == -1)
+					goto failure;
+			}
+#ifdef HAVE_OPENSSL
+			switch (code) {
+			case 426: self->tls_mode = SHOUT_TLS_UPGRADE;  break;
+			case 101: self->tls_mode = SHOUT_TLS_OVER_TLS; break;
+			}
+#endif
+			self->retry++;
+			if (self->retry > LIBSHOUT_MAX_RETRY)
+				self->retry = 0;
+
+			goto retry;
+		} else {
+			self->retry = 0;
 		}
 	}
 
+failure:
+	self->retry = 0;
+retry:
 	free(header);
 	httpp_destroy(parser);
 	return self->error = SHOUTERR_NOLOGIN;
