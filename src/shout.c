@@ -206,8 +206,9 @@ int shout_close(shout_t *self)
 		self->close(self);
 
 #ifdef HAVE_OPENSSL
-	if (self->tls_mode != SHOUT_TLS_DISABLED)
-		shout_tls_close(self);
+	if (self->tls)
+		shout_tls_close(self->tls);
+	self->tls = NULL;
 #endif
 
 	sock_close(self->socket);
@@ -335,13 +336,17 @@ int shout_metadata_add(shout_metadata_t *self, const char *name, const char *val
  * TODO: prettier error-handling. */
 int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 {
-	sock_t socket;
+	int error;
+	sock_t socket = -1;
 	int rv;
 	char *encvalue = NULL;
 	const char *request_template;
 	char *request = NULL;
 	size_t request_len;
 	char *auth = NULL;
+#ifdef HAVE_OPENSSL
+	shout_tls_t *tls = NULL;
+#endif
 
 	if (!self || !metadata)
 		return SHOUTERR_INSANE;
@@ -378,31 +383,115 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 	}
 
 	free(encvalue);
+	encvalue = NULL;
+
 	if (auth)
 		free(auth);
+	auth = NULL;
 
 	if ((socket = sock_connect(self->host, self->port)) <= 0)
 		return SHOUTERR_NOCONNECT;
 
-	rv = sock_write(socket, "%s", request);
+#ifdef HAVE_OPENSSL
+	switch (self->tls_mode) {
+	case SHOUT_TLS_DISABLED:
+		/* nothing to do */
+	break;
+	case SHOUT_TLS_RFC2817: /* Use TLS via HTTP Upgrade:-header [RFC2817]. */
+		do { /* use a subscope to avoid more function level variables */
+			char upgrade[512];
+			size_t len;
 
-	if (!rv) {
-		sock_close(socket);
-		return SHOUTERR_SOCKET;
+			/* send upgrade request */
+			snprintf(upgrade, sizeof(upgrade),
+				"GET / HTTP/1.1\r\nConnection: Upgrade\r\nUpgrade: TLS/1.0\r\nHost: %s:%i\r\n\r\n",
+				self->host, self->port);
+			upgrade[sizeof(upgrade)-1] = 0;
+			len = strlen(upgrade);
+			if (len == (sizeof(upgrade) - 1))
+				goto error_malloc;
+			rv = sock_write_bytes(socket, upgrade, len);
+			if (len != rv)
+				goto error_socket;
+
+			/* read status line */
+			if (!sock_read_line(socket, upgrade, sizeof(upgrade)))
+				goto error_socket;
+			if (strncmp(upgrade, "HTTP/1.1 101 ", 13) != 0)
+				goto error_socket;
+
+			/* read headers */
+			len = 0;
+			do {
+				if (!sock_read_line(socket, upgrade, sizeof(upgrade)))
+					goto error_socket;
+				if (upgrade[0] == 0)
+					break;
+				if (!strncasecmp(upgrade, "Content-Length: ", 16) == 0)
+					len = atoi(upgrade + 16);
+			} while (1);
+
+			/* read body */
+			while (len) {
+				rv = sock_read_bytes(socket, upgrade, len > sizeof(upgrade) ? sizeof(upgrade) : len);
+				if (rv < 1)
+					goto error_socket;
+				len -= rv;
+			}
+		} while (0);
+	/* fall thru */
+	case SHOUT_TLS_RFC2818: /* Use TLS for transport layer like HTTPS [RFC2818] does. */
+		tls = shout_tls_new(self, socket);
+		if (!tls)
+			goto error_malloc;
+		error = shout_tls_try_connect(tls);
+		if (error != SHOUTERR_SUCCESS)
+			goto error;
+	break;
+	default:
+		/* Bad mode or auto detection not completed. */
+		error = SHOUTERR_INSANE;
+		goto error;
+	break;
 	}
+#endif
 
-	sock_close(socket);
+#ifdef HAVE_OPENSSL
+	if (tls) {
+		rv = shout_tls_write(tls, request, strlen(request));
+	} else {
+		rv = sock_write(socket, "%s", request);
+	}
+#else
+	rv = sock_write(socket, "%s", request);
+#endif
 
-	return SHOUTERR_SUCCESS;
+	if (!rv)
+		goto error_socket;
 
+	error = SHOUTERR_SUCCESS;
+	goto error;
+
+error_socket:
+	error = SHOUTERR_SOCKET;
+	goto error;
 error_malloc:
+	error = SHOUTERR_MALLOC;
+	goto error;
+error:
+#ifdef HAVE_OPENSSL
+	if (tls)
+		shout_tls_close(tls);
+#endif
+	if (socket != -1)
+		sock_close(socket);
 	if (encvalue)
 		free(encvalue);
 	if (request)
 		free(request);
 	if (auth)
 		free(auth);
-	return SHOUTERR_MALLOC;
+	return error;
 }
 
 /* getters/setters */
@@ -1199,12 +1288,9 @@ retry:
 
 	case SHOUT_STATE_TLS_PENDING:
 #ifdef HAVE_OPENSSL
-		switch (self->tls_mode) {
-		case SHOUT_TLS_DISABLED:
+		if (self->tls_mode == SHOUT_TLS_DISABLED) {
 			/* nothing to be done */
-		break;
-		case SHOUT_TLS_AUTO:
-		case SHOUT_TLS_AUTO_NO_PLAIN:
+		} else if (self->tls_mode == SHOUT_TLS_AUTO || self->tls_mode == SHOUT_TLS_AUTO_NO_PLAIN) {
 			if (self->server_caps & LIBSHOUT_CAP_GOTCAPS) {
 				/* We had a probe allready, otherwise just do nothing to poke the server. */
 				if (self->server_caps & LIBSHOUT_CAP_UPGRADETLS) {
@@ -1217,15 +1303,18 @@ retry:
 				self->state = SHOUT_STATE_TLS_PENDING;
 				goto retry;
 			}
-		break;
-		case SHOUT_TLS_RFC2818:
-			if ((rc = shout_tls_try_connect(self)) != SHOUTERR_SUCCESS) {
+		} else if (self->tls_mode == SHOUT_TLS_RFC2818 || self->upgrade_to_tls) {
+			if (!self->tls) {
+				self->tls = shout_tls_new(self, self->socket);
+				if (!self->tls) /* just guessing that it's a malloc error */
+					return SHOUTERR_MALLOC;
+			}
+			if ((rc = shout_tls_try_connect(self->tls)) != SHOUTERR_SUCCESS) {
 				if (rc == SHOUTERR_BUSY)
 					return SHOUTERR_BUSY;
 				goto failure;
 			}
-		break;
-		case SHOUT_TLS_RFC2817:
+		} else if (self->tls_mode == SHOUT_TLS_RFC2817) {
 			if ((rc = create_http_request_upgrade(self, "TLS/1.0")) != SHOUTERR_SUCCESS) {
 				if (rc == SHOUTERR_BUSY)
 					return SHOUTERR_BUSY;
@@ -1233,11 +1322,9 @@ retry:
 			}
 			self->state = SHOUT_STATE_REQ_PENDING;
 			goto retry;
-		break;
-		default:
+		} else {
                         rc = SHOUTERR_INSANE;
                         goto failure;
-		break;
 		}
 #endif
 		self->state = SHOUT_STATE_REQ_CREATION;
@@ -1361,24 +1448,24 @@ static int try_write (shout_t *self, const void *data_p, size_t len)
 static ssize_t conn_read(shout_t *self, void *buf, size_t len)
 {
 #ifdef HAVE_OPENSSL
-	if (self->ssl)
-		return shout_tls_read(self, buf, len);
+	if (self->tls)
+		return shout_tls_read(self->tls, buf, len);
 #endif
 	return sock_read_bytes(self->socket, buf, len);
 }
 static ssize_t conn_write(shout_t *self, const void *buf, size_t len)
 {
 #ifdef HAVE_OPENSSL
-	if (self->ssl)
-		return shout_tls_write(self, buf, len);
+	if (self->tls)
+		return shout_tls_write(self->tls, buf, len);
 #endif
 	return sock_write_bytes(self->socket, buf, len);
 }
 static int conn_recoverable(shout_t *self)
 {
 #ifdef HAVE_OPENSSL
-	if (self->ssl)
-		return shout_tls_recoverable(self);
+	if (self->tls)
+		return shout_tls_recoverable(self->tls);
 #endif
 	return sock_recoverable(sock_error());
 }
@@ -1703,8 +1790,8 @@ static int parse_http_response(shout_t *self)
 			}
 #ifdef HAVE_OPENSSL
 			switch (code) {
-			case 426: self->tls_mode = SHOUT_TLS_RFC2817;  break;
-			case 101: self->tls_mode = SHOUT_TLS_RFC2818; break;
+			case 426: self->tls_mode = SHOUT_TLS_RFC2817; break;
+			case 101: self->upgrade_to_tls = 1; break;
 			}
 #endif
 			self->retry++;

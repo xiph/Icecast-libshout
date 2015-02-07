@@ -30,7 +30,36 @@
 #include <ctype.h>
 #endif
 
-static inline int tls_setup(shout_t *self)
+struct _shout_tls {
+        SSL_CTX *ssl_ctx;
+        SSL *ssl;
+        int ssl_ret;
+	/* only pointers into self, don't need to free them */
+	sock_t socket;
+	const char *host;
+        const char *ca_directory;
+        const char *ca_certificate;
+        const char *allowed_ciphers;
+        const char *client_certificate;
+};
+
+shout_tls_t *shout_tls_new(shout_t *self, sock_t socket)
+{
+	shout_tls_t *tls = calloc(1, sizeof(shout_tls_t));
+	if (!tls)
+		return NULL;
+
+	tls->socket = socket;
+	tls->host = self->host;
+	tls->ca_directory = self->ca_directory;
+	tls->ca_certificate = self->ca_certificate;
+	tls->allowed_ciphers = self->allowed_ciphers;
+	tls->client_certificate = self->client_certificate;
+
+	return tls;
+}
+
+static inline int tls_setup(shout_tls_t *tls)
 {
 	SSL_METHOD *meth;
 
@@ -43,57 +72,46 @@ static inline int tls_setup(shout_t *self)
 	if (!meth)
 		goto error;
 
-	self->ssl_ctx = SSL_CTX_new(meth);
-	if (!self->ssl_ctx)
+	tls->ssl_ctx = SSL_CTX_new(meth);
+	if (!tls->ssl_ctx)
 		goto error;
 
-	SSL_CTX_set_default_verify_paths(self->ssl_ctx);
-	SSL_CTX_load_verify_locations(self->ssl_ctx, self->ca_certificate, self->ca_directory);
+	SSL_CTX_set_default_verify_paths(tls->ssl_ctx);
+	SSL_CTX_load_verify_locations(tls->ssl_ctx, tls->ca_certificate, tls->ca_directory);
 
-	SSL_CTX_set_verify(self->ssl_ctx, SSL_VERIFY_NONE, NULL);
+	SSL_CTX_set_verify(tls->ssl_ctx, SSL_VERIFY_NONE, NULL);
 
-	if (self->client_certificate) {
-		if (SSL_CTX_use_certificate_file(self->ssl_ctx, self->client_certificate, SSL_FILETYPE_PEM) != 1)
+	if (tls->client_certificate) {
+		if (SSL_CTX_use_certificate_file(tls->ssl_ctx, tls->client_certificate, SSL_FILETYPE_PEM) != 1)
 			goto error;
-		if (SSL_CTX_use_PrivateKey_file(self->ssl_ctx, self->client_certificate, SSL_FILETYPE_PEM) != 1)
+		if (SSL_CTX_use_PrivateKey_file(tls->ssl_ctx, tls->client_certificate, SSL_FILETYPE_PEM) != 1)
 			goto error;
 	}
 
-	if (SSL_CTX_set_cipher_list(self->ssl_ctx, self->allowed_ciphers) <= 0)
+	if (SSL_CTX_set_cipher_list(tls->ssl_ctx, tls->allowed_ciphers) <= 0)
 		goto error;
 
-	SSL_CTX_set_mode(self->ssl_ctx, SSL_MODE_ENABLE_PARTIAL_WRITE);
-	SSL_CTX_set_mode(self->ssl_ctx, SSL_MODE_AUTO_RETRY);
+	SSL_CTX_set_mode(tls->ssl_ctx, SSL_MODE_ENABLE_PARTIAL_WRITE);
+	SSL_CTX_set_mode(tls->ssl_ctx, SSL_MODE_AUTO_RETRY);
 
-	self->ssl = SSL_new(self->ssl_ctx);
-	if (!self->ssl)
+	tls->ssl = SSL_new(tls->ssl_ctx);
+	if (!tls->ssl)
 		goto error;
 
-	if (!SSL_set_fd(self->ssl, self->socket))
+	if (!SSL_set_fd(tls->ssl, tls->socket))
 		goto error;
 
-	SSL_set_connect_state(self->ssl);
-	self->ssl_ret = SSL_connect(self->ssl);
+	SSL_set_connect_state(tls->ssl);
+	tls->ssl_ret = SSL_connect(tls->ssl);
 
 	return SHOUTERR_SUCCESS;
 
 	error:
-		if (self->ssl)
-			SSL_free(self->ssl);
-		if (self->ssl_ctx)
-			SSL_CTX_free(self->ssl_ctx);
+		if (tls->ssl)
+			SSL_free(tls->ssl);
+		if (tls->ssl_ctx)
+			SSL_CTX_free(tls->ssl_ctx);
 		return SHOUTERR_UNSUPPORTED;
-}
-
-static inline int tls_setup_mode(shout_t *self)
-{
-	if (self->tls_mode == SHOUT_TLS_DISABLED)
-		return SHOUTERR_SUCCESS;
-
-	if (self->tls_mode == SHOUT_TLS_RFC2818)
-		return tls_setup(self);
-
-	return SHOUTERR_UNSUPPORTED;
 }
 
 #ifndef XXX_HAVE_X509_check_host
@@ -149,22 +167,22 @@ static inline int tls_check_host(X509 *cert, const char *hostname)
 }
 #endif
 
-static inline int tls_check_cert(shout_t *self)
+static inline int tls_check_cert(shout_tls_t *tls)
 {
-	X509 *cert = SSL_get_peer_certificate(self->ssl);
+	X509 *cert = SSL_get_peer_certificate(tls->ssl);
 	int cert_ok = 0;
 	if (!cert)
 		return SHOUTERR_TLSBADCERT;
 
 	do {
-		if (SSL_get_verify_result(self->ssl) != X509_V_OK)
+		if (SSL_get_verify_result(tls->ssl) != X509_V_OK)
 			break;
 
 #ifdef XXX_HAVE_X509_check_host
-		if (X509_check_host(cert, self->host, 0, 0, NULL) != 1)
+		if (X509_check_host(cert, tls->host, 0, 0, NULL) != 1)
 			break;
 #else
-		if (tls_check_host(cert, self->host) != SHOUTERR_SUCCESS)
+		if (tls_check_host(cert, tls->host) != SHOUTERR_SUCCESS)
 			break;
 #endif
 
@@ -176,47 +194,48 @@ static inline int tls_check_cert(shout_t *self)
 	return cert_ok ? SHOUTERR_SUCCESS : SHOUTERR_TLSBADCERT;
 }
 
-static inline int tls_setup_process(shout_t *self)
+static inline int tls_setup_process(shout_tls_t *tls)
 {
-	if (SSL_is_init_finished(self->ssl))
-		return tls_check_cert(self);
-	self->ssl_ret = SSL_connect(self->ssl);
-	if (SSL_is_init_finished(self->ssl))
-		return tls_check_cert(self);
+	if (SSL_is_init_finished(tls->ssl))
+		return tls_check_cert(tls);
+	tls->ssl_ret = SSL_connect(tls->ssl);
+	if (SSL_is_init_finished(tls->ssl))
+		return tls_check_cert(tls);
 	return SHOUTERR_BUSY;
 }
 
-int shout_tls_try_connect(shout_t *self)
+int shout_tls_try_connect(shout_tls_t *tls)
 {
-	if (!self->ssl)
-		tls_setup_mode(self);
-	if (self->ssl)
-		return tls_setup_process(self);
+	if (!tls->ssl)
+		tls_setup(tls);
+	if (tls->ssl)
+		return tls_setup_process(tls);
 	return SHOUTERR_UNSUPPORTED;
 }
-int shout_tls_close(shout_t *self) {
-	if (self->ssl) {
-		SSL_shutdown(self->ssl);
-		SSL_free(self->ssl);
+int shout_tls_close(shout_tls_t *tls) {
+	if (tls->ssl) {
+		SSL_shutdown(tls->ssl);
+		SSL_free(tls->ssl);
 	}
-	if (self->ssl_ctx)
-		SSL_CTX_free(self->ssl_ctx);
+	if (tls->ssl_ctx)
+		SSL_CTX_free(tls->ssl_ctx);
+	free(tls);
 	return SHOUTERR_SUCCESS;
 }
 
-ssize_t shout_tls_read(shout_t *self, void *buf, size_t len)
+ssize_t shout_tls_read(shout_tls_t *tls, void *buf, size_t len)
 {
-	return self->ssl_ret = SSL_read(self->ssl, buf, len);
+	return tls->ssl_ret = SSL_read(tls->ssl, buf, len);
 }
 
-ssize_t shout_tls_write(shout_t *self, const void *buf, size_t len)
+ssize_t shout_tls_write(shout_tls_t *tls, const void *buf, size_t len)
 {
-	return self->ssl_ret = SSL_write(self->ssl, buf, len);
+	return tls->ssl_ret = SSL_write(tls->ssl, buf, len);
 }
 
-int shout_tls_recoverable(shout_t *self)
+int shout_tls_recoverable(shout_tls_t *tls)
 {
-	int error = SSL_get_error(self->ssl, self->ssl_ret);
+	int error = SSL_get_error(tls->ssl, tls->ssl_ret);
 	if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE)
 		return 1;
 	return 0;

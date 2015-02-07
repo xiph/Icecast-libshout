@@ -72,6 +72,8 @@
 
 #define SHOUT_BUFSIZE 4096
 
+typedef struct _shout_tls shout_tls_t;
+
 typedef struct _shout_buf {
 	unsigned char data[SHOUT_BUFSIZE];
 	unsigned int len;
@@ -126,14 +128,13 @@ struct shout {
 
         /* TLS options */
 #ifdef HAVE_OPENSSL
+	int upgrade_to_tls;
         int tls_mode;
         char *ca_directory;
         char *ca_certificate;
         char *allowed_ciphers;
         char *client_certificate;
-        SSL_CTX *ssl_ctx;
-        SSL *ssl;
-        int ssl_ret;
+	shout_tls_t *tls;
 #endif
 
         /* server capabilities (LIBSHOUT_CAP_*) */
@@ -167,11 +168,12 @@ int shout_open_mp3(shout_t *self);
 int shout_open_webm(shout_t *self);
 
 #ifdef HAVE_OPENSSL
-int shout_tls_try_connect(shout_t *self);
-int shout_tls_close(shout_t *self);
-ssize_t shout_tls_read(shout_t *self, void *buf, size_t len);
-ssize_t shout_tls_write(shout_t *self, const void *buf, size_t len);
-int shout_tls_recoverable(shout_t *self);
+shout_tls_t *shout_tls_new(shout_t *self, sock_t socket);
+int shout_tls_try_connect(shout_tls_t *tls);
+int shout_tls_close(shout_tls_t *tls);
+ssize_t shout_tls_read(shout_tls_t *tls, void *buf, size_t len);
+ssize_t shout_tls_write(shout_tls_t *tls, const void *buf, size_t len);
+int shout_tls_recoverable(shout_tls_t *tls);
 #endif
 
 #endif /* __LIBSHOUT_SHOUT_PRIVATE_H__ */
