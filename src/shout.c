@@ -337,30 +337,55 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 {
 	sock_t socket;
 	int rv;
-	char *encvalue;
+	char *encvalue = NULL;
+	const char *request_template;
+	char *request = NULL;
+	size_t request_len;
+	char *auth = NULL;
 
 	if (!self || !metadata)
 		return SHOUTERR_INSANE;
 
 	if (!(encvalue = _shout_util_dict_urlencode(metadata, '&')))
-		return SHOUTERR_MALLOC;
+		goto error_malloc;
+
+	switch (self->protocol) {
+	case SHOUT_PROTOCOL_ICY:
+		request_template = "GET /admin.cgi?mode=updinfo&pass=%s&%s HTTP/1.0\r\nUser-Agent: %s (Mozilla compatible)\r\n\r\n";
+		request_len = strlen(request_template) + strlen(self->password) + strlen(encvalue) + strlen(shout_get_agent(self)) + 1;
+		if (!(request = malloc(request_len)))
+			goto error_malloc;
+		snprintf(request, request_len, request_template, self->password, encvalue, shout_get_agent(self));
+	break;
+	case SHOUT_PROTOCOL_HTTP:
+		auth = http_basic_authorization(self);
+
+		request_template = "GET /admin/metadata?mode=updinfo&mount=%s&%s HTTP/1.0\r\nUser-Agent: %s\r\n%s\r\n";
+		request_len = strlen(request_template) + strlen(self->mount) + strlen(encvalue) + strlen(shout_get_agent(self)) + 1;
+		if (auth)
+			request_len += strlen(auth);
+		if (!(request = malloc(request_len)))
+			goto error_malloc;
+		snprintf(request, request_len, request_template, self->mount, encvalue, shout_get_agent(self), auth ? auth : "");
+	break;
+	default:
+		request_template = "GET /admin.cgi?mode=updinfo&pass=%s&mount=%s&%s HTTP/1.0\r\nUser-Agent: %s\r\n\r\n";
+		request_len = strlen(request_template) + strlen(self->password) + strlen(self->mount) + strlen(encvalue) + strlen(shout_get_agent(self)) + 1;
+		if (!(request = malloc(request_len)))
+			goto error_malloc;
+		snprintf(request, request_len, request_template, self->password, self->mount, encvalue, shout_get_agent(self));
+	break;
+	}
+
+	free(encvalue);
+	if (auth)
+		free(auth);
 
 	if ((socket = sock_connect(self->host, self->port)) <= 0)
 		return SHOUTERR_NOCONNECT;
 
-	if (self->protocol == SHOUT_PROTOCOL_ICY)
-		rv = sock_write(socket, "GET /admin.cgi?mode=updinfo&pass=%s&%s HTTP/1.0\r\nUser-Agent: %s (Mozilla compatible)\r\n\r\n",
-		  self->password, encvalue, shout_get_agent(self));
-	else if (self->protocol == SHOUT_PROTOCOL_HTTP) {
-		char *auth = http_basic_authorization(self);
+	rv = sock_write(socket, "%s", request);
 
-		rv = sock_write(socket, "GET /admin/metadata?mode=updinfo&mount=%s&%s HTTP/1.0\r\nUser-Agent: %s\r\n%s\r\n",
-		  self->mount, encvalue, shout_get_agent(self), auth ? auth : "");
-                free(auth);
-	} else
-		rv = sock_write(socket, "GET /admin.cgi?mode=updinfo&pass=%s&mount=%s&%s HTTP/1.0\r\nUser-Agent: %s\r\n\r\n",
-		  self->password, self->mount, encvalue, shout_get_agent(self));
-	free(encvalue);
 	if (!rv) {
 		sock_close(socket);
 		return SHOUTERR_SOCKET;
@@ -369,6 +394,15 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 	sock_close(socket);
 
 	return SHOUTERR_SUCCESS;
+
+error_malloc:
+	if (encvalue)
+		free(encvalue);
+	if (request)
+		free(request);
+	if (auth)
+		free(auth);
+	return SHOUTERR_MALLOC;
 }
 
 /* getters/setters */
