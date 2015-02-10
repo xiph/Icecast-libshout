@@ -170,7 +170,7 @@ void shout_free(shout_t *self)
 
 #ifdef HAVE_OPENSSL
 	if (self->ca_directory) free(self->ca_directory);
-	if (self->ca_certificate) free(self->ca_certificate);
+	if (self->ca_file) free(self->ca_file);
 	if (self->allowed_ciphers) free(self->allowed_ciphers);
 	if (self->client_certificate) free(self->client_certificate);
 #endif
@@ -975,7 +975,7 @@ const char *shout_get_ca_directory(shout_t *self)
 	return self->ca_directory;
 }
 
-int shout_set_ca_certificate(shout_t *self, const char *certificate)
+int shout_set_ca_file(shout_t *self, const char *file)
 {
 	if (!self)
 		return SHOUTERR_INSANE;
@@ -983,21 +983,21 @@ int shout_set_ca_certificate(shout_t *self, const char *certificate)
 	if (self->state != SHOUT_STATE_UNCONNECTED)
 		return self->error = SHOUTERR_CONNECTED;
 
-	if (self->ca_certificate)
-		free (self->ca_certificate);
+	if (self->ca_file)
+		free (self->ca_file);
 
-	if (!(self->ca_certificate = _shout_util_strdup(certificate)))
+	if (!(self->ca_file = _shout_util_strdup(file)))
 		return self->error = SHOUTERR_MALLOC;
 
 	return self->error = SHOUTERR_SUCCESS;
 }
 
-const char *shout_get_ca_certificate(shout_t *self)
+const char *shout_get_ca_file(shout_t *self)
 {
 	if (!self)
 		return NULL;
 
-	return self->ca_certificate;
+	return self->ca_file;
 }
 
 int shout_set_allowed_ciphers(shout_t *self, const char *ciphers)
@@ -1075,13 +1075,13 @@ const char *shout_get_ca_directory(shout_t *self)
 	return NULL;
 }
 
-int shout_set_ca_certificate(shout_t *self, const char *certificate)
+int shout_set_ca_file(shout_t *self, const char *file)
 {
 	if (!self)
 		return SHOUTERR_INSANE;
 	return self->error = SHOUTERR_UNSUPPORTED;
 }
-const char *shout_get_ca_certificate(shout_t *self)
+const char *shout_get_ca_file(shout_t *self)
 {
 	return NULL;
 }

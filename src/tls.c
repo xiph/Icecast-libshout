@@ -38,7 +38,7 @@ struct _shout_tls {
 	sock_t socket;
 	const char *host;
         const char *ca_directory;
-        const char *ca_certificate;
+        const char *ca_file;
         const char *allowed_ciphers;
         const char *client_certificate;
 };
@@ -52,7 +52,7 @@ shout_tls_t *shout_tls_new(shout_t *self, sock_t socket)
 	tls->socket = socket;
 	tls->host = self->host;
 	tls->ca_directory = self->ca_directory;
-	tls->ca_certificate = self->ca_certificate;
+	tls->ca_file = self->ca_file;
 	tls->allowed_ciphers = self->allowed_ciphers;
 	tls->client_certificate = self->client_certificate;
 
@@ -77,7 +77,7 @@ static inline int tls_setup(shout_tls_t *tls)
 		goto error;
 
 	SSL_CTX_set_default_verify_paths(tls->ssl_ctx);
-	SSL_CTX_load_verify_locations(tls->ssl_ctx, tls->ca_certificate, tls->ca_directory);
+	SSL_CTX_load_verify_locations(tls->ssl_ctx, tls->ca_file, tls->ca_directory);
 
 	SSL_CTX_set_verify(tls->ssl_ctx, SSL_VERIFY_NONE, NULL);
 

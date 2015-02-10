@@ -131,7 +131,7 @@ struct shout {
 	int upgrade_to_tls;
         int tls_mode;
         char *ca_directory;
-        char *ca_certificate;
+        char *ca_file;
         char *allowed_ciphers;
         char *client_certificate;
 	shout_tls_t *tls;
