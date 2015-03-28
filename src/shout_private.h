@@ -146,6 +146,7 @@ struct shout {
 	/* socket the connection is on */
 	sock_t socket;
 	shout_state_e state;
+        int protocol_state; /* extra state information from the protocol */
 	int nonblocking;
 
 	void *format_data;

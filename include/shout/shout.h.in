@@ -53,6 +53,7 @@
 #define SHOUT_PROTOCOL_HTTP		(0)
 #define SHOUT_PROTOCOL_XAUDIOCAST	(1)
 #define SHOUT_PROTOCOL_ICY		(2)
+#define SHOUT_PROTOCOL_ROARAUDIO	(3)
 
 /* Possible TLS modes */
 #define SHOUT_TLS_DISABLED              (0)  /* Do not use TLS at all */
