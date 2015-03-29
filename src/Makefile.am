@@ -26,7 +26,7 @@ libshout_la_LDFLAGS = -version-info 5:0:2
 
 EXTRA_DIST = codec_theora.c codec_speex.c tls.c
 noinst_HEADERS = format_ogg.h shout_private.h util.h
-PROTOCOLS=proto_http.c proto_xaudiocast.c proto_icy.c
+PROTOCOLS=proto_http.c proto_xaudiocast.c proto_icy.c proto_roaraudio.c
 FORMATS=format_ogg.c format_webm.c format_mp3.c
 CODECS=codec_vorbis.c codec_opus.c $(MAYBE_THEORA) $(MAYBE_SPEEX)
 libshout_la_SOURCES = shout.c util.c queue.c $(PROTOCOLS) $(FORMATS) $(CODECS) $(MAYBE_TLS)

@@ -147,6 +147,7 @@ struct shout {
 	sock_t socket;
 	shout_state_e state;
         int protocol_state; /* extra state information from the protocol */
+        int protocol_extra; /* extra data from the protocol */
 	int nonblocking;
 
 	void *format_data;
@@ -196,6 +197,10 @@ int shout_create_xaudiocast_request(shout_t *self);
 int shout_parse_xaudiocast_response(shout_t *self);
 
 int shout_create_icy_request(shout_t *self);
+
+int shout_create_roaraudio_request(shout_t *self);
+int shout_get_roaraudio_response(shout_t *self);
+int shout_parse_roaraudio_response(shout_t *self);
 
 /* containsers */
 int shout_open_ogg(shout_t *self);

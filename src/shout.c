@@ -171,7 +171,7 @@ int shout_open(shout_t *self)
 		return SHOUTERR_CONNECTED;
 	if (!self->host || !self->password || !self->port)
 		return self->error = SHOUTERR_INSANE;
-	if (self->format == SHOUT_FORMAT_OGG && self->protocol != SHOUT_PROTOCOL_HTTP)
+	if (self->format == SHOUT_FORMAT_OGG && (self->protocol != SHOUT_PROTOCOL_HTTP && self->protocol != SHOUT_PROTOCOL_ROARAUDIO))
 		return self->error = SHOUTERR_UNSUPPORTED;
 
 	return self->error = try_connect(self);
@@ -875,7 +875,8 @@ int shout_set_protocol(shout_t *self, unsigned int protocol)
 
 	if (protocol != SHOUT_PROTOCOL_HTTP &&
 	    protocol != SHOUT_PROTOCOL_XAUDIOCAST &&
-	    protocol != SHOUT_PROTOCOL_ICY)
+	    protocol != SHOUT_PROTOCOL_ICY &&
+	    protocol != SHOUT_PROTOCOL_ROARAUDIO)
 		return self->error = SHOUTERR_UNSUPPORTED;
 
 	self->protocol = protocol;
@@ -1111,6 +1112,9 @@ static int get_response(shout_t *self)
 
 	if ((rc = shout_queue_data(&self->rqueue, (unsigned char*)buf, rc)))
 		return rc;
+
+        if (self->protocol == SHOUT_PROTOCOL_ROARAUDIO)
+            return shout_get_roaraudio_response(self);
 
 	return shout_get_http_response(self);
 }
@@ -1373,6 +1377,8 @@ static int create_request(shout_t *self)
 		return shout_create_xaudiocast_request(self);
 	else if (self->protocol == SHOUT_PROTOCOL_ICY)
 		return shout_create_icy_request(self);
+	else if (self->protocol == SHOUT_PROTOCOL_ROARAUDIO)
+		return shout_create_roaraudio_request(self);
 
 	return self->error = SHOUTERR_UNSUPPORTED;
 }
@@ -1384,6 +1390,8 @@ static int parse_response(shout_t *self)
 	else if (self->protocol == SHOUT_PROTOCOL_XAUDIOCAST ||
 		 self->protocol == SHOUT_PROTOCOL_ICY)
 		return shout_parse_xaudiocast_response(self);
+	else if (self->protocol == SHOUT_PROTOCOL_ROARAUDIO)
+		return shout_parse_roaraudio_response(self);
 
 	return self->error = SHOUTERR_UNSUPPORTED;
 }
