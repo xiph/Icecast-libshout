@@ -230,7 +230,7 @@ static inline void parse_http_response_caps(shout_t *self, const char *header, c
 	return;
 }
 
-static inline int eat_body(shout_t *self, ssize_t len, const char *buf, size_t buflen)
+static inline int eat_body(shout_t *self, size_t len, const char *buf, size_t buflen)
 {
 	const char *p;
 	size_t header_len = 0;

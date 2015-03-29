@@ -51,6 +51,8 @@ int _shout_open_vorbis(ogg_codec_t *codec, ogg_page *page)
 	vorbis_data_t *vorbis_data = calloc(1, sizeof(vorbis_data_t));
 	ogg_packet packet;
 
+	(void)page;
+
 	if (!vorbis_data)
 		return SHOUTERR_MALLOC;
 
@@ -77,6 +79,8 @@ static int read_vorbis_page(ogg_codec_t *codec, ogg_page *page)
 	ogg_packet packet;
 	vorbis_data_t *vorbis_data = codec->codec_data;
 	uint64_t samples = 0;
+
+	(void)page;
 
 	if (codec->headers < 3) {
 		while (ogg_stream_packetout (&codec->os, &packet) > 0) {

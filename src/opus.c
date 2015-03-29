@@ -214,6 +214,8 @@ int _shout_open_opus(ogg_codec_t *codec, ogg_page *page)
    opus_data_t *opus_data = calloc(1, sizeof(opus_data_t));
    ogg_packet packet;
 
+   (void)page;
+
    if (!opus_data)
       return SHOUTERR_MALLOC;
 
@@ -236,6 +238,8 @@ static int read_opus_page(ogg_codec_t *codec, ogg_page *page)
 {
    ogg_packet packet;
    opus_data_t *opus_data = codec->codec_data;
+
+   (void)page;
 
    /* We use the strategy of counting the packet times and ignoring
       the granpos. This has the advantage of needing less code to

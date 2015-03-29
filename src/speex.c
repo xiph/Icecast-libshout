@@ -43,6 +43,8 @@ int _shout_open_speex(ogg_codec_t *codec, ogg_page *page)
 	speex_data_t *speex_data = calloc(1, sizeof(speex_data_t));
 	ogg_packet packet;
 
+	(void)page;
+
 	if (!speex_data)
 		return SHOUTERR_MALLOC;
 
@@ -67,6 +69,8 @@ static int read_speex_page(ogg_codec_t *codec, ogg_page *page)
 	speex_data_t *speex_data = codec->codec_data;
 	uint64_t samples = 0;
 	
+	(void)page;
+
 	while (ogg_stream_packetout (&codec->os, &packet) > 0)
 		samples += speex_data->sh->frames_per_packet * speex_data->sh->frame_size;
 

@@ -144,7 +144,7 @@ static inline int tls_check_host(X509 *cert, const char *hostname)
 	int ret;
 
 	ret = X509_NAME_get_text_by_NID(xname, NID_commonName, common_name, sizeof(common_name));
-	if (ret < 1 || ret >= (sizeof(common_name)-1))
+	if (ret < 1 || (size_t)ret >= (sizeof(common_name)-1))
 		return SHOUTERR_TLSBADCERT;
 
 	if (!tls_check_pattern(hostname, common_name))
@@ -160,7 +160,7 @@ static inline int tls_check_host(X509 *cert, const char *hostname)
 	xentry = X509_NAME_get_entry(xname, i);
 	sdata = X509_NAME_ENTRY_get_data(xentry);
 
-	if (ASN1_STRING_length(sdata) != strlen(common_name))
+	if ((size_t)ASN1_STRING_length(sdata) != strlen(common_name))
 		return SHOUTERR_TLSBADCERT;
 
 	return SHOUTERR_SUCCESS;

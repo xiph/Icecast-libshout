@@ -52,10 +52,10 @@ int shout_open_webm(shout_t *self)
 
 static int send_webm(shout_t *self, const unsigned char *data, size_t len)
 {
-	/* HACK: just send the raw data, no throttle */
+	/* IMPORTANT TODO: we just send the raw data. We need throttling. */
 
-	int ret = shout_send_raw(self, data, len);
-	if (ret != len)
+	ssize_t ret = shout_send_raw(self, data, len);
+	if (ret != (ssize_t)len)
 		return self->error = SHOUTERR_SOCKET;
 
 	return self->error = SHOUTERR_SUCCESS;
@@ -64,4 +64,5 @@ static int send_webm(shout_t *self, const unsigned char *data, size_t len)
 static void close_webm(shout_t *self)
 {
 	/* no local state */
+	(void)self;
 }

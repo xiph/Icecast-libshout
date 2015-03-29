@@ -395,7 +395,7 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 			if (len == (sizeof(upgrade) - 1))
 				goto error_malloc;
 			rv = sock_write_bytes(socket, upgrade, len);
-			if (len != rv)
+			if (len != (size_t)rv)
 				goto error_socket;
 
 			/* read status line */

@@ -54,6 +54,8 @@ int _shout_open_theora(ogg_codec_t *codec, ogg_page *page)
 {
 	ogg_packet packet;
 
+	(void)page;
+
 	theora_data_t *theora_data = calloc(1, sizeof(theora_data_t));
 	if (! theora_data)
 		return SHOUTERR_MALLOC;
