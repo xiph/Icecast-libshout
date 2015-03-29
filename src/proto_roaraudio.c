@@ -243,9 +243,7 @@ int shout_get_roaraudio_response(shout_t *self)
 
 int shout_parse_roaraudio_response(shout_t *self)
 {
-    shout_buf_t *queue;
-    size_t total_len = 0;
-    char *data;
+    char *data = NULL;
     uint8_t header[HEADER_SIZE];
 
     /* ok, this is the most hacky function in here as we do not
@@ -256,8 +254,10 @@ int shout_parse_roaraudio_response(shout_t *self)
      * "data length" is already checked by shout_get_roaraudio_response().
      */
 
-    /* TODO FIXME: check for error here */
-    shout_queue_collect(self->rqueue.head, &data);
+    if (shout_queue_collect(self->rqueue.head, &data) != HEADER_SIZE) {
+        free(data);
+        return SHOUTERR_INSANE;
+    }
     shout_queue_free(&self->rqueue);
     memcpy(header, data, HEADER_SIZE);
     free(data);
@@ -272,21 +272,17 @@ int shout_parse_roaraudio_response(shout_t *self)
 
     switch ((shout_roar_protocol_state_t)self->protocol_state) {
     case STATE_IDENT:
-        printf("self->protocol_extra=%i, header[0]=%i, header[1]=%i, header[2]=%i, header[3]=%i\n", self->protocol_extra, header[0], header[1], header[2], header[3]);
         self->protocol_state = STATE_AUTH;
         break;
     case STATE_AUTH:
-        printf("self->protocol_extra=%i, header[0]=%i, header[1]=%i, header[2]=%i, header[3]=%i\n", self->protocol_extra, header[0], header[1], header[2], header[3]);
         self->protocol_state = STATE_NEW_STREAM;
         break;
     case STATE_NEW_STREAM:
         self->protocol_extra = (((unsigned int)header[2]) << 8) | (unsigned int)header[3];
-        printf("self->protocol_extra=%i, header[0]=%i, header[1]=%i, header[2]=%i, header[3]=%i\n", self->protocol_extra, header[0], header[1], header[2], header[3]);
         self->protocol_state = STATE_EXEC;
         break;
     case STATE_EXEC:
         /* ok. everything worked. Continue normally! */
-        printf("self->protocol_extra=%i, header[0]=%i, header[1]=%i, header[2]=%i, header[3]=%i\n", self->protocol_extra, header[0], header[1], header[2], header[3]);
         return SHOUTERR_SUCCESS;
         break;
     default:
