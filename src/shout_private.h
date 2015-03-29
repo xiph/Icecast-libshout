@@ -163,9 +163,17 @@ struct shout {
 	int error;
 };
 
-int shout_open_ogg(shout_t *self);
-int shout_open_mp3(shout_t *self);
-int shout_open_webm(shout_t *self);
+/* helper functions */
+int shout_queue_data(shout_queue_t *queue, const unsigned char *data, size_t len);
+int shout_queue_str(shout_t *self, const char *str);
+int shout_queue_printf(shout_t *self, const char *fmt, ...);
+void shout_queue_free(shout_queue_t *queue);
+ssize_t shout_queue_collect(shout_buf_t *queue, char **buf);
+
+/* transports */
+ssize_t shout_conn_read(shout_t *self, void *buf, size_t len);
+ssize_t shout_conn_write(shout_t *self, const void *buf, size_t len);
+int shout_conn_recoverable(shout_t *self);
 
 #ifdef HAVE_OPENSSL
 shout_tls_t *shout_tls_new(shout_t *self, sock_t socket);
@@ -175,5 +183,22 @@ ssize_t shout_tls_read(shout_tls_t *tls, void *buf, size_t len);
 ssize_t shout_tls_write(shout_tls_t *tls, const void *buf, size_t len);
 int shout_tls_recoverable(shout_tls_t *tls);
 #endif
+
+/* protocols */
+char *shout_http_basic_authorization(shout_t *self);
+int shout_create_http_request(shout_t *self);
+int shout_create_http_request_upgrade(shout_t *self, const char *proto);
+int shout_get_http_response(shout_t *self);
+int shout_parse_http_response(shout_t *self);
+
+int shout_create_xaudiocast_request(shout_t *self);
+int shout_parse_xaudiocast_response(shout_t *self);
+
+int shout_create_icy_request(shout_t *self);
+
+/* containsers */
+int shout_open_ogg(shout_t *self);
+int shout_open_mp3(shout_t *self);
+int shout_open_webm(shout_t *self);
 
 #endif /* __LIBSHOUT_SHOUT_PRIVATE_H__ */

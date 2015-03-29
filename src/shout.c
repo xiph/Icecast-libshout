@@ -48,29 +48,13 @@
 #endif
 
 /* -- local prototypes -- */
-static int queue_data(shout_queue_t *queue, const unsigned char *data, size_t len);
-static int queue_str(shout_t *self, const char *str);
-static int queue_printf(shout_t *self, const char *fmt, ...);
-static inline void queue_free(shout_queue_t *queue);
 static int send_queue(shout_t *self);
 static int get_response(shout_t *self);
 static int try_connect (shout_t *self);
 static int try_write (shout_t *self, const void *data, size_t len);
 
 static int create_request(shout_t *self);
-static int create_http_request(shout_t *self);
-static int create_http_request_upgrade(shout_t *self, const char *proto);
-static int create_xaudiocast_request(shout_t *self);
-static int create_icy_request(shout_t *self);
 static int parse_response(shout_t *self);
-static int parse_http_response(shout_t *self);
-static int parse_xaudiocast_response(shout_t *self);
-
-static char *http_basic_authorization(shout_t *self);
-
-static ssize_t conn_read(shout_t *self, void *buf, size_t len);
-static ssize_t conn_write(shout_t *self, const void *buf, size_t len);
-static int conn_recoverable(shout_t *self);
 
 /* -- static data -- */
 static int _initialized = 0;
@@ -215,8 +199,8 @@ int shout_close(shout_t *self)
 	self->state = SHOUT_STATE_UNCONNECTED;
 	self->starttime = 0;
 	self->senttime = 0;
-	queue_free(&self->rqueue);
-	queue_free(&self->wqueue);
+	shout_queue_free(&self->rqueue);
+	shout_queue_free(&self->wqueue);
 
 	return self->error = SHOUTERR_SUCCESS;
 }
@@ -255,7 +239,7 @@ ssize_t shout_send_raw(shout_t *self, const unsigned char *data, size_t len)
 		if ((ret = try_write(self, data, len)) < 0)
 			return self->error;
 		if (ret < (ssize_t)len) {
-			self->error = queue_data(&self->wqueue, data + ret, len - ret);
+			self->error = shout_queue_data(&self->wqueue, data + ret, len - ret);
 			if (self->error != SHOUTERR_SUCCESS)
 				return self->error;
 		}
@@ -263,7 +247,7 @@ ssize_t shout_send_raw(shout_t *self, const unsigned char *data, size_t len)
 		return len;
 	}
 
-	self->error = queue_data(&self->wqueue, data, len);
+	self->error = shout_queue_data(&self->wqueue, data, len);
 	if (self->error != SHOUTERR_SUCCESS)
 		return self->error;
 
@@ -363,7 +347,7 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 		snprintf(request, request_len, request_template, self->password, encvalue, shout_get_agent(self));
 	break;
 	case SHOUT_PROTOCOL_HTTP:
-		auth = http_basic_authorization(self);
+		auth = shout_http_basic_authorization(self);
 
 		request_template = "GET /admin/metadata?mode=updinfo&mount=%s&%s HTTP/1.0\r\nUser-Agent: %s\r\n%s\r\n";
 		request_len = strlen(request_template) + strlen(self->mount) + strlen(encvalue) + strlen(shout_get_agent(self)) + 1;
@@ -1110,145 +1094,22 @@ const char *shout_get_client_certificate(shout_t *self)
 #endif
 
 /* -- static function definitions -- */
-
-/* queue data in pages of SHOUT_BUFSIZE bytes */
-static int queue_data(shout_queue_t *queue, const unsigned char *data, size_t len)
-{
-	shout_buf_t *buf;
-	size_t plen;
-
-	if (!len)
-		return SHOUTERR_SUCCESS;
-
-	if (!queue->len) {
-		queue->head = calloc(1, sizeof (shout_buf_t));
-		if (! queue->head)
-			return SHOUTERR_MALLOC;
-	}
-
-	for (buf = queue->head; buf->next; buf = buf->next);
-
-	/* Maybe any added data should be freed if we hit a malloc error?
-	 * Otherwise it'd be impossible to tell where to start requeueing.
-	 * (As if anyone ever tried to recover from a malloc error.) */
-	while (len > 0) {
-		if (buf->len == SHOUT_BUFSIZE) {
-			buf->next = calloc(1, sizeof (shout_buf_t));
-			if (! buf->next)
-				return SHOUTERR_MALLOC;
-			buf->next->prev = buf;
-			buf = buf->next;
-		}
-
-		plen = len > SHOUT_BUFSIZE - buf->len ? SHOUT_BUFSIZE - buf->len : len;
-		memcpy (buf->data + buf->len, data, plen);
-		buf->len += plen;
-		data += plen;
-		len -= plen;
-		queue->len += plen;
-	}
-
-	return SHOUTERR_SUCCESS;
-}
-
-static inline int queue_str(shout_t *self, const char *str)
-{
-	return queue_data(&self->wqueue, (const unsigned char*)str, strlen(str));
-}
-
-/* this should be shared with sock_write. Create libicecommon. */
-static int queue_printf(shout_t *self, const char *fmt, ...)
-{
-	char buffer[1024];
-	char *buf;
-	va_list ap, ap_retry;
-	int len;
-
-	buf = buffer;
-
-	va_start(ap, fmt);
-	va_copy(ap_retry, ap);
-
-	len = vsnprintf(buf, sizeof(buffer), fmt, ap);
-
-	self->error = SHOUTERR_SUCCESS;
-	if (len > 0) {
-		if ((size_t)len < sizeof(buffer))
-			queue_data(&self->wqueue, (unsigned char*)buf, len);
-		else {
-			buf = malloc(++len);
-			if (buf) {
-				len = vsnprintf(buf, len, fmt, ap_retry);
-				queue_data(&self->wqueue, (unsigned char*)buf, len);
-				free(buf);
-			} else
-				self->error = SHOUTERR_MALLOC;
-		}
-	}
-
-	va_end(ap_retry);
-	va_end(ap);
-
-	return self->error;
-}
-
-static inline void queue_free(shout_queue_t *queue)
-{
-	shout_buf_t *prev;
-
-	while (queue->head) {
-		prev = queue->head;
-		queue->head = queue->head->next;
-		free(prev);
-	}
-	queue->len = 0;
-}
-
 static int get_response(shout_t *self)
 {
 	char buf[1024];
-	int rc, blen;
-	char *pc;
-	shout_buf_t *queue;
-	int newlines = 0;
+	int rc;
 
-	rc = conn_read(self, buf, sizeof(buf));
+	rc = shout_conn_read(self, buf, sizeof(buf));
 
-	if (rc < 0 && conn_recoverable(self))
+	if (rc < 0 && shout_conn_recoverable(self))
 		return SHOUTERR_BUSY;
 	if (rc <= 0)
 		return SHOUTERR_SOCKET;
 
-	if ((rc = queue_data(&self->rqueue, (unsigned char*)buf, rc)))
+	if ((rc = shout_queue_data(&self->rqueue, (unsigned char*)buf, rc)))
 		return rc;
 
-	/* work from the back looking for \r?\n\r?\n. Anything else means more
-	 * is coming. */
-	for (queue = self->rqueue.head; queue->next; queue = queue->next);
-	pc = (char*)queue->data + queue->len - 1;
-	blen = queue->len;
-	while (blen) {
-		if (*pc == '\n')
-			newlines++;
-		/* we may have to scan the entire queue if we got a response with
-		 * data after the head line (this can happen with eg 401) */
-		else if (*pc != '\r')
-			newlines = 0;
-
-		if (newlines == 2)
-			return SHOUTERR_SUCCESS;
-
-		blen--;
-		pc--;
-
-		if (!blen && queue->prev) {
-			queue = queue->prev;
-			pc = (char*)queue->data + queue->len - 1;
-			blen = queue->len;
-		}
-	}
-
-	return SHOUTERR_BUSY;
+	return shout_get_http_response(self);
 }
 
 static int try_connect (shout_t *self)
@@ -1315,7 +1176,7 @@ retry:
 				goto failure;
 			}
 		} else if (self->tls_mode == SHOUT_TLS_RFC2817) {
-			if ((rc = create_http_request_upgrade(self, "TLS/1.0")) != SHOUTERR_SUCCESS) {
+			if ((rc = shout_create_http_request_upgrade(self, "TLS/1.0")) != SHOUTERR_SUCCESS) {
 				if (rc == SHOUTERR_BUSY)
 					return SHOUTERR_BUSY;
 				goto failure;
@@ -1426,14 +1287,14 @@ static int try_write (shout_t *self, const void *data_p, size_t len)
 
     /* loop until whole buffer is written (unless it would block) */
     do {
-        ret = conn_write(self, data + pos, len - pos);
+        ret = shout_conn_write(self, data + pos, len - pos);
         if (ret > 0)
             pos += ret;
     } while (pos < len && ret >= 0);
 
     if (ret < 0)
     {
-        if (conn_recoverable(self))
+        if (shout_conn_recoverable(self))
         {
             self->error = SHOUTERR_BUSY;
             return pos;
@@ -1445,7 +1306,7 @@ static int try_write (shout_t *self, const void *data_p, size_t len)
     return pos;
 }
 
-static ssize_t conn_read(shout_t *self, void *buf, size_t len)
+ssize_t shout_conn_read(shout_t *self, void *buf, size_t len)
 {
 #ifdef HAVE_OPENSSL
 	if (self->tls)
@@ -1453,7 +1314,7 @@ static ssize_t conn_read(shout_t *self, void *buf, size_t len)
 #endif
 	return sock_read_bytes(self->socket, buf, len);
 }
-static ssize_t conn_write(shout_t *self, const void *buf, size_t len)
+ssize_t shout_conn_write(shout_t *self, const void *buf, size_t len)
 {
 #ifdef HAVE_OPENSSL
 	if (self->tls)
@@ -1461,34 +1322,13 @@ static ssize_t conn_write(shout_t *self, const void *buf, size_t len)
 #endif
 	return sock_write_bytes(self->socket, buf, len);
 }
-static int conn_recoverable(shout_t *self)
+int shout_conn_recoverable(shout_t *self)
 {
 #ifdef HAVE_OPENSSL
 	if (self->tls)
 		return shout_tls_recoverable(self->tls);
 #endif
 	return sock_recoverable(sock_error());
-}
-
-/* collect nodes of a queue into a single buffer */
-static int collect_queue(shout_buf_t *queue, char **buf)
-{
-	shout_buf_t *node;
-	int pos = 0;
-	int len = 0;
-
-	for (node = queue; node; node = node->next)
-		len += node->len;
-
-	if (!(*buf = malloc(len)))
-		return SHOUTERR_MALLOC;
-
-	for (node = queue; node; node = node->next) {
-		memcpy(*buf + pos, node->data, node->len);
-		pos += node->len;
-	}
-
-	return len;
 }
 
 static int send_queue(shout_t *self)
@@ -1523,390 +1363,22 @@ static int send_queue(shout_t *self)
 static int create_request(shout_t *self)
 {
 	if (self->protocol == SHOUT_PROTOCOL_HTTP)
-		return create_http_request(self);
+		return shout_create_http_request(self);
 	else if (self->protocol == SHOUT_PROTOCOL_XAUDIOCAST)
-		return create_xaudiocast_request(self);
+		return shout_create_xaudiocast_request(self);
 	else if (self->protocol == SHOUT_PROTOCOL_ICY)
-		return create_icy_request(self);
+		return shout_create_icy_request(self);
 
 	return self->error = SHOUTERR_UNSUPPORTED;
-}
-
-static int create_http_request(shout_t *self)
-{
-	char *auth;
-	char *ai;
-	int ret = SHOUTERR_MALLOC;
-	util_dict *dict;
-	const char *key, *val;
-	const char *mimetype;
-
-	switch (self->format) {
-	case SHOUT_FORMAT_OGG:
-		mimetype = "application/ogg";
-		break;
-	case SHOUT_FORMAT_MP3:
-		mimetype = "audio/mpeg";
-		break;
-	case SHOUT_FORMAT_WEBM:
-		mimetype = "video/webm";
-		break;
-	case SHOUT_FORMAT_WEBMAUDIO:
-		mimetype = "audio/webm";
-		break;
-	default:
-		return SHOUTERR_INSANE;
-		break;
-	}
-
-	/* this is lazy code that relies on the only error from queue_* being
-	 * SHOUTERR_MALLOC */
-	do {
-		if (queue_printf(self, "SOURCE %s HTTP/1.0\r\n", self->mount))
-			break;
-		if (self->password && (self->server_caps & LIBSHOUT_CAP_GOTCAPS)) {
-			if (! (auth = http_basic_authorization(self)))
-				break;
-			if (queue_str(self, auth)) {
-				free(auth);
-				break;
-			}
-			free(auth);
-		}
-		if (self->useragent && queue_printf(self, "Host: %s:%i\r\n", self->host, self->port))
-			break;
-		if (self->useragent && queue_printf(self, "User-Agent: %s\r\n", self->useragent))
-			break;
-		if (queue_printf(self, "Content-Type: %s\r\n", mimetype))
-			break;
-		if (queue_printf(self, "ice-public: %d\r\n", self->public))
-			break;
-
-		_SHOUT_DICT_FOREACH(self->meta, dict, key, val) {
-			if (val && queue_printf(self, "ice-%s: %s\r\n", key, val))
-				break;
-		}
-
-		if ((ai = _shout_util_dict_urlencode(self->audio_info, ';'))) {
-			if (queue_printf(self, "ice-audio-info: %s\r\n", ai)) {
-				free(ai);
-				break;
-			}
-			free(ai);
-		}
-		if (queue_str(self, "\r\n"))
-			break;
-		
-		ret = SHOUTERR_SUCCESS;
-	} while (0);
-
-	return ret;
-}
-
-static int create_http_request_upgrade(shout_t *self, const char *proto)
-{
-	do {
-		if (queue_str(self, "GET / HTTP/1.1\r\nConnection: Upgrade\r\n"))
-			break;
-		if (queue_printf(self, "Upgrade: %s\r\n", proto))
-			break;
-		/* Send Host:-header as this one may be used to select cert! */
-		if (queue_printf(self, "Host: %s:%i\r\n", self->host, self->port))
-			break;
-		if (queue_str(self, "\r\n"))
-			break;
-		return SHOUTERR_SUCCESS;
-	} while (0);
-
-	return SHOUTERR_MALLOC;
-}
-
-static char *http_basic_authorization(shout_t *self)
-{
-	char *out, *in;
-	int len;
-
-	if (!self || !self->user || !self->password)
-		return NULL;
-
-	len = strlen(self->user) + strlen(self->password) + 2;
-	if (!(in = malloc(len)))
-		return NULL;
-	snprintf(in, len, "%s:%s", self->user, self->password);
-	out = _shout_util_base64_encode(in);
-	free(in);
-
-	len = strlen(out) + 24;
-	if (!(in = malloc(len))) {
-		free(out);
-		return NULL;
-	}
-	snprintf(in, len, "Authorization: Basic %s\r\n", out);
-	free(out);
-	
-	return in;
 }
 
 static int parse_response(shout_t *self)
 {
 	if (self->protocol == SHOUT_PROTOCOL_HTTP)
-		return parse_http_response(self);
+		return shout_parse_http_response(self);
 	else if (self->protocol == SHOUT_PROTOCOL_XAUDIOCAST ||
 		 self->protocol == SHOUT_PROTOCOL_ICY)
-		return parse_xaudiocast_response(self);
+		return shout_parse_xaudiocast_response(self);
 
 	return self->error = SHOUTERR_UNSUPPORTED;
-}
-
-static inline void parse_http_response_caps(shout_t *self, const char *header, const char *str) {
-	const char * end;
-	size_t len;
-	char buf[64];
-
-	if (!self || !header || !str)
-		return;
-
-	do {
-		for (; *str == ' '; str++);
-		end = strstr(str, ",");
-		if (end) {
-			len = end - str;
-		} else {
-			len = strlen(str);
-		}
-
-		if (len > (sizeof(buf) - 1))
-			return;
-		memcpy(buf, str, len);
-		buf[len] = 0;
-
-		if (strcmp(header, "Allow") == 0){
-			if (strcasecmp(buf, "SOURCE") == 0) {
-				self->server_caps |= LIBSHOUT_CAP_SOURCE;
-			} else if (strcasecmp(buf, "PUT") == 0) {
-				self->server_caps |= LIBSHOUT_CAP_PUT;
-			} else if (strcasecmp(buf, "POST") == 0) {
-				self->server_caps |= LIBSHOUT_CAP_POST;
-			} else if (strcasecmp(buf, "GET") == 0) {
-				self->server_caps |= LIBSHOUT_CAP_GET;
-			}
-		} else if (strcmp(header, "Accept-Encoding") == 0){
-			if (strcasecmp(buf, "chunked") == 0) {
-				self->server_caps |= LIBSHOUT_CAP_CHUNKED;
-			}
-		} else if (strcmp(header, "Upgrade") == 0){
-			if (strcasecmp(buf, "TLS/1.0") == 0) {
-				self->server_caps |= LIBSHOUT_CAP_UPGRADETLS;
-			}
-		} else {
-			return; /* unknown header */
-		}
-
-		str += len + 1;
-	} while (end);
-
-	return;
-}
-
-static inline int eat_body(shout_t *self, ssize_t len, const char *buf, size_t buflen)
-{
-	const char *p;
-	size_t header_len = 0;
-	char buffer[256];
-	ssize_t got;
-
-	if (!len)
-		return 0;
-
-	for (p = buf; p < (buf+buflen-3); p++) {
-		if (p[0] == '\r' && p[1] == '\n' && p[2] == '\r' && p[3] == '\n') {
-			header_len = p - buf + 4;
-			break;
-		} else if (p[0] == '\n' && p[1] == '\n') {
-			header_len = p - buf + 2;
-			break;
-		}
-	}
-	if (!header_len && buflen >= 3 && buf[buflen-2] == '\n' && buf[buflen-3] == '\n') {
-		header_len = buflen - 1;
-	} else if (!header_len && buflen >= 2 && buf[buflen-1] == '\n' && buf[buflen-2] == '\n') {
-		header_len = buflen;
-	}
-
-	if ( (buflen - header_len) > len)
-		return -1;
-
-	len -= buflen - header_len;
-
-	while (len) {
-		got = conn_read(self, buffer, len > sizeof(buffer) ? sizeof(buffer) : len);
-		if (got == -1 && conn_recoverable(self)) {
-			continue;
-		} else if (got == -1) {
-			return -1;
-		}
-
-		len -= got;
-	}
-
-	return 0;
-}
-
-static int parse_http_response(shout_t *self)
-{
-	http_parser_t *parser;
-	char *header = NULL;
-	int hlen = 0;
-	int code;
-	const char *retcode;
-
-	/* all this copying! */
-	hlen = collect_queue(self->rqueue.head, &header);
-	if (hlen <= 0)
-		return SHOUTERR_MALLOC;
-	queue_free(&self->rqueue);
-
-	parser = httpp_create_parser();
-	httpp_initialize(parser, NULL);
-	if (httpp_parse_response(parser, header, hlen, self->mount)) {
-		/* TODO: Headers to Handle:
-		 * Allow:, Accept-Encoding:, Warning:, Upgrade:
-		 */
-		parse_http_response_caps(self, "Allow", httpp_getvar(parser, "allow"));
-		parse_http_response_caps(self, "Accept-Encoding", httpp_getvar(parser, "accept-encoding"));
-		parse_http_response_caps(self, "Upgrade", httpp_getvar(parser, "upgrade"));
-		self->server_caps |= LIBSHOUT_CAP_GOTCAPS;
-		retcode = httpp_getvar(parser, HTTPP_VAR_ERROR_CODE);
-		code = atoi(retcode);
-		if(code >= 200 && code < 300) {
-			httpp_destroy(parser);
-			free (header);
-			return SHOUTERR_SUCCESS;
-		} else if (code == 401 || code == 405 || code == 426 || code == 101) {
-			const char *content_length = httpp_getvar(parser, "content-length");
-			if (content_length) {
-				if (eat_body(self, atoi(content_length), header, hlen) == -1)
-					goto failure;
-			}
-#ifdef HAVE_OPENSSL
-			switch (code) {
-			case 426: self->tls_mode = SHOUT_TLS_RFC2817; break;
-			case 101: self->upgrade_to_tls = 1; break;
-			}
-#endif
-			self->retry++;
-			if (self->retry > LIBSHOUT_MAX_RETRY)
-				self->retry = 0;
-
-			goto retry;
-		} else {
-			self->retry = 0;
-		}
-	}
-
-failure:
-	self->retry = 0;
-retry:
-	free(header);
-	httpp_destroy(parser);
-	return self->error = SHOUTERR_NOLOGIN;
-}
-
-static int create_xaudiocast_request(shout_t *self)
-{
-	const char *bitrate;
-	const char *val;
-	int ret;
-
-	bitrate = shout_get_audio_info(self, SHOUT_AI_BITRATE);
-	if (!bitrate)
-		bitrate = "0";
-
-	ret = SHOUTERR_MALLOC;
-	do {
-		if (queue_printf(self, "SOURCE %s %s\n", self->password, self->mount))
-			break;
-		if (queue_printf(self, "x-audiocast-name: %s\n", shout_get_meta(self, "name")))
-			break;
-		val = shout_get_meta(self, "url");
-		if (queue_printf(self, "x-audiocast-url: %s\n", val ? val : "http://www.icecast.org/"))
-			break;
-		val = shout_get_meta(self, "genre");
-		if (queue_printf(self, "x-audiocast-genre: %s\n", val ? val : "icecast"))
-			break;
-		if (queue_printf(self, "x-audiocast-bitrate: %s\n", bitrate))
-			break;
-		if (queue_printf(self, "x-audiocast-public: %i\n", self->public))
-			break;
-		val = shout_get_meta(self, "description");
-		if (queue_printf(self, "x-audiocast-description: %s\n", val ? val : "Broadcasting with the icecast streaming media server!"))
-			break;
-		if (self->dumpfile && queue_printf(self, "x-audiocast-dumpfile: %s\n", self->dumpfile))
-			break;
-		if (queue_str(self, "\n"))
-			break;
-
-		ret = SHOUTERR_SUCCESS;
-	} while (0);
-		
-	return ret;
-}
-
-static int parse_xaudiocast_response(shout_t *self)
-{
-	char *response;
-
-	if (collect_queue(self->rqueue.head, &response) <= 0)
-		return SHOUTERR_MALLOC;
-	queue_free(&self->rqueue);
-
-	if (!strstr(response, "OK")) {
-		free(response);
-		return SHOUTERR_NOLOGIN;
-	}
-	free(response);
-
-	return SHOUTERR_SUCCESS;
-}
-
-static int create_icy_request(shout_t *self)
-{
-	const char *bitrate;
-	const char *val;
-	int ret;
-
-	bitrate = shout_get_audio_info(self, SHOUT_AI_BITRATE);
-	if (!bitrate)
-		bitrate = "0";
-
-	ret = SHOUTERR_MALLOC;
-	do {
-		if (queue_printf(self, "%s\n", self->password))
-			break;
-		if (queue_printf(self, "icy-name:%s\n", shout_get_meta(self, "name")))
-			break;
-		val = shout_get_meta(self, "url");
-		if (queue_printf(self, "icy-url:%s\n", val ? val : "http://www.icecast.org/"))
-			break;
-		val = shout_get_meta(self, "irc");
-		if (queue_printf(self, "icy-irc:%s\n", val ? val : ""))
-			break;
-		val = shout_get_meta(self, "aim");
-		if (queue_printf(self, "icy-aim:%s\n", val ? val : ""))
-			break;
-		val = shout_get_meta(self, "icq");
-		if (queue_printf(self, "icy-icq:%s\n", val ? val : ""))
-			break;
-		if (queue_printf(self, "icy-pub:%i\n", self->public))
-			break;
-		val = shout_get_meta(self, "genre");
-		if (queue_printf(self, "icy-genre:%s\n", val ? val : "icecast"))
-			break;
-		if (queue_printf(self, "icy-br:%s\n\n", bitrate))
-			break;
-
-		ret = SHOUTERR_SUCCESS;
-	} while (0);
-
-	return ret;
 }
