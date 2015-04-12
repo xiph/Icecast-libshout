@@ -920,7 +920,8 @@ int shout_set_tls(shout_t *self, int mode)
 	if (mode != SHOUT_TLS_DISABLED &&
 	    mode != SHOUT_TLS_AUTO &&
 	    mode != SHOUT_TLS_AUTO_NO_PLAIN &&
-	    mode != SHOUT_TLS_RFC2818)
+	    mode != SHOUT_TLS_RFC2818 &&
+            mode != SHOUT_TLS_RFC2817)
 		return self->error = SHOUTERR_UNSUPPORTED;
 
 	self->tls_mode = mode;
