@@ -31,7 +31,7 @@
 #include <ogg/ogg.h>
 
 #include "shout_private.h"
-#include "shout_ogg.h"
+#include "format_ogg.h"
 
 /* -- local data structures -- */
 typedef struct {

@@ -1,5 +1,5 @@
 /* -*- c-basic-offset: 8; -*- */
-/* shout_ogg.h: Internal shout interface to Ogg codec handlers
+/* format_ogg.h: Internal shout interface to Ogg codec handlers
  * $Id$
  *
  *  Copyright (C) 2004 the Icecast team <team@icecast.org>
@@ -19,8 +19,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef __LIBSHOUT_SHOUT_OGG_H__
-#define __LIBSHOUT_SHOUT_OGG_H__
+#ifndef __LIBSHOUT_FORMAT_OGG_H__
+#define __LIBSHOUT_FORMAT_OGG_H__
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>

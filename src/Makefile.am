@@ -8,11 +8,11 @@ if HAVE_THREAD
 endif
 
 if HAVE_THEORA
-  MAYBE_THEORA = theora.c
+  MAYBE_THEORA = codec_theora.c
 endif
 
 if HAVE_SPEEX
-  MAYBE_SPEEX = speex.c
+  MAYBE_SPEEX = codec_speex.c
 endif
 
 if HAVE_TLS
@@ -25,8 +25,11 @@ lib_LTLIBRARIES = libshout.la
 libshout_la_LDFLAGS = -version-info 5:0:2
 
 EXTRA_DIST = theora.c speex.c tls.c
-noinst_HEADERS = shout_ogg.h shout_private.h util.h
-libshout_la_SOURCES = shout.c util.c queue.c proto_http.c proto_xaudiocast.c proto_icy.c ogg.c vorbis.c mp3.c webm.c opus.c $(MAYBE_THEORA) $(MAYBE_SPEEX) $(MAYBE_TLS)
+noinst_HEADERS = format_ogg.h shout_private.h util.h
+PROTOCOLS=proto_http.c proto_xaudiocast.c proto_icy.c
+FORMATS=format_ogg.c format_webm.c format_mp3.c
+CODECS=codec_vorbis.c codec_opus.c $(MAYBE_THEORA) $(MAYBE_SPEEX)
+libshout_la_SOURCES = shout.c util.c queue.c $(PROTOCOLS) $(FORMATS) $(CODECS) $(MAYBE_TLS)
 AM_CFLAGS = @XIPH_CFLAGS@
 
 libshout_la_LIBADD = common/net/libicenet.la common/timing/libicetiming.la common/avl/libiceavl.la\

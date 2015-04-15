@@ -34,7 +34,7 @@
 
 #include <shout/shout.h>
 #include "shout_private.h"
-#include "shout_ogg.h"
+#include "format_ogg.h"
 
 /* -- local datatypes -- */
 typedef struct {
