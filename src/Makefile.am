@@ -24,7 +24,7 @@ SUBDIRS = common/avl common/net common/timing common/httpp $(MAYBE_THREAD)
 lib_LTLIBRARIES = libshout.la
 libshout_la_LDFLAGS = -version-info 5:0:2
 
-EXTRA_DIST = theora.c speex.c tls.c
+EXTRA_DIST = codec_theora.c codec_speex.c tls.c
 noinst_HEADERS = format_ogg.h shout_private.h util.h
 PROTOCOLS=proto_http.c proto_xaudiocast.c proto_icy.c
 FORMATS=format_ogg.c format_webm.c format_mp3.c
