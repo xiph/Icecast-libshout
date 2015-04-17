@@ -16,18 +16,19 @@
     -->
     <orgname><ulink url="http://xiph.org/">Xiph.org</ulink></orgname>
     <releaseinfo>$Id: libshout.xml,v 1.5 2003/07/10 01:46:24 brendan Exp $</releaseinfo>
-    <date> 3 Jul 2003</date>
+    <date>17 Apr 2015</date>
   </bookinfo>
 
 <chapter><title>Overview</title>
 
 <para>
 libshout is a library for streaming audio to icecast or shoutcast-compatible
-servers. Currently it supports two audio formats and three protocols.
+servers. Currently it supports three formats and three protocols.
 </para>
 
 <itemizedlist><title>Audio Formats</title>
-  <listitem>Ogg Vorbis</listitem>
+  <listitem>Ogg (audio any video with different codecs)</listitem>
+  <listitem>WebM (audio and video)</listitem>
   <listitem>MP3</listitem>
 </itemizedlist>
 
@@ -436,7 +437,7 @@ Returns the protocol used to connect to the server.
 </funcsynopsis>
 Sets the audio format of this stream. The currently supported formats
 are listed in <link linkend="format_constants">Format Constants</link>.
-The default is <constant>SHOUT_FORMAT_VORBIS</constant>.
+The default is <constant>SHOUT_FORMAT_OGG</constant>.
 
 <funcsynopsis id="shout_get_format">
 <funcprototype>
@@ -801,12 +802,48 @@ metadata for a stream provided by another process).
   state of your connection. For example, attempting to set metadata while using the
   Ogg Vorbis format is unsupported.</listitem>
   </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_BUSY</constant></term>
+  <listitem>Indicates that the socket is busy. The funtion returning this should be
+  called again later. This is likely to happen in non-blocking mode but may also happen
+  in blocking mode.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_NOTLS</constant></term>
+  <listitem>TLS (Transport Layer Security) was requested via <function>shout_set_tls</function>
+  but is not supported by the server.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_TLSBADCERT</constant></term>
+  <listitem>A TLS (Transport Layer Security) connection has been established but the server
+  returned a certificate which failed the check. The certificate may be invalid or
+  is not signed by a trusted CA. See <function>shout_set_tls</function>.</listitem>
+  </varlistentry>
 </variablelist>
 
 <variablelist id="format_constants"><title>Formats</title>
   <varlistentry>
+  <term><constant>SHOUT_FORMAT_OGG</constant></term>
+  <listitem>The Ogg Format. Vorbis or any codec may be used. This is the default format.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUT_FORMAT_WEBM</constant></term>
+  <listitem>The WebM format.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUT_FORMAT_WEBMAUDIO</constant></term>
+  <listitem>The WebM format, audio only streams.</listitem>
+  </varlistentry>
+
+  <varlistentry>
   <term><constant>SHOUT_FORMAT_VORBIS</constant></term>
-  <listitem>The Ogg Vorbis format. This is the default format.</listitem>
+  <listitem>This is deprecated. It is an alias to <constant>SHOUT_FORMAT_OGG</constant>.
+  Please migrate your code.</listitem>
   </varlistentry>
 
   <varlistentry>
@@ -819,13 +856,13 @@ metadata for a stream provided by another process).
   <varlistentry>
   <term><constant>SHOUT_PROTOCOL_HTTP</constant></term>
   <listitem>The HTTP protocol. This is the native protocol of the
-  <application>icecast 2</application> server, and is the default.</listitem>
+  <application>Icecast 2</application> server, and is the default.</listitem>
   </varlistentry>
 
   <varlistentry>
   <term><constant>SHOUT_PROTOCOL_XAUDIOCAST</constant></term>
   <listitem>The Audiocast format. This is the native protocol of
-  <application>icecast 1</application>.</listitem>
+  <application>Icecast 1</application>.</listitem>
   </varlistentry>
 
   <varlistentry>
@@ -854,6 +891,45 @@ metadata for a stream provided by another process).
   <varlistentry>
   <term><constant>SHOUT_AI_QUALITY</constant></term>
   <listitem>Used to specify the Ogg Vorbis encoding quality of the stream.</listitem>
+  </varlistentry>
+</variablelist>
+
+<variablelist id="tls_mode_constants"><title>TLS modes</title>
+  <varlistentry>
+  <term><constant>SHOUT_TLS_DISABLED</constant></term>
+  <listitem>TLS (Transport Layer Security) is disabled.
+  Passwords and data will be sent unencrypted.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUT_TLS_AUTO</constant></term>
+  <listitem>TLS (Transport Layer Security) support by the server will be autodetected. This is the default.
+  In this mode TLS is used if supported by the server.
+  <warning>Please note that this is not a secure mode as it will
+  not prevent any downgrade attacks. <constant>SHOUT_TLS_AUTO_NO_PLAIN</constant> is a more secure version of
+  this mode.</warning>
+  </listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUT_TLS_AUTO_NO_PLAIN</constant></term>
+  <listitem>TLS (Transport Layer Security) is used. Autodetection is used to find out about which modes
+  are supported by the server. This mode should be used for secure connections.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUT_TLS_RFC2818</constant></term>
+  <listitem>TLS (Transport Layer Security) is used as defined by RFC2818.
+  In this mode libshout expects a TLS socket on the server side and will begin with a TLS handshake
+  prior to any other communication.
+  </listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUT_TLS_RFC2817</constant></term>
+  <listitem>TLS (Transport Layer Security) is used as defined by RFC2817.
+  In this mode libshout will use HTTP/1.1's Upgrade:-process to switch to TLS.
+  This allows to use TLS on a non-TLS socket of the server.</listitem>
   </varlistentry>
 </variablelist>
 
