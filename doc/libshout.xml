@@ -626,6 +626,8 @@ by default. If you don't know what this function is for, don't use it.
 Returns the user agent.
 </para>
 
+</section>
+
 <section><title>Directory parameters</title>
 
 <para>
@@ -704,8 +706,6 @@ you are free to add additional fields if your directory server understands them.
 <para>
 Returns the value of the audio info field <varname>name</varname>, if defined.
 </para>
-
-</section>
 
 </section>
 
