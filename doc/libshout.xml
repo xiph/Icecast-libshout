@@ -596,89 +596,27 @@ any directories it knows about. To suppress listing, set this to
 Returns whether or not this stream is public.
 </para>
 
-<funcsynopsis id="shout_set_name">
+<funcsynopsis id="shout_set_meta">
 <funcprototype>
-  <funcdef>int <function>shout_set_name</function></funcdef>
+  <funcdef>int <function>shout_set_meta</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>const char *<parameter>name</parameter></paramdef>
+  <paramdef>const char *<parameter>value</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+This function sets the meta data for the stream.
+</para>
+
+<funcsynopsis id="shout_get_meta">
+<funcprototype>
+  <funcdef>const char *<function>shout_get_meta</function></funcdef>
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
   <paramdef>const char *<parameter>name</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
 <para>
-Sets the name of the stream.
-</para>
-
-<funcsynopsis id="shout_get_name">
-<funcprototype>
-  <funcdef>const char *<function>shout_get_name</function></funcdef>
-  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
-</funcprototype>
-</funcsynopsis>
-<para>
-Returns the stream name.
-</para>
-
-<funcsynopsis id="shout_set_url">
-<funcprototype>
-  <funcdef>int <function>shout_set_url</function></funcdef>
-  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
-  <paramdef>const char *<parameter>url</parameter></paramdef>
-</funcprototype>
-</funcsynopsis>
-<para>
-Sets the URL of a site about this stream.
-</para>
-
-<funcsynopsis id="shout_get_url">
-<funcprototype>
-  <funcdef>const char *<function>shout_get_url</function></funcdef>
-  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
-</funcprototype>
-</funcsynopsis>
-<para>
-Returns the stream URL.
-</para>
-
-<funcsynopsis id="shout_set_genre">
-<funcprototype>
-  <funcdef>int <function>shout_set_genre</function></funcdef>
-  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
-  <paramdef>const char *<parameter>genre</parameter></paramdef>
-</funcprototype>
-</funcsynopsis>
-<para>
-Sets the genre (or genres) of the stream. This is usually a keyword list,
-eg "pop rock rap".
-</para>
-
-<funcsynopsis id="shout_get_genre">
-<funcprototype>
-  <funcdef>const char *<function>shout_get_genre</function></funcdef>
-  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
-</funcprototype>
-</funcsynopsis>
-<para>
-Returns the stream genre.
-</para>
-
-<funcsynopsis id="shout_set_description">
-<funcprototype>
-  <funcdef>int <function>shout_set_description</function></funcdef>
-  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
-  <paramdef>const char *<parameter>description</parameter></paramdef>
-</funcprototype>
-</funcsynopsis>
-<para>
-Sets the description of this stream.
-</para>
-
-<funcsynopsis id="shout_get_description">
-<funcprototype>
-  <funcdef>const char *<function>shout_get_description</function></funcdef>
-  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
-</funcprototype>
-</funcsynopsis>
-<para>
-Returns the stream description.
+This function gets the meta data for the stream. 
 </para>
 
 <funcsynopsis id="shout_set_audio_info">
@@ -822,6 +760,99 @@ metadata for a stream provided by another process).
   <listitem>The server returned any other error (eg bad mount point).</listitem>
   </varlistentry>
 </variablelist>
+
+</section>
+
+<section><title>Obsolate metadata Interface</title>
+<warning>
+All those functions have been replaced by <function>shout_set_meta</function> and
+<function>shout_get_meta</function>. They may be removed by newer versions of this library.
+</warning>
+
+<funcsynopsis id="shout_set_name">
+<funcprototype>
+  <funcdef>int <function>shout_set_name</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>const char *<parameter>name</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+Sets the name of the stream.
+</para>
+
+<funcsynopsis id="shout_get_name">
+<funcprototype>
+  <funcdef>const char *<function>shout_get_name</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+Returns the stream name.
+</para>
+
+<funcsynopsis id="shout_set_url">
+<funcprototype>
+  <funcdef>int <function>shout_set_url</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>const char *<parameter>url</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+Sets the URL of a site about this stream.
+</para>
+
+<funcsynopsis id="shout_get_url">
+<funcprototype>
+  <funcdef>const char *<function>shout_get_url</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+Returns the stream URL.
+</para>
+
+<funcsynopsis id="shout_set_genre">
+<funcprototype>
+  <funcdef>int <function>shout_set_genre</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>const char *<parameter>genre</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+Sets the genre (or genres) of the stream. This is usually a keyword list,
+eg "pop rock rap".
+</para>
+
+<funcsynopsis id="shout_get_genre">
+<funcprototype>
+  <funcdef>const char *<function>shout_get_genre</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+Returns the stream genre.
+</para>
+
+<funcsynopsis id="shout_set_description">
+<funcprototype>
+  <funcdef>int <function>shout_set_description</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>const char *<parameter>description</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+Sets the description of this stream.
+</para>
+
+<funcsynopsis id="shout_get_description">
+<funcprototype>
+  <funcdef>const char *<function>shout_get_description</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+Returns the stream description.
+</para>
 
 </section>
 
