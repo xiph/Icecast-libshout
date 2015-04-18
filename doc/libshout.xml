@@ -197,6 +197,34 @@ Closes a connection to the server.
   </varlistentry>
 </variablelist>
 
+<funcsynopsis id="shout_get_connected">
+<funcprototype>
+  <funcdef>int <function>shout_get_connected</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+Returns the connection status of the given <type>shout_t</type> object.
+</para>
+
+<variablelist><title>Return Values</title>
+  <varlistentry>
+  <term><constant>SHOUTERR_INSANE</constant></term>
+  <listitem><varname>self</varname> is not a valid <type>shout_t</type>
+  object.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_UNCONNECTED</constant></term>
+  <listitem><varname>self</varname> is not currently connected.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_CONNECTED</constant></term>
+  <listitem><varname>self</varname> is currently connected.</listitem>
+  </varlistentry>
+</variablelist>
+
 <funcsynopsis id="shout_get_error">
 <funcprototype>
   <funcdef>const char *<function>shout_get_error</function></funcdef>
@@ -339,6 +367,17 @@ This function is provided as an alternative to
 applications that may wish to do other processing in the meantime.
 </para>
 
+<funcsynopsis id="shout_queuelen">
+<funcprototype>
+  <funcdef>ssize_t <function>shout_queuelen</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+Returns the number of bytes currently on the write queue.
+</para>
+<tip>This is only useful in non-blocking mode.</tip>
+
 </section>
 
 <section><title>Connection parameters</title>
@@ -365,6 +404,27 @@ NULL for those functions that return strings). The
   parameters are only used when first opening the connection, this operation
   would be useless.</listitem>
 </itemizedlist>
+
+<funcsynopsis id="shout_set_nonblocking">
+<funcprototype>
+  <funcdef>int <function>shout_set_nonblocking</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>unsigned int <parameter>nonblocking</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+Sets non-blocking mode. The default is <constant>0</constant>.
+</para>
+
+<funcsynopsis id="shout_get_nonblocking">
+<funcprototype>
+  <funcdef>unsigned int <function>shout_get_nonblocking</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+Returns non-blocking mode or <constant>0</constant> in case of error.
+</para>
 
 <funcsynopsis id="shout_set_host">
 <funcprototype>
