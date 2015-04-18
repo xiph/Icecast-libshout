@@ -451,7 +451,7 @@ Returns the server hostname or IP address.
 <funcprototype>
   <funcdef>int <function>shout_set_port</function></funcdef>
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
-  <paramdef>int <parameter>port</parameter></paramdef>
+  <paramdef>unsigned short <parameter>port</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
 <para>
@@ -460,7 +460,7 @@ Sets the server port. The default is <constant>8000</constant>.
 
 <funcsynopsis id="shout_get_port">
 <funcprototype>
-  <funcdef>int <function>shout_get_port</function></funcdef>
+  <funcdef>unsigned short <function>shout_get_port</function></funcdef>
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
