@@ -15,6 +15,9 @@ doc_DATA = COPYING NEWS README examples/example.c examples/nonblocking.c
 m4datadir = $(datadir)/aclocal
 m4data_DATA = m4/shout.m4
 
+ckportdir = $(libdir)/ckport/db
+ckport_DATA = libshout.ckport
+
 if HAVE_PKGCONFIG
   pkgconfigdir = $(libdir)/pkgconfig
   pkgconfig_DATA = shout.pc
