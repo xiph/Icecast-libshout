@@ -626,6 +626,133 @@ by default. If you don't know what this function is for, don't use it.
 Returns the user agent.
 </para>
 
+<funcsynopsis id="shout_set_tls">
+<funcprototype>
+  <funcdef>int <function>shout_set_tls</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>int <parameter>mode</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+This function sets the TLS (Transport Layer Security) mode to use.
+<parameter>mode</parameter> is a <link linkend="tls_mode_constants">TLS mode</link>.
+This is <constant>SHOUT_TLS_AUTO</constant> by default.
+</para>
+<tip>To force TLS on you should use <constant>SHOUT_TLS_AUTO_NO_PLAIN</constant> and
+<constant>SHOUT_TLS_DISABLED</constant> to force TLS off.</tip>
+<warning>While <constant>SHOUT_TLS_AUTO</constant> may connect via TLS this is not a
+secure mode as everybody can do a man in the middle kind of attack and downgrade the
+connection to plain.</warning>
+
+<funcsynopsis id="shout_get_tls">
+<funcprototype>
+  <funcdef>int <function>shout_get_tls</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+Returns the currently used TLS mode.
+</para>
+
+<funcsynopsis id="shout_set_ca_directory">
+<funcprototype>
+  <funcdef>int <function>shout_set_ca_directory</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>const char *<parameter>directory</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+This sets the CA directory used by libshout to verify server certificates.
+Defaults to system defaults.
+</para>
+
+<funcsynopsis id="shout_get_ca_directory">
+<funcprototype>
+  <funcdef>const char *<function>shout_get_ca_directory</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+Returns the currently used CA directory.
+</para>
+
+<funcsynopsis id="shout_set_ca_file">
+<funcprototype>
+  <funcdef>int <function>shout_set_ca_file</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>const char *<parameter>file</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+Sets a file with CA certificates used to verify server certificates.
+Defaults to system defaults. The file must be in PEM format.
+</para>
+<tip>You can use this for self signed server certificates.
+In this case you point this to the server certificate in PEM format.
+Keep in mind that this will allow self-signed certificates but other
+checks such as hostname still needs to verify correctly.</tip>
+
+<funcsynopsis id="shout_get_ca_file">
+<funcprototype>
+  <funcdef>const char *<function>shout_get_ca_file</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+Returns the currently used CA file.
+</para>
+
+<funcsynopsis id="shout_set_allowed_ciphers">
+<funcprototype>
+  <funcdef>int <function>shout_set_allowed_ciphers</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>const char *<parameter>ciphers</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+This sets the list of currently allowed ciphers in OpenSSL format.
+Defaults to a list of ciphers considerd secure as of day of release.
+</para>
+<caution>Setting this to a insecure list may render encryption and authentication useless.</caution>
+<warning>Any application using this call must expose this list to the user.
+If the user can not alter this list your application will harm security badly by
+preventing the user to get to a save value by setting it manually or upgrading
+libshout.
+<emphasis>Do not use this call if you don't know what you are doing.</emphasis></warning>
+
+<funcsynopsis id="shout_get_allowed_ciphers">
+<funcprototype>
+  <funcdef>const char *<function>shout_get_allowed_ciphers</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+Returns the currently used list of allowed ciphers.
+</para>
+
+<funcsynopsis id="shout_set_client_certificate">
+<funcprototype>
+  <funcdef>int <function>shout_set_client_certificate</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+  <paramdef>const char *<parameter>certificate</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+This sets the client certificate to be used. Defaults to none.
+The file must be in PEM format and must contain both the certificate as well as the
+private key for that certificate.
+</para>
+
+<funcsynopsis id="shout_get_client_certificate">
+<funcprototype>
+  <funcdef>const char *<function>shout_get_client_certificate</function></funcdef>
+  <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+<para>
+Returns the currently used client certificate.
+</para>
+
 </section>
 
 <section><title>Directory parameters</title>
