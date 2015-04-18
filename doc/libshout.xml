@@ -894,6 +894,43 @@ metadata for a stream provided by another process).
   </varlistentry>
 </variablelist>
 
+<variablelist id="meta_constants"><title>Stream Metadata Parameters</title>
+  <varlistentry>
+  <term><constant>SHOUT_META_NAME</constant></term>
+  <listitem>Sets stream name.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUT_META_URL</constant></term>
+  <listitem>Sets stream URL.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUT_META_GENRE</constant></term>
+  <listitem>Sets stream genre.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUT_META_DESCRIPTION</constant></term>
+  <listitem>Sets stream description.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUT_META_IRC</constant></term>
+  <listitem>Sets IRC contact information for stream.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUT_META_AIM</constant></term>
+  <listitem>Sets AIM contact information for stream.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUT_META_ICQ</constant></term>
+  <listitem>Sets ICQ contact information for stream.</listitem>
+  </varlistentry>
+</variablelist>
+
 <variablelist id="tls_mode_constants"><title>TLS modes</title>
   <varlistentry>
   <term><constant>SHOUT_TLS_DISABLED</constant></term>
