@@ -52,9 +52,11 @@ servers. Currently it supports three formats and three protocols.
   <void/>
 </funcprototype>
 </funcsynopsis>
+<para>
 Initializes the shout library. Currently this initializes the networking
 mutexes when the library is built with thread safety. This function must
 always be called before any other libshout function.
+</para>
 
 <funcsynopsis id="shout_shutdown">
 <funcprototype>
@@ -62,9 +64,11 @@ always be called before any other libshout function.
   <void/>
 </funcprototype>
 </funcsynopsis>
+<para>
 Releases any resources which may have been allocated by a call to
 <link linkend="shout_init"><function>shout_init</function></link>. An
 application should call this function after it has finished using libshout.
+</para>
 
 <funcsynopsis id="shout_version">
 <funcprototype>
@@ -74,11 +78,13 @@ application should call this function after it has finished using libshout.
   <paramdef>int *<parameter>patch</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Returns the version of the libshout library, both as a string via the
 return value, and as a set of integers corresponding to the major,
 minor and patch levels of the library. The application must allocate
 the integer parameters. If any parameter is NULL, libshout will not
 attempt to set it.
+</para>
 
 </section>
 
@@ -90,10 +96,12 @@ attempt to set it.
   <void/>
 </funcprototype>
 </funcsynopsis>
+<para>
 Allocates a new <type>shout_t</type> structure. May return NULL if no memory
 is available. The result should be disposed of with
 <link linkend="shout_free"><function>shout_free</function></link> when you are
 finished with it.
+</para>
 
 <funcsynopsis id="shout_free">
 <funcprototype>
@@ -101,8 +109,10 @@ finished with it.
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Frees a <type>shout_t</type> allocated by
 <link linkend="shout_new"><function>shout_new</function></link>.
+</para>
 
 <funcsynopsis id="shout_open">
 <funcprototype>
@@ -110,8 +120,10 @@ Frees a <type>shout_t</type> allocated by
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Opens a connection to a server. All connection parameters must have been
 set prior to this call.
+</para>
 <variablelist><title>Return Values</title>
   <varlistentry>
   <term><constant>SHOUTERR_SUCCESS</constant></term>
@@ -163,7 +175,9 @@ set prior to this call.
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Closes a connection to the server.
+</para>
 
 <variablelist><title>Return Values</title>
   <varlistentry>
@@ -189,9 +203,11 @@ Closes a connection to the server.
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Returns a statically allocated string describing the last shout error
 that occured in this connection. Only valid until the next call affecting
 this connection.
+</para>
 
 <funcsynopsis id="shout_get_errno">
 <funcprototype>
@@ -199,7 +215,9 @@ this connection.
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Returns the shout error code of the last error that occured in this connection.
+</para>
 
 </section>
 
@@ -213,10 +231,12 @@ Returns the shout error code of the last error that occured in this connection.
   <paramdef><type>size_t</type> <parameter>len</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Sends <varname>len</varname> bytes of audio data from the buffer pointed to by
 <varname>data</varname> to the server. The connection must already have been
 established by a successful call to
 <link linkend="shout_open"><function>shout_open</function></link>.
+</para>
 
 <variablelist><title>Return Values</title>
   <varlistentry>
@@ -254,11 +274,13 @@ established by a successful call to
   <paramdef><type>size_t</type> <parameter>len</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Sends <varname>len</varname> bytes of audio data from the buffer pointed to by
 <varname>data</varname> to the server. The data is not parsed for timing
 or validity, but sent raw over the connection. The connection must already have been
 established by a successful call to
 <link linkend="shout_open"><function>shout_open</function></link>.
+</para>
 <warning>This function should not be used unless you know exactly what you
 are doing. Its use is deprecated and it may be removed in a future version of
 the library.</warning>
@@ -292,6 +314,7 @@ the library.</warning>
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Causes the caller to sleep for the amount of time necessary to play back
 audio sent since the last call to <function>shout_sync</function>. Should
 be called before every call to
@@ -300,6 +323,7 @@ ensure that audio data is sent to the server at the correct speed.
 Alternatively, the caller may use
 <link linkend="shout_delay"><function>shout_delay</function></link> to
 determine the number of milliseconds to wait and delay itself.
+</para>
 
 <funcsynopsis id="shout_delay">
 <funcprototype>
@@ -307,16 +331,19 @@ determine the number of milliseconds to wait and delay itself.
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Returns the number of milliseconds the caller should wait before calling
 <link linkend="shout_send"><function>shout_send</function></link> again.
 This function is provided as an alternative to
 <link linkend="shout_sync"><function>shout_sync</function></link> for
 applications that may wish to do other processing in the meantime.
+</para>
 
 </section>
 
 <section><title>Connection parameters</title>
 
+<para>
 The following functions are used to get or set attributes of the
 <type>shout_t</type> object before calling
 <link linkend="shout_open"><function>shout_open</function></link>.  They all
@@ -326,6 +353,7 @@ return the value of their associated parameter, or 0 on error (that's
 NULL for those functions that return strings). The
 <function>shout_set_*</function> functions will return either
 <constant>SHOUTERR_SUCCESS</constant> on success, or one of:
+</para>
 
 <itemizedlist>
   <listitem><constant>SHOUTERR_INSANE</constant> - <type>shout_t</type>
@@ -345,7 +373,9 @@ NULL for those functions that return strings). The
   <paramdef>const char *<parameter>host</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Sets the server hostname or IP address. The default is <constant>localhost</constant>.
+</para>
 
 <funcsynopsis id="shout_get_host">
 <funcprototype>
@@ -353,7 +383,9 @@ Sets the server hostname or IP address. The default is <constant>localhost</cons
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Returns the server hostname or IP address.
+</para>
 
 <funcsynopsis id="shout_set_port">
 <funcprototype>
@@ -362,7 +394,9 @@ Returns the server hostname or IP address.
   <paramdef>int <parameter>port</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Sets the server port. The default is <constant>8000</constant>.
+</para>
 
 <funcsynopsis id="shout_get_port">
 <funcprototype>
@@ -370,7 +404,9 @@ Sets the server port. The default is <constant>8000</constant>.
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Returns the server port.
+</para>
 
 <funcsynopsis id="shout_set_user">
 <funcprototype>
@@ -379,8 +415,10 @@ Returns the server port.
   <paramdef>const char *<parameter>user</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Sets the user to authenticate as, for protocols that can use this parameter.
 The default is <constant>source</constant>.
+</para>
 
 <funcsynopsis id="shout_get_user">
 <funcprototype>
@@ -388,7 +426,9 @@ The default is <constant>source</constant>.
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Returns the user name.
+</para>
 
 <funcsynopsis id="shout_set_password">
 <funcprototype>
@@ -397,8 +437,10 @@ Returns the user name.
   <paramdef>const char *<parameter>pass</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Sets the password to authenticate to the server with. This parameter
 <emphasis>must</emphasis> be set. There is no default.
+</para>
 
 <funcsynopsis id="shout_get_password">
 <funcprototype>
@@ -406,7 +448,9 @@ Sets the password to authenticate to the server with. This parameter
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Returns the password.
+</para>
 
 <funcsynopsis id="shout_set_protocol">
 <funcprototype>
@@ -415,10 +459,12 @@ Returns the password.
   <paramdef>int <parameter>protocol</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Set the protocol with which to connect to the server. Supported protocols
 are listed in <link linkend="protocol_constants">Protocol Constants</link>.
 The default is <constant>SHOUT_PROTOCOL_HTTP</constant> (compatible with
 Icecast 2).
+</para>
 
 <funcsynopsis id="shout_get_protocol">
 <funcprototype>
@@ -426,7 +472,9 @@ Icecast 2).
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Returns the protocol used to connect to the server.
+</para>
 
 <funcsynopsis id="shout_set_format">
 <funcprototype>
@@ -435,9 +483,11 @@ Returns the protocol used to connect to the server.
   <paramdef>int <parameter>format</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Sets the audio format of this stream. The currently supported formats
 are listed in <link linkend="format_constants">Format Constants</link>.
 The default is <constant>SHOUT_FORMAT_OGG</constant>.
+</para>
 
 <funcsynopsis id="shout_get_format">
 <funcprototype>
@@ -445,7 +495,9 @@ The default is <constant>SHOUT_FORMAT_OGG</constant>.
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Returns the audio format used by this stream.
+</para>
 
 <funcsynopsis id="shout_set_mount">
 <funcprototype>
@@ -454,8 +506,10 @@ Returns the audio format used by this stream.
   <paramdef>const char *<parameter>mount</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Sets the mount point for this stream, for protocols that support this option
 (<constant>SHOUT_PROTOCOL_ICY</constant> doesn't).
+</para>
 
 <funcsynopsis id="shout_get_mount">
 <funcprototype>
@@ -463,7 +517,9 @@ Sets the mount point for this stream, for protocols that support this option
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Returns the stream mount point.
+</para>
 
 <funcsynopsis id="shout_set_dumpfile">
 <funcprototype>
@@ -472,9 +528,11 @@ Returns the stream mount point.
   <paramdef>const char *<parameter>dumpfile</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 If the server supports it, you can request that your stream be archived
 on the server under the name <varname>dumpfile</varname>. This can quickly
 eat a lot of disk space, so think twice before setting it.
+</para>
 
 <funcsynopsis id="shout_get_dumpfile">
 <funcprototype>
@@ -482,7 +540,9 @@ eat a lot of disk space, so think twice before setting it.
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Returns the dump file, if specified.
+</para>
 
 <funcsynopsis id="shout_set_agent">
 <funcprototype>
@@ -491,8 +551,10 @@ Returns the dump file, if specified.
   <paramdef>const char *<parameter>agent</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Sets the user agent header. This is <constant>libshout/VERSION</constant>
 by default. If you don't know what this function is for, don't use it.
+</para>
 
 <funcsynopsis id="shout_get_agent">
 <funcprototype>
@@ -500,12 +562,16 @@ by default. If you don't know what this function is for, don't use it.
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Returns the user agent.
+</para>
 
 <section><title>Directory parameters</title>
 
+<para>
 The following parameters are optional. They are used to control whether
 and how your stream will be listed in the server's stream directory (if available).
+</para>
 
 <funcsynopsis id="shout_set_public">
 <funcprototype>
@@ -514,9 +580,11 @@ and how your stream will be listed in the server's stream directory (if availabl
   <paramdef>int <parameter>makepublic</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Setting this to <constant>1</constant> asks the server to list the stream in
 any directories it knows about. To suppress listing, set this to
 <constant>0</constant>. The default is <constant>0</constant>.
+</para>
 
 <funcsynopsis id="shout_get_public">
 <funcprototype>
@@ -524,7 +592,9 @@ any directories it knows about. To suppress listing, set this to
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Returns whether or not this stream is public.
+</para>
 
 <funcsynopsis id="shout_set_name">
 <funcprototype>
@@ -533,7 +603,9 @@ Returns whether or not this stream is public.
   <paramdef>const char *<parameter>name</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Sets the name of the stream.
+</para>
 
 <funcsynopsis id="shout_get_name">
 <funcprototype>
@@ -541,7 +613,9 @@ Sets the name of the stream.
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Returns the stream name.
+</para>
 
 <funcsynopsis id="shout_set_url">
 <funcprototype>
@@ -550,7 +624,9 @@ Returns the stream name.
   <paramdef>const char *<parameter>url</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Sets the URL of a site about this stream.
+</para>
 
 <funcsynopsis id="shout_get_url">
 <funcprototype>
@@ -558,7 +634,9 @@ Sets the URL of a site about this stream.
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Returns the stream URL.
+</para>
 
 <funcsynopsis id="shout_set_genre">
 <funcprototype>
@@ -567,8 +645,10 @@ Returns the stream URL.
   <paramdef>const char *<parameter>genre</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Sets the genre (or genres) of the stream. This is usually a keyword list,
 eg "pop rock rap".
+</para>
 
 <funcsynopsis id="shout_get_genre">
 <funcprototype>
@@ -576,7 +656,9 @@ eg "pop rock rap".
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Returns the stream genre.
+</para>
 
 <funcsynopsis id="shout_set_description">
 <funcprototype>
@@ -585,7 +667,9 @@ Returns the stream genre.
   <paramdef>const char *<parameter>description</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Sets the description of this stream.
+</para>
 
 <funcsynopsis id="shout_get_description">
 <funcprototype>
@@ -593,7 +677,9 @@ Sets the description of this stream.
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Returns the stream description.
+</para>
 
 <funcsynopsis id="shout_set_audio_info">
 <funcprototype>
@@ -603,10 +689,12 @@ Returns the stream description.
   <paramdef>const char *<parameter>value</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Sets a stream audio parameter (eg bitrate, samplerate, channels or quality).
 The currently defined parameters are listed in the
 <link linkend="audio_info_constants">Audio Info Constants</link> section, but
 you are free to add additional fields if your directory server understands them.
+</para>
 
 <funcsynopsis id="shout_get_audio_info">
 <funcprototype>
@@ -615,15 +703,19 @@ you are free to add additional fields if your directory server understands them.
   <paramdef>const char *<parameter>name</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Returns the value of the audio info field <varname>name</varname>, if defined.
+</para>
 
 </section>
 
 </section>
 
 <section><title>Metadata</title>
+<para>
 These functions currently only make sense for MP3 streams. Vorbis streams are expected
 to embed metadata as vorbis comments in the audio stream.
+</para>
 
 <funcsynopsis id="shout_metadata_new">
 <funcprototype>
@@ -631,10 +723,12 @@ to embed metadata as vorbis comments in the audio stream.
   <void/>
 </funcprototype>
 </funcsynopsis>
+<para>
 Allocates a new metadata structure, or returns NULL if no memory is available. The
 returned structure should be freed with
 <link linkend="shout_metadata_free">shout_metadata_free</link> when you are done with
 it.
+</para>
 
 <funcsynopsis id="shout_metadata_free">
 <funcprototype>
@@ -642,7 +736,9 @@ it.
   <paramdef><type>shout_metadata_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Frees any resources associated with <varname>self</varname>.
+</para>
 
 <funcsynopsis id="shout_metadata_add">
 <funcprototype>
@@ -652,10 +748,12 @@ Frees any resources associated with <varname>self</varname>.
   <paramdef>const char *<parameter>value</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Add metadata value <varname>value</varname> to <varname>self</varname>, under the
 key <varname>name</varname>. You'll probably want to set <varname>name</varname>
 to <constant>"song"</constant>, though <constant>"url"</constant> may also be
 useful.
+</para>
 
 <variablelist><title>Return Values</title>
   <varlistentry>
@@ -681,10 +779,12 @@ useful.
   <paramdef><type>shout_metadata_t</type> *<parameter>metadata</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
+<para>
 Sets metadata on the connection <varname>self</varname> to <varname>metadata</varname>.
 Only MP3 streams support this type of metadata update. You may use this function
 on defined but closed connections (this is useful if you simply want to set the
 metadata for a stream provided by another process).
+</para>
 
 <variablelist><title>Return Values</title>
   <varlistentry>
