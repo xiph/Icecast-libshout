@@ -390,9 +390,9 @@ The default is <constant>source</constant>.
 </funcsynopsis>
 Returns the user name.
 
-<funcsynopsis id="shout_set_pass">
+<funcsynopsis id="shout_set_password">
 <funcprototype>
-  <funcdef>int <function>shout_set_pass</function></funcdef>
+  <funcdef>int <function>shout_set_password</function></funcdef>
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
   <paramdef>const char *<parameter>pass</parameter></paramdef>
 </funcprototype>
@@ -400,9 +400,9 @@ Returns the user name.
 Sets the password to authenticate to the server with. This parameter
 <emphasis>must</emphasis> be set. There is no default.
 
-<funcsynopsis id="shout_get_pass">
+<funcsynopsis id="shout_get_password">
 <funcprototype>
-  <funcdef>const char *<function>shout_get_pass</function></funcdef>
+  <funcdef>const char *<function>shout_get_password</function></funcdef>
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
