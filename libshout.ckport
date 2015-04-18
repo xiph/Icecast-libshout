@@ -79,12 +79,12 @@ shout_metadata_add		maybe	Only useful for MP3 streams.
 
 # Obsolete functions:
 shout_set_name			legacy	Replaced by shout_set_meta().
-shout_get_name			legacy	Replaced by shout_set_meta().
+shout_get_name			legacy	Replaced by shout_get_meta().
 shout_set_url			legacy	Replaced by shout_set_meta().
-shout_get_url			legacy	Replaced by shout_set_meta().
+shout_get_url			legacy	Replaced by shout_get_meta().
 shout_set_genre			legacy	Replaced by shout_set_meta().
-shout_get_genre			legacy	Replaced by shout_set_meta().
+shout_get_genre			legacy	Replaced by shout_get_meta().
 shout_set_description		legacy	Replaced by shout_set_meta().
-shout_get_description		legacy	Replaced by shout_set_meta().
+shout_get_description		legacy	Replaced by shout_get_meta().
 
 #ll
