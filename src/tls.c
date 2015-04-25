@@ -101,6 +101,7 @@ static inline int tls_setup(shout_tls_t *tls)
 	if (!SSL_set_fd(tls->ssl, tls->socket))
 		goto error;
 
+	SSL_set_tlsext_host_name(tls->ssl, tls->host);
 	SSL_set_connect_state(tls->ssl);
 	tls->ssl_ret = SSL_connect(tls->ssl);
 
