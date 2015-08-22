@@ -227,12 +227,12 @@ int shout_get_roaraudio_response(shout_t *self)
     if (total_len < HEADER_SIZE)
         return SHOUTERR_BUSY;
 
-   /* ok. we got a header.
-    * Now find the body length ("data length") bytes
-    * and see if they are both zero.
-    * If not the server sent us extra infos we currently
-    * not support.
-    */
+    /* ok. we got a header.
+     * Now find the body length ("data length") bytes
+     * and see if they are both zero.
+     * If not the server sent us extra infos we currently
+     * not support.
+     */
 
     if (header[8] || header[9])
         return SHOUTERR_UNSUPPORTED;
