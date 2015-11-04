@@ -526,6 +526,8 @@ const char *shout_get_error(shout_t *self)
 		return "TLS requested but not supported by peer";
 	case SHOUTERR_TLSBADCERT:
 		return "TLS connection can not be established because of bad certificate";
+	case SHOUTERR_RETRY:
+		return "Please retry current operation.";
 	default:
 		return "Unknown error";
 	}
@@ -1235,6 +1237,8 @@ retry:
                         goto failure;
 
 		if ((rc = parse_response(self)) != SHOUTERR_SUCCESS) {
+			if (rc == SHOUTERR_RETRY)
+				goto retry;
 			if (self->retry) {
 				self->state = SHOUT_STATE_TLS_PENDING;
 				goto retry;

@@ -40,6 +40,7 @@
 #define SHOUTERR_BUSY			(-10) /* Socket is busy */
 #define SHOUTERR_NOTLS                  (-11) /* TLS requested but not supported by peer */
 #define SHOUTERR_TLSBADCERT             (-12) /* TLS connection can not be established because of bad certificate */
+#define SHOUTERR_RETRY                  (-13) /* Retry last operation. */
 
 #define SHOUT_FORMAT_OGG		(0) /* application/ogg */
 #define SHOUT_FORMAT_MP3		(1) /* audio/mpeg */
