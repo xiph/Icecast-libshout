@@ -25,6 +25,8 @@
  #include <config.h>
 #endif
 
+#include <strings.h>
+
 #include <shout/shout.h>
 #include "shout_private.h"
 #include "common/httpp/httpp.h"
