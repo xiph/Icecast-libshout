@@ -11,6 +11,7 @@ libshout 2.3.2 (????????)
 * Improved HTTP protocol:
   * Set Host:-header (vhosting)
   * Check for server capabilities
+* Basic support for RoarAudio protocol.
 
 libshout 2.3.1 (20120525)
 
