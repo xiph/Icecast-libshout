@@ -1,16 +1,16 @@
 libshout 2.3.2 (????????)
 
 * ---NOT YET RELEASED---
-* Audio only WebM support
+* Audio only WebM support.
 * Protocol level meta data support improved.
   Some API calls got replaced and marked as obsolete.
-* Code hardened
-* Fixed overlinking
-* Removed Debian packaging
-* TLS support (RFC2818 and RFC2817, mode can be autodetected)
+* Code hardened.
+* Fixed overlinking.
+* Removed Debian packaging.
+* TLS support (RFC2818 and RFC2817, mode can be autodetected).
 * Improved HTTP protocol:
-  * Set Host:-header (vhosting)
-  * Check for server capabilities
+  * Set Host:-header (vhosting),
+  * Check for server capabilities.
 * Basic support for RoarAudio protocol.
 
 libshout 2.3.1 (20120525)
