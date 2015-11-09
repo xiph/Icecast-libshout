@@ -34,6 +34,7 @@ servers. Currently it supports three formats and three protocols.
 
 <itemizedlist><title>Protocols</title>
   <listitem>HTTP</listitem>
+  <listitem>RoarAudio</listitem>
   <listitem>Audiocast</listitem>
   <listitem>ShoutCast</listitem>
 </itemizedlist>
@@ -1140,6 +1141,11 @@ Returns the stream description.
   returned a certificate which failed the check. The certificate may be invalid or
   is not signed by a trusted CA. See <function>shout_set_tls</function>.</listitem>
   </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUTERR_RETRY</constant></term>
+  <listitem>The caller should retry this call later.</listitem>
+  </varlistentry>
 </variablelist>
 
 <variablelist id="format_constants"><title>Formats</title>
@@ -1175,6 +1181,12 @@ Returns the stream description.
   <term><constant>SHOUT_PROTOCOL_HTTP</constant></term>
   <listitem>The HTTP protocol. This is the native protocol of the
   <application>Icecast 2</application> server, and is the default.</listitem>
+  </varlistentry>
+
+  <varlistentry>
+  <term><constant>SHOUT_PROTOCOL_ROARAUDIO</constant></term>
+  <listitem>The RoarAudio protocol. This is the native protocol for
+  <application>RoarAudio</application> servers.</listitem>
   </varlistentry>
 
   <varlistentry>
