@@ -1,6 +1,5 @@
-libshout 2.4.0 (201511xx)
+libshout 2.4.0 (20151111)
 
-* ---NOT YET RELEASED---
 * Audio only WebM support.
 * Protocol level meta data support improved.
   Some API calls got replaced and marked as obsolete.
