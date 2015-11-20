@@ -31,6 +31,8 @@
 #include <arpa/inet.h>
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <shout/shout.h>
 #include "shout_private.h"

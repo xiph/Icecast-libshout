@@ -25,6 +25,9 @@
  #include <config.h>
 #endif
 
+#include <stdlib.h>
+#include <string.h>
+
 #include <shout/shout.h>
 #include "shout_private.h"
 
