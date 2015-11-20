@@ -41,7 +41,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir "Release"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
-# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\src" /I "..\src/httpp" /I "..\src/thread" /I "..\src/log" /I "..\src/avl" /I "..\src/net" /I "..\src/timings" /I "../" /I "../../pthreads" /I "../../oggvorbis-win32sdk-1.0.1/include" /I "../include" /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /D "_WIN32" /D VERSION=\"2.4.0\" /D LIBSHOUT_MAJOR=2 /D LIBSHOUT_MINOR=0 /D LIBSHOUT_MICRO=0 /D "HAVE_WINSOCK2_H" /YX /FD /c
+# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\src" /I "..\src/httpp" /I "..\src/thread" /I "..\src/log" /I "..\src/avl" /I "..\src/net" /I "..\src/timings" /I "../" /I "../../pthreads" /I "../../oggvorbis-win32sdk-1.0.1/include" /I "../include" /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /D "_WIN32" /D VERSION=\"2.4.1\" /D LIBSHOUT_MAJOR=2 /D LIBSHOUT_MINOR=0 /D LIBSHOUT_MICRO=0 /D "HAVE_WINSOCK2_H" /YX /FD /c
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe

@@ -1,3 +1,7 @@
+libshout 2.4.1 (20151120)
+
+* Fixed issue with missing file in distribution
+
 libshout 2.4.0 (20151111)
 
 * Audio only WebM support.
