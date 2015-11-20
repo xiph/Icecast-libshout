@@ -7,7 +7,7 @@ SUBDIRS = include src examples doc win32
 
 EXTRA_DIST = INSTALL m4/shout.m4 m4/acx_pthread.m4 \
 	m4/ogg.m4 m4/vorbis.m4 m4/xiph_compiler.m4 m4/xiph_net.m4 \
-	m4/xiph_types.m4
+	m4/xiph_types.m4 libshout.ckport
 
 docdir = $(datadir)/doc/$(PACKAGE)
 doc_DATA = COPYING NEWS README examples/example.c examples/nonblocking.c
