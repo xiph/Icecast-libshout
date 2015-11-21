@@ -75,7 +75,7 @@ int _shout_util_read_header(int sock, char *buff, unsigned long len)
 	return ret;
 }
 
-static char base64table[65] = {
+static const char base64table[65] = {
     'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P',
     'Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f',
     'g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v',
@@ -117,11 +117,11 @@ char *_shout_util_base64_encode(char *data)
 	return result;
 }
 
-static char urltable[16] = {
+static const char urltable[16] = {
 	'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'
 };
 
-static char safechars[256] = {
+static const char safechars[256] = {
       0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
       0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
       0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
