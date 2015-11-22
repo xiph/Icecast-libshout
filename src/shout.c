@@ -329,6 +329,7 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 	char *request = NULL;
 	size_t request_len;
 	char *auth = NULL;
+	char *mount = NULL;
 #ifdef HAVE_OPENSSL
 	shout_tls_t *tls = NULL;
 #endif
@@ -337,6 +338,9 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 		return SHOUTERR_INSANE;
 
 	if (!(encvalue = _shout_util_dict_urlencode(metadata, '&')))
+		goto error_malloc;
+
+	if (!(mount = _shout_util_url_encode(self->mount)))
 		goto error_malloc;
 
 	switch (self->protocol) {
@@ -351,24 +355,27 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 		auth = shout_http_basic_authorization(self);
 
 		request_template = "GET /admin/metadata?mode=updinfo&mount=%s&%s HTTP/1.0\r\nUser-Agent: %s\r\n%s\r\n";
-		request_len = strlen(request_template) + strlen(self->mount) + strlen(encvalue) + strlen(shout_get_agent(self)) + 1;
+		request_len = strlen(request_template) + strlen(mount) + strlen(encvalue) + strlen(shout_get_agent(self)) + 1;
 		if (auth)
 			request_len += strlen(auth);
 		if (!(request = malloc(request_len)))
 			goto error_malloc;
-		snprintf(request, request_len, request_template, self->mount, encvalue, shout_get_agent(self), auth ? auth : "");
+		snprintf(request, request_len, request_template, mount, encvalue, shout_get_agent(self), auth ? auth : "");
 	break;
 	default:
 		request_template = "GET /admin.cgi?mode=updinfo&pass=%s&mount=%s&%s HTTP/1.0\r\nUser-Agent: %s\r\n\r\n";
-		request_len = strlen(request_template) + strlen(self->password) + strlen(self->mount) + strlen(encvalue) + strlen(shout_get_agent(self)) + 1;
+		request_len = strlen(request_template) + strlen(self->password) + strlen(mount) + strlen(encvalue) + strlen(shout_get_agent(self)) + 1;
 		if (!(request = malloc(request_len)))
 			goto error_malloc;
-		snprintf(request, request_len, request_template, self->password, self->mount, encvalue, shout_get_agent(self));
+		snprintf(request, request_len, request_template, self->password, mount, encvalue, shout_get_agent(self));
 	break;
 	}
 
 	free(encvalue);
 	encvalue = NULL;
+
+	free(mount);
+	mount = NULL;
 
 	if (auth)
 		free(auth);
@@ -476,6 +483,8 @@ error:
 		free(request);
 	if (auth)
 		free(auth);
+	if (mount)
+		free(mount);
 	return error;
 }
 

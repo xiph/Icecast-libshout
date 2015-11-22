@@ -68,6 +68,7 @@ int shout_create_http_request(shout_t *self)
 	util_dict *dict;
 	const char *key, *val;
 	const char *mimetype;
+	char *mount = NULL;
 
 	switch (self->format) {
 	case SHOUT_FORMAT_OGG:
@@ -90,7 +91,9 @@ int shout_create_http_request(shout_t *self)
 	/* this is lazy code that relies on the only error from queue_* being
 	 * SHOUTERR_MALLOC */
 	do {
-		if (shout_queue_printf(self, "SOURCE %s HTTP/1.0\r\n", self->mount))
+		if (!(mount = _shout_util_url_encode(self->mount)))
+			break;
+		if (shout_queue_printf(self, "SOURCE %s HTTP/1.0\r\n", mount))
 			break;
 		if (self->password && (self->server_caps & LIBSHOUT_CAP_GOTCAPS)) {
 			if (! (auth = shout_http_basic_authorization(self)))
@@ -127,6 +130,9 @@ int shout_create_http_request(shout_t *self)
 		
 		ret = SHOUTERR_SUCCESS;
 	} while (0);
+
+	if (mount)
+		free(mount);
 
 	return ret;
 }
@@ -286,6 +292,8 @@ int shout_parse_http_response(shout_t *self)
 	ssize_t hlen;
 	int code;
 	const char *retcode;
+	int ret;
+	char *mount;
 
 	/* all this copying! */
 	hlen = shout_queue_collect(self->rqueue.head, &header);
@@ -295,7 +303,17 @@ int shout_parse_http_response(shout_t *self)
 
 	parser = httpp_create_parser();
 	httpp_initialize(parser, NULL);
-	if (httpp_parse_response(parser, header, hlen, self->mount)) {
+
+	if (!(mount = _shout_util_url_encode(self->mount))) {
+		httpp_destroy(parser);
+		free (header);
+		return SHOUTERR_MALLOC;
+	}
+
+	ret = httpp_parse_response(parser, header, hlen, mount);
+	free(mount);
+
+	if (ret) {
 		/* TODO: Headers to Handle:
 		 * Allow:, Accept-Encoding:, Warning:, Upgrade:
 		 */

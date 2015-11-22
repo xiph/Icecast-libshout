@@ -35,6 +35,7 @@ int shout_create_xaudiocast_request(shout_t *self)
 {
 	const char *bitrate;
 	const char *val;
+	char *mount = NULL;
 	int ret;
 
 	bitrate = shout_get_audio_info(self, SHOUT_AI_BITRATE);
@@ -43,7 +44,9 @@ int shout_create_xaudiocast_request(shout_t *self)
 
 	ret = SHOUTERR_MALLOC;
 	do {
-		if (shout_queue_printf(self, "SOURCE %s %s\n", self->password, self->mount))
+		if (!(mount = _shout_util_url_encode(self->mount)))
+			break;
+		if (shout_queue_printf(self, "SOURCE %s %s\n", self->password, mount))
 			break;
 		if (shout_queue_printf(self, "x-audiocast-name: %s\n", shout_get_meta(self, "name")))
 			break;
@@ -67,7 +70,10 @@ int shout_create_xaudiocast_request(shout_t *self)
 
 		ret = SHOUTERR_SUCCESS;
 	} while (0);
-		
+
+	if (mount)
+		free(mount);
+
 	return ret;
 }
 
