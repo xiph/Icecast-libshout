@@ -38,6 +38,39 @@
 
 #include "util.h"
 
+/* first all static tables, then the code */
+
+static const char hexchars[16] = {
+    '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'
+};
+
+static const char safechars[256] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
+    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
+    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+};
+
+static const char base64table[64] = {
+    'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P',
+    'Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f',
+    'g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v',
+    'w','x','y','z','0','1','2','3','4','5','6','7','8','9','+','/'
+};
+
+
 char *_shout_util_strdup(const char *s)
 {
 	if (!s)
@@ -60,9 +93,9 @@ int _shout_util_read_header(int sock, char *buff, unsigned long len)
         read_bytes = 0;
 
         if ((read_bytes = recv(sock, &c, 1, 0))) {
-			if (c != '\r')
-                buff[pos++] = c;
-            if ((pos > 1) && (buff[pos - 1] == '\n' && buff[pos - 2] == '\n')) {
+            if (c != '\r') buff[pos++] = c;
+            if ((pos > 1) && (buff[pos - 1] == '\n' &&
+                              buff[pos - 2] == '\n')) {
                 ret = 1;
                 break;
             }
@@ -76,20 +109,13 @@ int _shout_util_read_header(int sock, char *buff, unsigned long len)
     return ret;
 }
 
-static const char base64table[65] = {
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
-    'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
-    'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
-    'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/',
-};
-
 /* This isn't efficient, but it doesn't need to be */
 char *_shout_util_base64_encode(char *data)
 {
-    int len = strlen(data);
+    size_t len = strlen(data);
     char *out = malloc(len * 4 / 3 + 4);
     char *result = out;
-    int chunk;
+    size_t chunk;
 
     while (len > 0) {
         chunk = (len > 3) ? 3 : len;
@@ -117,29 +143,6 @@ char *_shout_util_base64_encode(char *data)
 
     return result;
 }
-
-static const char hexchars[16] = {
-    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
-};
-
-static const char safechars[256] = {
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
-    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
-    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-};
 
 /* modified from libshout1, which credits Rick Franchuk <rickf@transpect.net>.
  * Caller must free result. */
@@ -199,7 +202,7 @@ void _shout_util_dict_free(util_dict *dict)
 const char *_shout_util_dict_get(util_dict *dict, const char *key)
 {
     while (dict) {
-		if (dict->key && !strcmp(key, dict->key))
+        if (dict->key && !strcmp(key, dict->key))
             return dict->val;
         dict = dict->next;
     }
@@ -211,12 +214,13 @@ int _shout_util_dict_set(util_dict *dict, const char *key, const char *val)
 {
     util_dict *prev;
 
-	if (!dict || !key)
+    if (!dict || !key) {
         return SHOUTERR_INSANE;
+    }
 
     prev = NULL;
     while (dict) {
-		if (!dict->key || !strcmp(dict->key, key))
+        if (!dict->key || !strcmp(dict->key, key))
             break;
         prev = dict;
         dict = dict->next;
@@ -224,9 +228,10 @@ int _shout_util_dict_set(util_dict *dict, const char *key, const char *val)
 
     if (!dict) {
         dict = _shout_util_dict_new();
-		if (!dict)
+        if (!dict) {
             return SHOUTERR_MALLOC;
-		if (prev)
+        }
+	if (prev)
             prev->next = dict;
         }
 
