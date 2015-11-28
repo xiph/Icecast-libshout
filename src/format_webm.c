@@ -43,26 +43,26 @@ static void close_webm(shout_t *self);
 
 int shout_open_webm(shout_t *self)
 {
-	self->format_data = NULL;
-	self->send = send_webm;
-	self->close = close_webm;
+    self->format_data = NULL;
+    self->send = send_webm;
+    self->close = close_webm;
 
-	return SHOUTERR_SUCCESS;
+    return SHOUTERR_SUCCESS;
 }
 
 static int send_webm(shout_t *self, const unsigned char *data, size_t len)
 {
-	/* IMPORTANT TODO: we just send the raw data. We need throttling. */
+    /* IMPORTANT TODO: we just send the raw data. We need throttling. */
 
-	ssize_t ret = shout_send_raw(self, data, len);
+    ssize_t ret = shout_send_raw(self, data, len);
 	if (ret != (ssize_t)len)
-		return self->error = SHOUTERR_SOCKET;
+        return self->error = SHOUTERR_SOCKET;
 
-	return self->error = SHOUTERR_SUCCESS;
+    return self->error = SHOUTERR_SUCCESS;
 }
 
 static void close_webm(shout_t *self)
 {
-	/* no local state */
-	(void)self;
+    /* no local state */
+    (void)self;
 }

@@ -41,211 +41,211 @@
 char *_shout_util_strdup(const char *s)
 {
 	if (!s)
-		return NULL;
+        return NULL;
 
-	return strdup(s);
+    return strdup(s);
 }
 
 int _shout_util_read_header(int sock, char *buff, unsigned long len)
 {
-	int read_bytes, ret;
-	unsigned long pos;
-	char c;
+    int read_bytes, ret;
+    unsigned long pos;
+    char c;
 
-	read_bytes = 1;
-	pos = 0;
-	ret = 0;
+    read_bytes = 1;
+    pos = 0;
+    ret = 0;
 
-	while ((read_bytes == 1) && (pos < (len - 1))) {
-		read_bytes = 0;
+    while ((read_bytes == 1) && (pos < (len - 1))) {
+        read_bytes = 0;
 
-		if ((read_bytes = recv(sock, &c, 1, 0))) {
+        if ((read_bytes = recv(sock, &c, 1, 0))) {
 			if (c != '\r')
-				buff[pos++] = c;
-			if ((pos > 1) && (buff[pos - 1] == '\n' && buff[pos - 2] == '\n')) {
-				ret = 1;
-				break;
-			}
-		} else {
-			break;
-		}
-	}
+                buff[pos++] = c;
+            if ((pos > 1) && (buff[pos - 1] == '\n' && buff[pos - 2] == '\n')) {
+                ret = 1;
+                break;
+            }
+        } else {
+            break;
+        }
+    }
 
 	if (ret) buff[pos] = '\0';
 
-	return ret;
+    return ret;
 }
 
 static const char base64table[65] = {
-    'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P',
-    'Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f',
-    'g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v',
-    'w','x','y','z','0','1','2','3','4','5','6','7','8','9','+','/',
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+    'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+    'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+    'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/',
 };
 
 /* This isn't efficient, but it doesn't need to be */
 char *_shout_util_base64_encode(char *data)
 {
-	int len = strlen(data);
-	char *out = malloc(len*4/3 + 4);
-	char *result = out;
-	int chunk;
+    int len = strlen(data);
+    char *out = malloc(len * 4 / 3 + 4);
+    char *result = out;
+    int chunk;
 
-	while(len > 0) {
-		chunk = (len >3)?3:len;
-		*out++ = base64table[(*data & 0xFC)>>2];
-		*out++ = base64table[((*data & 0x03)<<4) | ((*(data+1) & 0xF0) >> 4)];
+    while (len > 0) {
+        chunk = (len > 3) ? 3 : len;
+        *out++ = base64table[(*data & 0xFC) >> 2];
+        *out++ = base64table[((*data & 0x03) << 4) | ((*(data + 1) & 0xF0) >> 4)];
 
-		switch(chunk) {
-		case 3:
-			*out++ = base64table[((*(data+1) & 0x0F)<<2) | ((*(data+2) & 0xC0)>>6)];
-			*out++ = base64table[(*(data+2)) & 0x3F];
-			break;
-		case 2:
-			*out++ = base64table[((*(data+1) & 0x0F)<<2)];
-			*out++ = '=';
-			break;
-		case 1:
-			*out++ = '=';
-			*out++ = '=';
-			break;
-		}
-		data += chunk;
-		len -= chunk;
-	}
-	*out = 0;
+        switch (chunk) {
+        case 3:
+            *out++ = base64table[((*(data + 1) & 0x0F) << 2) | ((*(data + 2) & 0xC0) >> 6)];
+            *out++ = base64table[(*(data + 2)) & 0x3F];
+            break;
+        case 2:
+            *out++ = base64table[((*(data + 1) & 0x0F) << 2)];
+            *out++ = '=';
+            break;
+        case 1:
+            *out++ = '=';
+            *out++ = '=';
+            break;
+        }
+        data += chunk;
+        len -= chunk;
+    }
+    *out = 0;
 
-	return result;
+    return result;
 }
 
 static const char hexchars[16] = {
-    '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
 };
 
 static const char safechars[256] = {
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,
-    0,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-    1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0,
-    0,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-    1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
+    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
+    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 };
 
 /* modified from libshout1, which credits Rick Franchuk <rickf@transpect.net>.
  * Caller must free result. */
 char *_shout_util_url_encode(const char *data) {
-	const char *p;
-	char *q, *dest;
-	int digit;
-	size_t n;
+    const char *p;
+    char *q, *dest;
+    int digit;
+    size_t n;
 
-	for (p = data, n = 0; *p; p++) {
-		n++;
+    for (p = data, n = 0; *p; p++) {
+        n++;
 		if (!safechars[(unsigned char)(*p)])
-			n += 2;
-	}
+            n += 2;
+        }
 	if (!(dest = malloc(n+1)))
-		return NULL;
-		
-	for (p = data, q = dest; *p; p++, q++) {
-		if (safechars[(unsigned char)(*p)]) {
-			*q = *p;
-		} else {
-			*q++ = '%';
-			digit = (*p >> 4) & 0xF;
-			*q++ = hexchars[digit];
-			digit = *p & 0xf;
-			*q = hexchars[digit];
-			n += 2;
-		}
-	}
-	*q = '\0';
+        return NULL;
 
-	return dest;
+    for (p = data, q = dest; *p; p++, q++) {
+        if (safechars[(unsigned char)(*p)]) {
+            *q = *p;
+        } else {
+            *q++ = '%';
+            digit = (*p >> 4) & 0xF;
+            *q++ = hexchars[digit];
+            digit = *p & 0xf;
+            *q = hexchars[digit];
+            n += 2;
+        }
+    }
+    *q = '\0';
+
+    return dest;
 }
 
 util_dict *_shout_util_dict_new(void)
 {
-	return (util_dict *)calloc(1, sizeof(util_dict));
+    return (util_dict*)calloc(1, sizeof(util_dict));
 }
 
 void _shout_util_dict_free(util_dict *dict)
 {
-	util_dict *next;
+    util_dict *next;
 
-	while (dict) {
-		next = dict->next;
+    while (dict) {
+        next = dict->next;
 
 		if (dict->key)
-			free (dict->key);
+            free(dict->key);
 		if (dict->val)
-			free (dict->val);
-		free (dict);
+            free(dict->val);
+        free(dict);
 
-		dict = next;
-	}
+        dict = next;
+    }
 }
 
 const char *_shout_util_dict_get(util_dict *dict, const char *key)
 {
-	while (dict) {
+    while (dict) {
 		if (dict->key && !strcmp(key, dict->key))
-			return dict->val;
-		dict = dict->next;
-	}
+            return dict->val;
+        dict = dict->next;
+    }
 
-	return NULL;
+    return NULL;
 }
 
 int _shout_util_dict_set(util_dict *dict, const char *key, const char *val)
 {
-	util_dict *prev;
+    util_dict *prev;
 
 	if (!dict || !key)
-		return SHOUTERR_INSANE;
+        return SHOUTERR_INSANE;
 
-	prev = NULL;
-	while (dict) {
+    prev = NULL;
+    while (dict) {
 		if (!dict->key || !strcmp(dict->key, key))
-			break;
-		prev = dict;
-		dict = dict->next;
-	}
+            break;
+        prev = dict;
+        dict = dict->next;
+    }
 
-	if (!dict) {
-		dict = _shout_util_dict_new();
+    if (!dict) {
+        dict = _shout_util_dict_new();
 		if (!dict)
-			return SHOUTERR_MALLOC;
+            return SHOUTERR_MALLOC;
 		if (prev)
-			prev->next = dict;
-	}
+            prev->next = dict;
+        }
 
 	if (dict->key)
-		free (dict->val);
+        free(dict->val);
 	else if (!(dict->key = strdup(key))) {
 		if (prev)
-			prev->next = NULL;
-		_shout_util_dict_free (dict);
+            prev->next = NULL;
+        _shout_util_dict_free(dict);
 
-		return SHOUTERR_MALLOC;
-	}
+        return SHOUTERR_MALLOC;
+    }
 
-	dict->val = strdup(val);
-	if (!dict->val) {
-		return SHOUTERR_MALLOC;
-	}
+    dict->val = strdup(val);
+    if (!dict->val) {
+        return SHOUTERR_MALLOC;
+    }
 
-	return SHOUTERR_SUCCESS;
+    return SHOUTERR_SUCCESS;
 }
 
 /* given a dictionary, URL-encode each key and val and stringify them in order as
@@ -253,77 +253,77 @@ int _shout_util_dict_set(util_dict *dict, const char *key, const char *val)
    TODO: Memory management needs overhaul. */
 char *_shout_util_dict_urlencode(util_dict *dict, char delim)
 {
-	size_t reslen, resoffset;
-	char *res, *tmp;
-	char *enc;
-	int start = 1;
+    size_t reslen, resoffset;
+    char *res, *tmp;
+    char *enc;
+    int start = 1;
 
-	for (res = NULL; dict; dict = dict->next) {
-		/* encode key */
+    for (res = NULL; dict; dict = dict->next) {
+        /* encode key */
 		if (!dict->key)
-			continue;
-		if (!(enc = _shout_util_url_encode(dict->key))) {
+            continue;
+        if (!(enc = _shout_util_url_encode(dict->key))) {
 			if (res)
-				free(res);
-			return NULL;
-		}
-		if (start) {
-			reslen = strlen(enc) + 1;
-			if (!(res = malloc(reslen))) {
-				free(enc);
-				return NULL;
-			}
-			snprintf(res, reslen, "%s", enc);
-			free(enc);
-			start = 0;
-		} else {
-			resoffset = strlen(res);
-			reslen = resoffset + strlen(enc) + 2;
-			if (!(tmp = realloc(res, reslen))) {
-				free(enc);
-				free(res);
-				return NULL;
+                free(res);
+            return NULL;
+        }
+        if (start) {
+            reslen = strlen(enc) + 1;
+            if (!(res = malloc(reslen))) {
+                free(enc);
+                return NULL;
+            }
+            snprintf(res, reslen, "%s", enc);
+            free(enc);
+            start = 0;
+        } else {
+            resoffset = strlen(res);
+            reslen = resoffset + strlen(enc) + 2;
+            if (!(tmp = realloc(res, reslen))) {
+                free(enc);
+                free(res);
+                return NULL;
 			} else
-				res = tmp;
-			snprintf(res + resoffset, reslen - resoffset, "%c%s", delim, enc);
-			free(enc);
-		}
+                res = tmp;
+            snprintf(res + resoffset, reslen - resoffset, "%c%s", delim, enc);
+            free(enc);
+        }
 
-		/* encode value */
+        /* encode value */
 		if (!dict->val)
-			continue;
-		if (!(enc = _shout_util_url_encode(dict->val))) {
-			free(res);
-			return NULL;
-		}
+            continue;
+        if (!(enc = _shout_util_url_encode(dict->val))) {
+            free(res);
+            return NULL;
+        }
 
-		resoffset = strlen(res);
-		reslen = resoffset + strlen(enc) + 2;
-		if (!(tmp = realloc(res, reslen))) {
-			free(enc);
-			free(res);
-			return NULL;
+        resoffset = strlen(res);
+        reslen = resoffset + strlen(enc) + 2;
+        if (!(tmp = realloc(res, reslen))) {
+            free(enc);
+            free(res);
+            return NULL;
 		} else
-			res = tmp;
-		snprintf(res + resoffset, reslen - resoffset, "=%s", enc);
-		free(enc);
-	}
+            res = tmp;
+        snprintf(res + resoffset, reslen - resoffset, "=%s", enc);
+        free(enc);
+    }
 
-	return res;
+    return res;
 }
 
 const char *_shout_util_dict_next(util_dict **dict, const char **key, const char **val) {
-	*key = NULL;
-	*val = NULL;
+    *key = NULL;
+    *val = NULL;
 
 	if (!dict)
-		return NULL;
-	*dict = (*dict)->next;
-	while (*dict && !(*dict)->key)
-		*dict = (*dict)->next;
+        return NULL;
+    *dict = (*dict)->next;
+    while (*dict && !(*dict)->key)
+        *dict = (*dict)->next;
 	if (!*dict)
-		return NULL;
-	*key = (*dict)->key;
-	*val = (*dict)->val;
-	return *key;
+        return NULL;
+    *key = (*dict)->key;
+    *val = (*dict)->val;
+    return *key;
 }

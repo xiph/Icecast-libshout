@@ -31,16 +31,16 @@
 #include <ogg/ogg.h>
 
 typedef struct _ogg_codec_tag {
-	ogg_stream_state os;
+    ogg_stream_state os;
 
-	unsigned int headers;
-	uint64_t senttime;
+    unsigned int headers;
+    uint64_t senttime;
 
-	void *codec_data;
-	int (*read_page)(struct _ogg_codec_tag *codec, ogg_page *page);
-	void (*free_data)(void *codec_data);
+    void *codec_data;
+    int (*read_page)(struct _ogg_codec_tag *codec, ogg_page *page);
+    void (*free_data)(void *codec_data);
 
-	struct _ogg_codec_tag *next;
+    struct _ogg_codec_tag *next;
 } ogg_codec_t;
 
 /* codec hooks */

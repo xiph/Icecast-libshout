@@ -127,10 +127,10 @@ static int shout_create_roaraudio_request_ident(shout_t *self)
     /* PID */
     data[1] = (pid & 0xFF000000UL) >> 24;
     data[2] = (pid & 0x00FF0000UL) >> 16;
-    data[3] = (pid & 0x0000FF00UL) >>  8;
-    data[4] = (pid & 0x000000FFUL) >>  0;
+    data[3] = (pid & 0x0000FF00UL) >> 8;
+    data[4] = (pid & 0x000000FFUL) >> 0;
     /* agent name */
-    memcpy(data+5, agent, datalen-5);
+    memcpy(data + 5, agent, datalen - 5);
 
     ret = command_send(self, CMD_IDENTIFY, STREAM_NONE, data, datalen);
 
@@ -172,14 +172,14 @@ static int shout_create_roaraudio_request_new_stream(shout_t *self)
      *       See https://bts.keep-cool.org/wiki/Specs/CodecsValues
      */
 
-     data[0] = htonl(1);
-     data[1] = htonl((uint32_t)-1);
-     data[2] = htonl(44100);
-     data[3] = htonl(32);
-     data[4] = htonl(2);
-     data[5] = htonl(0x0010); /* we assume Ogg/Vorbis for now. */
+    data[0] = htonl(1);
+    data[1] = htonl((uint32_t)-1);
+    data[2] = htonl(44100);
+    data[3] = htonl(32);
+    data[4] = htonl(2);
+    data[5] = htonl(0x0010);  /* we assume Ogg/Vorbis for now. */
 
-     return command_send(self, CMD_NEW_STREAM, STREAM_NONE, data, 24);
+    return command_send(self, CMD_NEW_STREAM, STREAM_NONE, data, 24);
 }
 
 static int shout_create_roaraudio_request_exec(shout_t *self)
@@ -221,7 +221,7 @@ int shout_get_roaraudio_response(shout_t *self)
 
     for (queue = self->rqueue.head; queue; queue = queue->next) {
         if (total_len < 10)
-            memcpy(header+total_len, queue->data, queue->len > (HEADER_SIZE - total_len) ? (HEADER_SIZE - total_len) : queue->len);
+            memcpy(header + total_len, queue->data, queue->len > (HEADER_SIZE - total_len) ? (HEADER_SIZE - total_len) : queue->len);
         total_len += queue->len;
     }
 

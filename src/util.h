@@ -26,9 +26,9 @@
 /* String dictionary type, without support for NULL keys, or multiple
  * instances of the same key */
 typedef struct _util_dict {
-  char *key;
-  char *val;
-  struct _util_dict *next;
+    char *key;
+    char *val;
+    struct _util_dict *next;
 } util_dict;
 
 char *_shout_util_strdup(const char *s);
@@ -41,7 +41,7 @@ const char *_shout_util_dict_get(util_dict *dict, const char *key);
 char *_shout_util_dict_urlencode(util_dict *dict, char delim);
 
 const char *_shout_util_dict_next(util_dict **dict, const char **key, const char **val);
-#define _SHOUT_DICT_FOREACH(init,var,keyvar,valvar) for ((var) = (init), (keyvar) = (var)->key ? (var)->key : _shout_util_dict_next(&(var), &(keyvar), &(valvar)), (valvar) = (var)->val; (var); _shout_util_dict_next(&(var), &(keyvar), &(valvar)))
+#define _SHOUT_DICT_FOREACH(init, var, keyvar, valvar) for ((var) = (init), (keyvar) = (var)->key ? (var)->key : _shout_util_dict_next(& (var), & (keyvar), & (valvar)), (valvar) = (var)->val; (var); _shout_util_dict_next(& (var), & (keyvar), & (valvar)))
 
 char *_shout_util_base64_encode(char *data);
 char *_shout_util_url_encode(const char *data);

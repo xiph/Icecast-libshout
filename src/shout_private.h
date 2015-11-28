@@ -75,94 +75,94 @@
 typedef struct _shout_tls shout_tls_t;
 
 typedef struct _shout_buf {
-	unsigned char data[SHOUT_BUFSIZE];
-	unsigned int len;
-	unsigned int pos;
+    unsigned char data[SHOUT_BUFSIZE];
+    unsigned int len;
+    unsigned int pos;
 
-	struct _shout_buf *prev;
-	struct _shout_buf *next;
+    struct _shout_buf *prev;
+    struct _shout_buf *next;
 } shout_buf_t;
 
 typedef struct {
-	shout_buf_t *head;
-	size_t len;
+    shout_buf_t *head;
+    size_t len;
 } shout_queue_t;
 
 typedef enum {
-	SHOUT_STATE_UNCONNECTED = 0,
-	SHOUT_STATE_CONNECT_PENDING,
-	SHOUT_STATE_TLS_PENDING,
-	SHOUT_STATE_REQ_CREATION,
-	SHOUT_STATE_REQ_PENDING,
-	SHOUT_STATE_RESP_PENDING,
-	SHOUT_STATE_CONNECTED,
-	SHOUT_STATE_RECONNECT
+    SHOUT_STATE_UNCONNECTED = 0,
+    SHOUT_STATE_CONNECT_PENDING,
+    SHOUT_STATE_TLS_PENDING,
+    SHOUT_STATE_REQ_CREATION,
+    SHOUT_STATE_REQ_PENDING,
+    SHOUT_STATE_RESP_PENDING,
+    SHOUT_STATE_CONNECTED,
+    SHOUT_STATE_RECONNECT
 } shout_state_e;
-	
+
 struct shout {
-	/* hostname or IP of icecast server */
-	char *host;
-	/* port of the icecast server */
-	int port;
-	/* login password for the server */
-	char *password;
-	/* server protocol to use */
-	unsigned int protocol;
-	/* type of data being sent */
-	unsigned int format;
-	/* audio encoding parameters */
-	util_dict *audio_info;
+    /* hostname or IP of icecast server */
+    char *host;
+    /* port of the icecast server */
+    int port;
+    /* login password for the server */
+    char *password;
+    /* server protocol to use */
+    unsigned int protocol;
+    /* type of data being sent */
+    unsigned int format;
+    /* audio encoding parameters */
+    util_dict *audio_info;
 
-	/* user-agent to use when doing HTTP login */
-	char *useragent;
-	/* mountpoint for this stream */
-	char *mount;
-	/* all the meta data about the stream */
-        util_dict *meta;
-	/* icecast 1.x dumpfile */
-	char *dumpfile;
-	/* username to use for HTTP auth. */
-	char *user;
-	/* is this stream private? */
-	int public;
+    /* user-agent to use when doing HTTP login */
+    char *useragent;
+    /* mountpoint for this stream */
+    char *mount;
+    /* all the meta data about the stream */
+    util_dict *meta;
+    /* icecast 1.x dumpfile */
+    char *dumpfile;
+    /* username to use for HTTP auth. */
+    char *user;
+    /* is this stream private? */
+    int public;
 
-        /* TLS options */
+    /* TLS options */
 #ifdef HAVE_OPENSSL
-	int upgrade_to_tls;
-        int tls_mode;
-        char *ca_directory;
-        char *ca_file;
-        char *allowed_ciphers;
-        char *client_certificate;
-	shout_tls_t *tls;
+    int upgrade_to_tls;
+    int tls_mode;
+    char *ca_directory;
+    char *ca_file;
+    char *allowed_ciphers;
+    char *client_certificate;
+    shout_tls_t *tls;
 #endif
 
-        /* server capabilities (LIBSHOUT_CAP_*) */
-        uint32_t server_caps;
+    /* server capabilities (LIBSHOUT_CAP_*) */
+    uint32_t server_caps;
 
-        /* Should we retry on error? */
-        int retry;
+    /* Should we retry on error? */
+    int retry;
 
-	/* socket the connection is on */
-	sock_t socket;
-	shout_state_e state;
-        int protocol_state; /* extra state information from the protocol */
-        int protocol_extra; /* extra data from the protocol */
-	int nonblocking;
+    /* socket the connection is on */
+    sock_t socket;
+    shout_state_e state;
+    int protocol_state;     /* extra state information from the protocol */
+    int protocol_extra;     /* extra data from the protocol */
+    int nonblocking;
 
-	void *format_data;
-	int (*send)(shout_t* self, const unsigned char* buff, size_t len);
-	void (*close)(shout_t* self);
+    void *format_data;
+    int (*send)(shout_t* self, const unsigned char* buff, size_t len);
+    void (*close)(shout_t* self);
 
-	shout_queue_t rqueue;
-	shout_queue_t wqueue;
+    shout_queue_t rqueue;
+    shout_queue_t wqueue;
 
-	/* start of this period's timeclock */
-	uint64_t starttime;
-	/* amout of data we've sent (in milliseconds) */
-	uint64_t senttime;
+    /* start of this period's timeclock */
+    uint64_t starttime;
+    /* amout of data we've sent (in milliseconds) */
+    uint64_t senttime;
 
-	int error;
+    int error;
 };
 
 /* helper functions */
