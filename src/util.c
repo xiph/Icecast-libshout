@@ -1,7 +1,7 @@
 /* util.c: libshout utility/portability functions
  *
- *  Copyright (C) 2002-2003 the Icecast team <team@icecast.org>,
- *  Copyright (C) 2012      Philipp "ph3-der-loewe" Schafft <lion@lion.leolix.org>
+ *  Copyright 2002-2003 the Icecast team <team@icecast.org>,
+ *  Copyright 2012-2015 Philipp "ph3-der-loewe" Schafft <lion@lion.leolix.org>
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -19,14 +19,14 @@
  */
 
 #ifdef HAVE_CONFIG_H
- #include <config.h>
+#include <config.h>
 #endif
 
+#include <sys/types.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
-#include <sys/types.h>
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
@@ -35,6 +35,7 @@
 #endif
 
 #include <shout/shout.h>
+
 #include "util.h"
 
 char *_shout_util_strdup(const char *s)
@@ -117,27 +118,27 @@ char *_shout_util_base64_encode(char *data)
 	return result;
 }
 
-static const char urltable[16] = {
-	'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'
+static const char hexchars[16] = {
+    '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'
 };
 
 static const char safechars[256] = {
-      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-      1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,
-      0,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-      1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0,
-      0,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-      1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0,
-      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,
+    0,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+    1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0,
+    0,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+    1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0,
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
 };
 
 /* modified from libshout1, which credits Rick Franchuk <rickf@transpect.net>.
@@ -162,9 +163,9 @@ char *_shout_util_url_encode(const char *data) {
 		} else {
 			*q++ = '%';
 			digit = (*p >> 4) & 0xF;
-			*q++ = urltable[digit];
+			*q++ = hexchars[digit];
 			digit = *p & 0xf;
-			*q = urltable[digit];
+			*q = hexchars[digit];
 			n += 2;
 		}
 	}
@@ -248,8 +249,8 @@ int _shout_util_dict_set(util_dict *dict, const char *key, const char *val)
 }
 
 /* given a dictionary, URL-encode each key and val and stringify them in order as
-  key=val&key=val... if val is set, or just key&key if val is NULL.
-  TODO: Memory management needs overhaul. */
+   key=val&key=val... if val is set, or just key&key if val is NULL.
+   TODO: Memory management needs overhaul. */
 char *_shout_util_dict_urlencode(util_dict *dict, char delim)
 {
 	size_t reslen, resoffset;
