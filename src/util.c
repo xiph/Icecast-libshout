@@ -44,6 +44,7 @@ static const char hexchars[16] = {
     '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'
 };
 
+/* For the next to tables see RFC3986 section 2.2 and 2.3. */
 static const char safechars[256] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -61,6 +62,26 @@ static const char safechars[256] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+};
+
+static const char safechars_plus_gen_delims_minus_3F_and_23[256] = {
+/* x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 xa xb xc xd xe xf */
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 0x */
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 1x */
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, /* 2x */
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, /* 3x */
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, /* 4x */
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, /* 5x */
+    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, /* 6x */
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, /* 7x */
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 8x */
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 9x */
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* ax */
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* bx */
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* cx */
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* dx */
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* ex */
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* fx */
 };
 
 static const char base64table[64] = {
@@ -146,7 +167,7 @@ char *_shout_util_base64_encode(char *data)
 
 /* modified from libshout1, which credits Rick Franchuk <rickf@transpect.net>.
  * Caller must free result. */
-char *_shout_util_url_encode(const char *data) {
+static char *_url_encode_with_table(const char *data, const char table[256]) {
     const char *p;
     char *q, *dest;
     int digit;
@@ -154,14 +175,15 @@ char *_shout_util_url_encode(const char *data) {
 
     for (p = data, n = 0; *p; p++) {
         n++;
-		if (!safechars[(unsigned char)(*p)])
+        if (!table[(unsigned char)(*p)])
             n += 2;
-        }
-	if (!(dest = malloc(n+1)))
+    }
+
+    if (!(dest = malloc(n+1)))
         return NULL;
 
     for (p = data, q = dest; *p; p++, q++) {
-        if (safechars[(unsigned char)(*p)]) {
+        if (table[(unsigned char)(*p)]) {
             *q = *p;
         } else {
             *q++ = '%';
@@ -175,6 +197,14 @@ char *_shout_util_url_encode(const char *data) {
     *q = '\0';
 
     return dest;
+}
+
+char *_shout_util_url_encode(const char *data) {
+    return _url_encode_with_table(data, safechars);
+}
+
+char *_shout_util_url_encode_resource(const char *data) {
+    return _url_encode_with_table(data, safechars_plus_gen_delims_minus_3F_and_23);
 }
 
 util_dict *_shout_util_dict_new(void)

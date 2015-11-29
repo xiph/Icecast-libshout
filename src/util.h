@@ -45,6 +45,7 @@ const char *_shout_util_dict_next(util_dict **dict, const char **key, const char
 
 char *_shout_util_base64_encode(char *data);
 char *_shout_util_url_encode(const char *data);
+char *_shout_util_url_encode_resource(const char *data);
 int _shout_util_read_header(int sock, char *buff, unsigned long len);
 
 #endif /* __LIBSHOUT_UTIL_H__ */
