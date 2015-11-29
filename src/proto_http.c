@@ -91,7 +91,7 @@ int shout_create_http_request(shout_t *self)
     /* this is lazy code that relies on the only error from queue_* being
      * SHOUTERR_MALLOC */
     do {
-		if (!(mount = _shout_util_url_encode(self->mount)))
+		if (!(mount = _shout_util_url_encode_resource(self->mount)))
             break;
 		if (shout_queue_printf(self, "SOURCE %s HTTP/1.0\r\n", mount))
             break;

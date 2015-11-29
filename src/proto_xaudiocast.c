@@ -44,7 +44,7 @@ int shout_create_xaudiocast_request(shout_t *self)
 
     ret = SHOUTERR_MALLOC;
     do {
-		if (!(mount = _shout_util_url_encode(self->mount)))
+		if (!(mount = _shout_util_url_encode_resource(self->mount)))
             break;
 		if (shout_queue_printf(self, "SOURCE %s %s\n", self->password, mount))
             break;
