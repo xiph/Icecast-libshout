@@ -74,7 +74,7 @@ dnl Checks for programs.
 dnl Checks for header files.
 AC_HEADER_STDC
 AC_HEADER_TIME
-AC_CHECK_HEADERS([strings.h sys/timeb.h])
+AC_CHECK_HEADERS([strings.h sys/timeb.h arpa/inet.h])
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
