@@ -35,7 +35,7 @@ AM_CFLAGS = @XIPH_CFLAGS@
 libshout_la_LIBADD = common/net/libicenet.la common/timing/libicetiming.la common/avl/libiceavl.la\
 		common/httpp/libicehttpp.la $(MAYBE_THREAD_LIB) $(THEORA_LIBS) $(VORBIS_LIBS) $(SPEEX_LIBS) @XIPH_LIBS@
 
-INCLUDES = -I$(top_builddir)/include -I./common/
+INCLUDES = -I$(top_builddir)/include -I$(srcdir)/common/
 
 debug:
 	$(MAKE) all CFLAGS="@DEBUG@"
