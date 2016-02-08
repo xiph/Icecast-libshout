@@ -21,7 +21,7 @@ AC_DEFINE([LIBSHOUT_MICRO], libshout_micro, [Shout library patch version])
 
 VERSION=libshout_version
 
-AM_INIT_AUTOMAKE([libshout], libshout_version)
+AM_INIT_AUTOMAKE
 AM_MAINTAINER_MODE
 
 dnl create our name mangling macro
