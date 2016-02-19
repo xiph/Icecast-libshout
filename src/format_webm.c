@@ -58,11 +58,10 @@ typedef enum webm_parsing_state {
     WEBM_STATE_COPY_THRU
 } webm_parsing_state;
 
-/* state for a filter that parses EBML tags
- * & passes them through unmodified.
+/* state for a filter that extracts timestamp
+ * information from a WebM stream
  */
-/* TODO: extract timestamps from Clusters and SimpleBlocks.
- */
+/* TODO: extract timestamps from SimpleBlocks.
  */
 /* TODO: provide for "fake chaining", where
  * concatinated files have extra headers stripped
@@ -79,6 +78,9 @@ typedef struct _webm_t {
     size_t input_write_position;
     size_t input_read_position;
     size_t output_position;
+
+    /* statistics */
+    uint64_t cluster_timestamp;
 
     /* buffer storage */
     unsigned char input_buffer[SHOUT_BUFSIZE];
@@ -153,6 +155,10 @@ static int send_webm(shout_t *self, const unsigned char *data, size_t len)
         self->error = flush_output(self, webm);
     }
 
+    /* Report latest known timecode for rate-control */
+    /* TODO: handle TimecodeScale values besides default 1000000 */
+    self->senttime = webm->cluster_timestamp * 1000;
+
     return self->error;
 }
 
@@ -171,7 +177,6 @@ static void close_webm(shout_t *self)
  */
 static int webm_process(shout_t *self, webm_t *webm)
 {
-    /* IMPORTANT TODO: we just send the raw data. We need throttling. */
     size_t to_process;
 
     /* loop as long as buffer holds process-able data */
@@ -292,6 +297,11 @@ static int webm_process_tag(shout_t *self, webm_t *webm)
             } else if(status < 0) {
                 return self->error = SHOUTERR_INSANE;
             }
+
+            /* report timecode */
+            webm->cluster_timestamp = timecode;
+
+            /* TODO: detect backwards jumps and rewrite to be monotonic */
             break;
     }
 
