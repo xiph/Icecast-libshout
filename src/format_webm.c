@@ -65,8 +65,12 @@ typedef struct _webm_t {
 static int  send_webm(shout_t *self, const unsigned char *data, size_t len);
 static void close_webm(shout_t *self);
 
-static size_t copy_possible(const void *src,    size_t srcLen,
-                                  void *target, size_t targetLen);
+static size_t copy_possible(const void *src_base,
+                            size_t *src_position,
+                            size_t src_len,
+                            void *target_base,
+                            size_t *target_position,
+                            size_t target_len);
 static int flush_output(shout_t *self, webm_t *webm);
 
 /* -- interface functions -- */
@@ -93,21 +97,14 @@ static int send_webm(shout_t *self, const unsigned char *data, size_t len)
     webm_t *webm = (webm_t *) self->format_data;
     /* IMPORTANT TODO: we just send the raw data. We need throttling. */
 
-    size_t copied = 0;
-    unsigned const char *src = data;
-    unsigned char *target;
-    size_t target_space;
+    size_t read_position = 0;
 
     self->error = SHOUTERR_SUCCESS;
 
-    while(len > 0 && self->error == SHOUTERR_SUCCESS) {
-        target = webm->output_buffer + webm->output_position;
-        target_space = SHOUT_BUFSIZE - webm->output_position;
-        copied = copy_possible(src, len, target, target_space);
+    while(read_position < len && self->error == SHOUTERR_SUCCESS) {
+        copy_possible(data, &read_position, len,
+                      webm->output_buffer, &webm->output_position, SHOUT_BUFSIZE);
 
-        src += copied;
-        webm->output_position += copied;
-        len -= copied;
         self->error = flush_output(self, webm);
     }
 
@@ -124,14 +121,26 @@ static void close_webm(shout_t *self)
 
 /* Copies as much of the source buffer into the target
  * as will fit, and returns the actual size copied.
+ * Updates position pointers to match.
  */
-static size_t copy_possible(const void *src,    size_t srcLen,
-                                  void *target, size_t targetLen)
+static size_t copy_possible(const void *src_base,
+                            size_t *src_position,
+                            size_t src_len,
+                            void *target_base,
+                            size_t *target_position,
+                            size_t target_len)
 {
-    size_t to_copy = srcLen;
-    if(targetLen < to_copy) to_copy = targetLen;
+    size_t src_space = src_len - *src_position;
+    size_t target_space = target_len - *target_position;
 
-    memcpy(target, src, to_copy);
+    size_t to_copy = src_space;
+    if(target_space < to_copy) to_copy = target_space;
+
+    memcpy(target_base + *target_position, src_base + *src_position, to_copy);
+
+    *src_position += to_copy;
+    *target_position += to_copy;
+
     return to_copy;
 }
 
