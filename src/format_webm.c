@@ -39,9 +39,6 @@
 /* unused state for a filter that passes
  * through data unmodified.
  */
-/* TODO: Run data through the internal buffers
- * so we have a spot we can insert processing.
- */
 /* TODO: incorporate EBML parsing & extract
  * timestamps from Clusters and SimpleBlocks.
  */
@@ -65,6 +62,7 @@ typedef struct _webm_t {
 static int  send_webm(shout_t *self, const unsigned char *data, size_t len);
 static void close_webm(shout_t *self);
 
+static int webm_process(shout_t *self, webm_t *webm);
 static int webm_output(shout_t *self, webm_t *webm, const unsigned char *data, size_t len);
 
 static size_t copy_possible(const void *src_base,
@@ -97,11 +95,16 @@ int shout_open_webm(shout_t *self)
 static int send_webm(shout_t *self, const unsigned char *data, size_t len)
 {
     webm_t *webm = (webm_t *) self->format_data;
-    /* IMPORTANT TODO: we just send the raw data. We need throttling. */
 
+    size_t input_progress = 0;
     self->error = SHOUTERR_SUCCESS;
 
-    self->error = webm_output(self, webm, data, len);
+    while(input_progress < len && self->error == SHOUTERR_SUCCESS) {
+        copy_possible(data, &input_progress, len,
+                      webm->input_buffer, &webm->input_position, SHOUT_BUFSIZE);
+
+        self->error = webm_process(self, webm);
+    }
 
     /* Squeeze out any possible output, unless we're failing */
     if(self->error == SHOUTERR_SUCCESS) {
@@ -118,6 +121,21 @@ static void close_webm(shout_t *self)
 }
 
 /* -- processing functions -- */
+
+/* Process what we can of the input buffer,
+ * extracting statistics or rewriting the
+ * stream as necessary.
+ * Returns a status code to indicate socket errors.
+ */
+static int webm_process(shout_t *self, webm_t *webm)
+{
+    /* IMPORTANT TODO: we just send the raw data. We need throttling. */
+    self->error = webm_output(self, webm, webm->input_buffer, webm->input_position);
+
+    webm->input_position = 0;
+
+    return self->error;
+}
 
 /* Queue the given data in the output buffer,
  * flushing as needed. Returns a status code
