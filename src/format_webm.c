@@ -65,6 +65,8 @@ typedef struct _webm_t {
 static int  send_webm(shout_t *self, const unsigned char *data, size_t len);
 static void close_webm(shout_t *self);
 
+static int webm_output(shout_t *self, webm_t *webm, const unsigned char *data, size_t len);
+
 static size_t copy_possible(const void *src_base,
                             size_t *src_position,
                             size_t src_len,
@@ -97,14 +99,12 @@ static int send_webm(shout_t *self, const unsigned char *data, size_t len)
     webm_t *webm = (webm_t *) self->format_data;
     /* IMPORTANT TODO: we just send the raw data. We need throttling. */
 
-    size_t read_position = 0;
-
     self->error = SHOUTERR_SUCCESS;
 
-    while(read_position < len && self->error == SHOUTERR_SUCCESS) {
-        copy_possible(data, &read_position, len,
-                      webm->output_buffer, &webm->output_position, SHOUT_BUFSIZE);
+    self->error = webm_output(self, webm, data, len);
 
+    /* Squeeze out any possible output, unless we're failing */
+    if(self->error == SHOUTERR_SUCCESS) {
         self->error = flush_output(self, webm);
     }
 
@@ -115,6 +115,29 @@ static void close_webm(shout_t *self)
 {
     webm_t *webm_filter = (webm_t *) self->format_data;
     if(webm_filter) free(webm_filter);
+}
+
+/* -- processing functions -- */
+
+/* Queue the given data in the output buffer,
+ * flushing as needed. Returns a status code
+ * to allow detecting socket errors on a flush.
+ */
+static int webm_output(shout_t *self, webm_t *webm, const unsigned char *data, size_t len)
+{
+    size_t output_progress = 0;
+
+    while(output_progress < len && self->error == SHOUTERR_SUCCESS)
+    {
+        copy_possible(data, &output_progress, len,
+                      webm->output_buffer, &webm->output_position, SHOUT_BUFSIZE);
+
+        if(webm->output_position == SHOUT_BUFSIZE) {
+            self->error = flush_output(self, webm);
+        }
+    }
+
+    return self->error;
 }
 
 /* -- utility functions -- */
