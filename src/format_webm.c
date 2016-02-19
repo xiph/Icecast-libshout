@@ -36,17 +36,50 @@
 
 /* -- local datatypes -- */
 
-/* no local state */
+/* unused state for a filter that passes
+ * through data unmodified.
+ */
+/* TODO: Run data through the internal buffers
+ * so we have a spot we can insert processing.
+ */
+/* TODO: incorporate EBML parsing & extract
+ * timestamps from Clusters and SimpleBlocks.
+ */
+/* TODO: provide for "fake chaining", where
+ * concatinated files have extra headers stripped
+ * and Cluster / Block timestamps rewritten
+ */
+typedef struct _webm_t {
+
+    /* buffer state */
+    size_t input_position;
+    size_t output_position;
+
+    /* buffer storage */
+    unsigned char input_buffer[SHOUT_BUFSIZE];
+    unsigned char output_buffer[SHOUT_BUFSIZE];
+
+} webm_t;
 
 /* -- static prototypes -- */
 static int  send_webm(shout_t *self, const unsigned char *data, size_t len);
 static void close_webm(shout_t *self);
 
+/* -- interface functions -- */
 int shout_open_webm(shout_t *self)
 {
-    self->format_data   = NULL;
-    self->send          = send_webm;
-    self->close         = close_webm;
+    webm_t *webm_filter;
+
+    /* Alloc WebM filter */
+    if (!(webm_filter = (webm_t *)calloc(1, sizeof(webm_t)))) {
+        return self->error = SHOUTERR_MALLOC;
+    }
+
+    /* configure shout state */
+    self->format_data = webm_filter;
+
+    self->send = send_webm;
+    self->close = close_webm;
 
     return SHOUTERR_SUCCESS;
 }
@@ -64,6 +97,6 @@ static int send_webm(shout_t *self, const unsigned char *data, size_t len)
 
 static void close_webm(shout_t *self)
 {
-    /* no local state */
-    (void)self;
+    webm_t *webm_filter = (webm_t *) self->format_data;
+    if(webm_filter) free(webm_filter);
 }
