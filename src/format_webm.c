@@ -24,6 +24,7 @@
 #   include <config.h>
 #endif
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -36,7 +37,12 @@
 
 /* -- local datatypes -- */
 
-/* unused state for a filter that passes
+typedef enum webm_parsing_state {
+    WEBM_STATE_READ_TAG = 0,
+    WEBM_STATE_COPY_THRU
+} webm_parsing_state;
+
+/* state for a filter that passes
  * through data unmodified.
  */
 /* TODO: incorporate EBML parsing & extract
@@ -48,8 +54,14 @@
  */
 typedef struct _webm_t {
 
+    /* processing state */
+    bool waiting_for_more_input;
+    webm_parsing_state parsing_state;
+    uint64_t copy_len;
+
     /* buffer state */
-    size_t input_position;
+    size_t input_write_position;
+    size_t input_read_position;
     size_t output_position;
 
     /* buffer storage */
@@ -101,7 +113,7 @@ static int send_webm(shout_t *self, const unsigned char *data, size_t len)
 
     while(input_progress < len && self->error == SHOUTERR_SUCCESS) {
         copy_possible(data, &input_progress, len,
-                      webm->input_buffer, &webm->input_position, SHOUT_BUFSIZE);
+                      webm->input_buffer, &webm->input_write_position, SHOUT_BUFSIZE);
 
         self->error = webm_process(self, webm);
     }
@@ -130,9 +142,66 @@ static void close_webm(shout_t *self)
 static int webm_process(shout_t *self, webm_t *webm)
 {
     /* IMPORTANT TODO: we just send the raw data. We need throttling. */
-    self->error = webm_output(self, webm, webm->input_buffer, webm->input_position);
+    size_t to_process;
 
-    webm->input_position = 0;
+    /* loop as long as buffer holds process-able data */
+    while( webm->input_read_position < webm->input_write_position
+           && !webm->waiting_for_more_input
+           && self->error == SHOUTERR_SUCCESS ) {
+
+        /* calculate max space an operation can work on */
+        to_process = webm->input_write_position - webm->input_read_position;
+
+        /* perform appropriate operation */
+        switch(webm->parsing_state) {
+            case WEBM_STATE_READ_TAG:
+                /* Stub: copy everything obliviously */
+                webm->copy_len = to_process;
+                webm->parsing_state = WEBM_STATE_COPY_THRU;
+                break;
+
+            case WEBM_STATE_COPY_THRU:
+                /* copy a known quantity of bytes to the output */
+
+                /* calculate size needing to be copied this step */
+                if(webm->copy_len < to_process) {
+                    to_process = webm->copy_len;
+                }
+
+                /* do copy */
+                self->error = webm_output(self, webm,
+                                          webm->input_buffer + webm->input_read_position,
+                                          to_process);
+
+                /* update state with copy progress */
+                webm->copy_len -= to_process;
+                webm->input_read_position += to_process;
+                if(webm->copy_len == 0) {
+                    webm->parsing_state = WEBM_STATE_READ_TAG;
+                }
+
+                break;
+
+        }
+
+    }
+
+    if(webm->input_read_position < webm->input_write_position) {
+        /* slide unprocessed data to front of buffer */
+        to_process = webm->input_write_position - webm->input_read_position;
+        memmove(webm->input_buffer, webm->input_buffer + webm->input_read_position, to_process);
+
+        webm->input_read_position = 0;
+        webm->input_write_position = to_process;
+    } else {
+        /* subtract read position instead of zeroing;
+         * this allows skipping over large spans of data by
+         * setting the read pointer far ahead. Processing won't
+         * resume until the read pointer is actually within the buffer.
+         */
+        webm->input_read_position -= webm->input_write_position;
+        webm->input_write_position = 0;
+    }
 
     return self->error;
 }
@@ -198,7 +267,7 @@ static size_t copy_possible(const void *src_base,
 static int flush_output(shout_t *self, webm_t *webm)
 {
     if(webm->output_position == 0) {
-        return self->error = SHOUTERR_SUCCESS;
+        return self->error;
     }
 
     ssize_t ret = shout_send_raw(self, webm->output_buffer, webm->output_position);
@@ -207,5 +276,5 @@ static int flush_output(shout_t *self, webm_t *webm)
     }
 
     webm->output_position = 0;
-    return self->error = SHOUTERR_SUCCESS;
+    return self->error;
 }
