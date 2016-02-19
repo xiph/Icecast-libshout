@@ -160,7 +160,7 @@ struct shout {
 
     /* start of this period's timeclock */
     uint64_t starttime;
-    /* amout of data we've sent (in milliseconds) */
+    /* amount of data we've sent (in microseconds) */
     uint64_t senttime;
 
     int error;
