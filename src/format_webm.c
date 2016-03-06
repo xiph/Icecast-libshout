@@ -45,11 +45,11 @@ typedef enum webm_parsing_state {
     WEBM_STATE_COPY_THRU
 } webm_parsing_state;
 
-/* state for a filter that passes
- * through data unmodified.
+/* state for a filter that parses EBML tags
+ * & passes them through unmodified.
  */
-/* TODO: incorporate EBML parsing & extract
- * timestamps from Clusters and SimpleBlocks.
+/* TODO: extract timestamps from Clusters and SimpleBlocks.
+ */
  */
 /* TODO: provide for "fake chaining", where
  * concatinated files have extra headers stripped
@@ -78,6 +78,7 @@ static int  send_webm(shout_t *self, const unsigned char *data, size_t len);
 static void close_webm(shout_t *self);
 
 static int webm_process(shout_t *self, webm_t *webm);
+static int webm_process_tag(shout_t *self, webm_t *webm);
 static int webm_output(shout_t *self, webm_t *webm, const unsigned char *data, size_t len);
 
 static size_t copy_possible(const void *src_base,
@@ -155,6 +156,7 @@ static int webm_process(shout_t *self, webm_t *webm)
     size_t to_process;
 
     /* loop as long as buffer holds process-able data */
+    webm->waiting_for_more_input = false;
     while( webm->input_read_position < webm->input_write_position
            && !webm->waiting_for_more_input
            && self->error == SHOUTERR_SUCCESS ) {
@@ -165,9 +167,7 @@ static int webm_process(shout_t *self, webm_t *webm)
         /* perform appropriate operation */
         switch(webm->parsing_state) {
             case WEBM_STATE_READ_TAG:
-                /* Stub: copy everything obliviously */
-                webm->copy_len = to_process;
-                webm->parsing_state = WEBM_STATE_COPY_THRU;
+                self->error =  webm_process_tag(self, webm);
                 break;
 
             case WEBM_STATE_COPY_THRU:
@@ -212,6 +212,38 @@ static int webm_process(shout_t *self, webm_t *webm)
         webm->input_read_position -= webm->input_write_position;
         webm->input_write_position = 0;
     }
+
+    return self->error;
+}
+
+/* Try to read a tag header & handle it appropriately.
+ * Returns an error code for socket errors or malformed input.
+ */
+static int webm_process_tag(shout_t *self, webm_t *webm)
+{
+    ssize_t tag_length;
+    uint64_t payload_length;
+
+    unsigned char *start_of_buffer = webm->input_buffer + webm->input_read_position;
+    unsigned char *end_of_buffer = webm->input_buffer + webm->input_write_position;
+
+    /* parse tag header */
+    tag_length = ebml_parse_tag(start_of_buffer, end_of_buffer, &payload_length);
+    if(tag_length == 0) {
+        webm->waiting_for_more_input = true;
+    } else if(tag_length < 0) {
+        return self->error = SHOUTERR_INSANE;
+    }
+
+    if (payload_length == EBML_UNKNOWN) {
+        /* break open tags of unknown length, process all children */
+        payload_length = 0;
+    }
+
+    /* stub: just copy tag w/ payload to output */
+
+    webm->copy_len = tag_length + payload_length;
+    webm->parsing_state = WEBM_STATE_COPY_THRU;
 
     return self->error;
 }
