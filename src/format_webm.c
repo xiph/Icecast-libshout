@@ -244,6 +244,12 @@ static int webm_process_tag(shout_t *self, webm_t *webm)
     uint64_t tag_id;
     uint64_t payload_length;
 
+    uint64_t timecode;
+
+    uint64_t to_copy;
+
+    ssize_t status;
+
     unsigned char *start_of_buffer = webm->input_buffer + webm->input_read_position;
     unsigned char *end_of_buffer = webm->input_buffer + webm->input_write_position;
 
@@ -251,19 +257,50 @@ static int webm_process_tag(shout_t *self, webm_t *webm)
     tag_length = ebml_parse_tag(start_of_buffer, end_of_buffer, &tag_id, &payload_length);
     if(tag_length == 0) {
         webm->waiting_for_more_input = true;
+        return self->error;
     } else if(tag_length < 0) {
         return self->error = SHOUTERR_INSANE;
     }
 
+    /* most tags will be copied, header & payload, to output unaltered */
+    to_copy = tag_length + payload_length;
+
+    /* break open tags of unknown length, to process all children */
     if (payload_length == EBML_UNKNOWN) {
-        /* break open tags of unknown length, process all children */
-        payload_length = 0;
+        to_copy = tag_length;
     }
 
-    /* stub: just copy tag w/ payload to output */
+    /* handle tag appropriately */
 
-    webm->copy_len = tag_length + payload_length;
-    webm->parsing_state = WEBM_STATE_COPY_THRU;
+    switch(tag_id) {
+        case WEBM_SEGMENT_ID:
+        case WEBM_CLUSTER_ID:
+            /* open containers to process children */
+            to_copy = tag_length;
+            break;
+
+        case WEBM_TIMECODE_ID:
+            /* read cluster timecode */
+            status = ebml_parse_sized_int(start_of_buffer + tag_length,
+                                          end_of_buffer,
+                                          payload_length,
+                                          false, &timecode);
+
+            if(status == 0) {
+                webm->waiting_for_more_input = true;
+                return self->error;
+            } else if(status < 0) {
+                return self->error = SHOUTERR_INSANE;
+            }
+            break;
+    }
+
+    /* queue copying */
+
+    if(to_copy > 0) {
+        webm->copy_len = to_copy;
+        webm->parsing_state = WEBM_STATE_COPY_THRU;
+    }
 
     return self->error;
 }
