@@ -61,11 +61,11 @@ typedef enum webm_parsing_state {
 /* state for a filter that extracts timestamp
  * information from a WebM stream
  */
-/* TODO: extract timestamps from SimpleBlocks.
+/* TODO: extract timestamps from non-SimpleBlock Blocks.
  */
 /* TODO: provide for "fake chaining", where
  * concatinated files have extra headers stripped
- * and Cluster / Block timestamps rewritten
+ * and Cluster timestamps rewritten
  */
 typedef struct _webm_t {
 
@@ -81,6 +81,7 @@ typedef struct _webm_t {
 
     /* statistics */
     uint64_t cluster_timestamp;
+    uint64_t latest_timestamp;
 
     /* buffer storage */
     unsigned char input_buffer[SHOUT_BUFSIZE];
@@ -157,7 +158,7 @@ static int send_webm(shout_t *self, const unsigned char *data, size_t len)
 
     /* Report latest known timecode for rate-control */
     /* TODO: handle TimecodeScale values besides default 1000000 */
-    self->senttime = webm->cluster_timestamp * 1000;
+    self->senttime = webm->latest_timestamp * 1000;
 
     return self->error;
 }
@@ -250,6 +251,8 @@ static int webm_process_tag(shout_t *self, webm_t *webm)
     uint64_t payload_length;
 
     uint64_t timecode;
+    ssize_t track_number_length;
+    uint64_t track_number;
 
     uint64_t to_copy;
 
@@ -300,8 +303,46 @@ static int webm_process_tag(shout_t *self, webm_t *webm)
 
             /* report timecode */
             webm->cluster_timestamp = timecode;
+            webm->latest_timestamp = timecode;
 
             /* TODO: detect backwards jumps and rewrite to be monotonic */
+            break;
+
+        case WEBM_SIMPLE_BLOCK_ID:
+            /* extract simple block timecode */
+
+            /* simple blocks start with a varint, so read it to
+             * know the offset of the following numbers
+             */
+            track_number_length = ebml_parse_var_int(start_of_buffer + tag_length,
+                                                     end_of_buffer, &track_number);
+            if(track_number_length == 0) {
+                webm->waiting_for_more_input = true;
+                return self->error;
+            } else if(track_number_length < 0) {
+                return self->error = SHOUTERR_INSANE;
+            }
+
+            /* now read the actual (signed 16-bit) timecode;
+             * this code is relative to the Cluster's timecode.
+             *
+             * ASSUMPTION: it will not actually be negative,
+             * since WebM encoding guidelines advise all timestamps
+             * be monotonically increasing.
+             */
+            status = ebml_parse_sized_int(start_of_buffer + tag_length + track_number_length,
+                                          end_of_buffer, 2, true, &timecode);
+
+            if(status == 0) {
+                webm->waiting_for_more_input = true;
+                return self->error;
+            } else if(status < 0) {
+                return self->error = SHOUTERR_INSANE;
+            }
+
+            /* report timecode */
+            webm->latest_timestamp = webm->cluster_timestamp + timecode;
+
             break;
     }
 
