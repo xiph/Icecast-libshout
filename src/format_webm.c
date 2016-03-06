@@ -40,6 +40,19 @@
 /* A value that no EBML var-int is allowed to take. */
 #define EBML_UNKNOWN ((uint64_t) -1)
 
+/* masks to turn the tag ID varints from the Matroska spec
+ * into their parsed-as-number equivalents */
+#define EBML_LONG_MASK (~0x10000000)
+#define EBML_SHORT_MASK (~0x80)
+
+/* tag IDs we're interested in */
+#define WEBM_EBML_ID    (0x1A45DFA3 & EBML_LONG_MASK)
+#define WEBM_SEGMENT_ID (0x18538067 & EBML_LONG_MASK)
+#define WEBM_CLUSTER_ID (0x1F43B675 & EBML_LONG_MASK)
+
+#define WEBM_TIMECODE_ID     (0xE7 & EBML_SHORT_MASK)
+#define WEBM_SIMPLE_BLOCK_ID (0xA3 & EBML_SHORT_MASK)
+
 typedef enum webm_parsing_state {
     WEBM_STATE_READ_TAG = 0,
     WEBM_STATE_COPY_THRU
@@ -91,6 +104,7 @@ static int flush_output(shout_t *self, webm_t *webm);
 
 static ssize_t ebml_parse_tag(unsigned char *buffer,
                               unsigned char *buffer_end,
+                              uint64_t *tag_id,
                               uint64_t *payload_length);
 static ssize_t ebml_parse_var_int(unsigned char *buffer,
                                   unsigned char *buffer_end,
@@ -222,13 +236,14 @@ static int webm_process(shout_t *self, webm_t *webm)
 static int webm_process_tag(shout_t *self, webm_t *webm)
 {
     ssize_t tag_length;
+    uint64_t tag_id;
     uint64_t payload_length;
 
     unsigned char *start_of_buffer = webm->input_buffer + webm->input_read_position;
     unsigned char *end_of_buffer = webm->input_buffer + webm->input_write_position;
 
     /* parse tag header */
-    tag_length = ebml_parse_tag(start_of_buffer, end_of_buffer, &payload_length);
+    tag_length = ebml_parse_tag(start_of_buffer, end_of_buffer, &tag_id, &payload_length);
     if(tag_length == 0) {
         webm->waiting_for_more_input = true;
     } else if(tag_length < 0) {
@@ -337,16 +352,17 @@ static int flush_output(shout_t *self, webm_t *webm)
 
 static ssize_t ebml_parse_tag(unsigned char *buffer,
                               unsigned char *buffer_end,
+                              uint64_t *tag_id,
                               uint64_t *payload_length)
 {
     ssize_t type_length;
     ssize_t size_length;
-    uint64_t value;
 
+    *tag_id = 0;
     *payload_length = 0;
 
     /* read past the type tag */
-    type_length = ebml_parse_var_int(buffer, buffer_end, &value);
+    type_length = ebml_parse_var_int(buffer, buffer_end, tag_id);
 
     if (type_length <= 0) {
         return type_length;
