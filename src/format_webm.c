@@ -37,6 +37,9 @@
 
 /* -- local datatypes -- */
 
+/* A value that no EBML var-int is allowed to take. */
+#define EBML_UNKNOWN ((uint64_t) -1)
+
 typedef enum webm_parsing_state {
     WEBM_STATE_READ_TAG = 0,
     WEBM_STATE_COPY_THRU
@@ -84,6 +87,13 @@ static size_t copy_possible(const void *src_base,
                             size_t *target_position,
                             size_t target_len);
 static int flush_output(shout_t *self, webm_t *webm);
+
+static ssize_t ebml_parse_tag(unsigned char *buffer,
+                              unsigned char *buffer_end,
+                              uint64_t *payload_length);
+static ssize_t ebml_parse_var_int(unsigned char *buffer,
+                                  unsigned char *buffer_end,
+                                  uint64_t *out_value);
 
 /* -- interface functions -- */
 int shout_open_webm(shout_t *self)
@@ -277,4 +287,105 @@ static int flush_output(shout_t *self, webm_t *webm)
 
     webm->output_position = 0;
     return self->error;
+}
+
+/* -- EBML helper functions -- */
+
+/* Try to parse an EBML tag at the given location, returning the
+ * length of the tag & the length of the associated payload.
+ *
+ * Returns the length of the tag on success, and writes the payload
+ * size to *payload_length.
+ *
+ * Return 0 if it would be necessary to read past the
+ * given end-of-buffer address to read a complete tag.
+ *
+ * Returns -1 if the tag is corrupt.
+ */
+
+static ssize_t ebml_parse_tag(unsigned char *buffer,
+                              unsigned char *buffer_end,
+                              uint64_t *payload_length)
+{
+    ssize_t type_length;
+    ssize_t size_length;
+    uint64_t value;
+
+    *payload_length = 0;
+
+    /* read past the type tag */
+    type_length = ebml_parse_var_int(buffer, buffer_end, &value);
+
+    if (type_length <= 0) {
+        return type_length;
+    }
+
+    /* read the length tag */
+    size_length = ebml_parse_var_int(buffer + type_length, buffer_end, payload_length);
+
+    if (size_length <= 0) {
+        return size_length;
+    }
+
+    return type_length + size_length;
+}
+
+/* Try to parse an EBML variable-length integer.
+ * Returns 0 if there's not enough space to read the number;
+ * Returns -1 if the number is malformed.
+ * Else, returns the length of the number in bytes and writes the
+ * value to *out_value.
+ */
+static ssize_t ebml_parse_var_int(unsigned char *buffer,
+                                  unsigned char *buffer_end,
+                                  uint64_t *out_value)
+{
+    ssize_t size = 1;
+    ssize_t i;
+    unsigned char mask = 0x80;
+    uint64_t value;
+    uint64_t unknown_marker;
+
+    if (buffer >= buffer_end) {
+        return 0;
+    }
+
+    /* find the length marker bit in the first byte */
+    value = buffer[0];
+
+    while (mask) {
+        if (value & mask) {
+            value = value & ~mask;
+            unknown_marker = mask - 1;
+            break;
+        }
+        size++;
+        mask = mask >> 1;
+    }
+
+    /* catch malformed number (no prefix) */
+    if (mask == 0) {
+        return -1;
+    }
+
+    /* catch number bigger than parsing buffer */
+    if (buffer + size - 1 >= buffer_end) {
+        return 0;
+    }
+
+    /* read remaining bytes of (big-endian) number */
+    for (i = 1; i < size; i++) {
+        value = (value << 8) + buffer[i];
+        unknown_marker = (unknown_marker << 8) + 0xFF;
+    }
+
+    /* catch special "unknown" length */
+
+    if (value == unknown_marker) {
+        *out_value = EBML_UNKNOWN;
+    } else {
+        *out_value = value;
+    }
+
+    return size;
 }
