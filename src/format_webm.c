@@ -52,6 +52,8 @@
 
 #define WEBM_TIMECODE_ID     (0xE7 & EBML_SHORT_MASK)
 #define WEBM_SIMPLE_BLOCK_ID (0xA3 & EBML_SHORT_MASK)
+#define WEBM_BLOCK_GROUP_ID (0xA0 & EBML_SHORT_MASK)
+#define WEBM_BLOCK_ID (0xA1 & EBML_SHORT_MASK)
 
 typedef enum webm_parsing_state {
     WEBM_STATE_READ_TAG = 0,
@@ -60,8 +62,6 @@ typedef enum webm_parsing_state {
 
 /* state for a filter that extracts timestamp
  * information from a WebM stream
- */
-/* TODO: extract timestamps from non-SimpleBlock Blocks.
  */
 /* TODO: provide for "fake chaining", where
  * concatinated files have extra headers stripped
@@ -308,11 +308,18 @@ static int webm_process_tag(shout_t *self, webm_t *webm)
             /* TODO: detect backwards jumps and rewrite to be monotonic */
             break;
 
-        case WEBM_SIMPLE_BLOCK_ID:
-            /* extract simple block timecode */
+        case WEBM_BLOCK_GROUP_ID:
+            /* open container to process children */
+            to_copy = tag_length;
 
-            /* simple blocks start with a varint, so read it to
-             * know the offset of the following numbers
+            break;
+
+        case WEBM_SIMPLE_BLOCK_ID:
+        case WEBM_BLOCK_ID:
+            /* extract block or simple block timecode */
+
+            /* [simple] blocks start with a varint, so read it to
+             * know the offset of the following fields
              */
             track_number_length = ebml_parse_var_int(start_of_buffer + tag_length,
                                                      end_of_buffer, &track_number);
