@@ -34,6 +34,7 @@
 #include "util.h"
 
 #include <sys/types.h>
+
 #ifdef HAVE_STDINT_H
 #   include <stdint.h>
 #elif defined (HAVE_INTTYPES_H)

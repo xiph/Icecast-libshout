@@ -52,7 +52,6 @@ int _shout_open_speex(ogg_codec_t *codec, ogg_page *page)
 
     if ( !(speex_data->sh = speex_packet_to_header((char*)packet.packet, packet.bytes)) ) {
         free_speex_data(speex_data);
-
         return SHOUTERR_UNSUPPORTED;
     }
 
@@ -71,8 +70,9 @@ static int read_speex_page(ogg_codec_t *codec, ogg_page *page)
 
     (void)          page;
 
-    while (ogg_stream_packetout(&codec->os, &packet) > 0)
+    while (ogg_stream_packetout(&codec->os, &packet) > 0) {
         samples += speex_data->sh->frames_per_packet * speex_data->sh->frame_size;
+    }
 
     codec->senttime += ((samples * 1000000) / speex_data->sh->rate);
 

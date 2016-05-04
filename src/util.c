@@ -30,6 +30,7 @@
 #ifdef HAVE_SYS_SOCKET_H
 #   include <sys/socket.h>
 #endif
+
 #ifdef HAVE_WINSOCK2_H
 #   include <winsock2.h>
 #endif
@@ -114,7 +115,8 @@ int _shout_util_read_header(int sock, char *buff, unsigned long len)
         read_bytes = 0;
 
         if ((read_bytes = recv(sock, &c, 1, 0))) {
-            if (c != '\r') buff[pos++] = c;
+            if (c != '\r')
+                buff[pos++] = c;
             if ((pos > 1) && (buff[pos - 1] == '\n' &&
                               buff[pos - 2] == '\n')) {
                 ret = 1;
@@ -125,7 +127,8 @@ int _shout_util_read_header(int sock, char *buff, unsigned long len)
         }
     }
 
-	if (ret) buff[pos] = '\0';
+	if (ret)
+        buff[pos] = '\0';
 
     return ret;
 }
@@ -166,8 +169,10 @@ char *_shout_util_base64_encode(char *data)
 }
 
 /* modified from libshout1, which credits Rick Franchuk <rickf@transpect.net>.
- * Caller must free result. */
-static char *_url_encode_with_table(const char *data, const char table[256]) {
+ * Caller must free result.
+ */
+static char *_url_encode_with_table(const char *data, const char table[256])
+{
     const char *p;
     char *q, *dest;
     int digit;
@@ -179,8 +184,7 @@ static char *_url_encode_with_table(const char *data, const char table[256]) {
             n += 2;
     }
 
-    if (!(dest = malloc(n+1)))
-        return NULL;
+    if (!(dest = malloc(n+1))) return NULL;
 
     for (p = data, q = dest; *p; p++, q++) {
         if (table[(unsigned char)(*p)]) {
@@ -199,11 +203,13 @@ static char *_url_encode_with_table(const char *data, const char table[256]) {
     return dest;
 }
 
-char *_shout_util_url_encode(const char *data) {
+char *_shout_util_url_encode(const char *data)
+{
     return _url_encode_with_table(data, safechars);
 }
 
-char *_shout_util_url_encode_resource(const char *data) {
+char *_shout_util_url_encode_resource(const char *data)
+{
     return _url_encode_with_table(data, safechars_plus_gen_delims_minus_3F_and_23);
 }
 
@@ -258,16 +264,15 @@ int _shout_util_dict_set(util_dict *dict, const char *key, const char *val)
 
     if (!dict) {
         dict = _shout_util_dict_new();
-        if (!dict) {
+        if (!dict)
             return SHOUTERR_MALLOC;
-        }
         if (prev)
             prev->next = dict;
     }
 
-	if (dict->key)
+    if (dict->key) {
         free(dict->val);
-	else if (!(dict->key = strdup(key))) {
+    } else if (!(dict->key = strdup(key))) {
         if (prev)
             prev->next = NULL;
         _shout_util_dict_free(dict);
@@ -284,8 +289,10 @@ int _shout_util_dict_set(util_dict *dict, const char *key, const char *val)
 }
 
 /* given a dictionary, URL-encode each key and val and stringify them in order as
-   key=val&key=val... if val is set, or just key&key if val is NULL.
-   TODO: Memory management needs overhaul. */
+ * key=val&key=val... if val is set, or just key&key if val is NULL.
+ *
+ * TODO: Memory management needs overhaul.
+ */
 char *_shout_util_dict_urlencode(util_dict *dict, char delim)
 {
     size_t reslen, resoffset;
@@ -318,8 +325,9 @@ char *_shout_util_dict_urlencode(util_dict *dict, char delim)
                 free(enc);
                 free(res);
                 return NULL;
-			} else
+            } else {
                 res = tmp;
+            }
             snprintf(res + resoffset, reslen - resoffset, "%c%s", delim, enc);
             free(enc);
         }
@@ -338,8 +346,9 @@ char *_shout_util_dict_urlencode(util_dict *dict, char delim)
             free(enc);
             free(res);
             return NULL;
-		} else
+        } else {
             res = tmp;
+        }
         snprintf(res + resoffset, reslen - resoffset, "=%s", enc);
         free(enc);
     }
@@ -347,7 +356,8 @@ char *_shout_util_dict_urlencode(util_dict *dict, char delim)
     return res;
 }
 
-const char *_shout_util_dict_next(util_dict **dict, const char **key, const char **val) {
+const char *_shout_util_dict_next(util_dict **dict, const char **key, const char **val)
+{
     *key = NULL;
     *val = NULL;
 

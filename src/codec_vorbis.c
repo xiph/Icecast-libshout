@@ -63,7 +63,6 @@ int _shout_open_vorbis(ogg_codec_t *codec, ogg_page *page)
 
     if (vorbis_synthesis_headerin(&vorbis_data->vi, &vorbis_data->vc, &packet) < 0) {
         free_vorbis_data(vorbis_data);
-
         return SHOUTERR_UNSUPPORTED;
     }
 
@@ -79,7 +78,6 @@ static int read_vorbis_page(ogg_codec_t *codec, ogg_page *page)
     ogg_packet      packet;
     vorbis_data_t  *vorbis_data = codec->codec_data;
     uint64_t        samples = 0;
-
     (void)          page;
 
     if (codec->headers < 3) {
@@ -92,8 +90,9 @@ static int read_vorbis_page(ogg_codec_t *codec, ogg_page *page)
         return SHOUTERR_SUCCESS;
     }
 
-    while (ogg_stream_packetout(&codec->os, &packet) > 0)
+    while (ogg_stream_packetout(&codec->os, &packet) > 0) {
         samples += vorbis_blocksize(vorbis_data, &packet);
+    }
 
     codec->senttime += ((samples * 1000000) / vorbis_data->vi.rate);
 

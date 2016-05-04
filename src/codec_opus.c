@@ -41,6 +41,7 @@ typedef struct {
     uint32_t input_sample_rate;
     int      gain;              /* in dB S7.8 should be zero whenever possible */
     int      channel_mapping;
+
     /* The rest is only used if channel_mapping != 0 */
     int      nb_streams;
     int      nb_coupled;
@@ -108,52 +109,56 @@ static int opus_header_parse(const unsigned char *packet, int len, OpusHeader *h
     p.data      = packet;
     p.maxlen    = len;
     p.pos       = 0;
+
     str[8] = 0;
-   if(len<19)return 0;
+
+    if (len<19)
+        return 0;
+
     read_chars(&p, (unsigned char*)str, 8);
     if (strcmp(str, "OpusHead")!=0)
         return 0;
 
     if (!read_chars(&p, &ch, 1))
         return 0;
+
     h->version = ch;
     if ((h->version&240) != 0) /* Only major version 0 supported. */
         return 0;
 
     if (!read_chars(&p, &ch, 1))
         return 0;
+
     h->channels = ch;
     if (h->channels == 0)
         return 0;
 
     if (!read_uint16(&p, &shortval))
         return 0;
-    h->preskip = shortval;
 
+    h->preskip = shortval;
     if (!read_uint32(&p, &h->input_sample_rate))
         return 0;
 
     if (!read_uint16(&p, &shortval))
         return 0;
-    h->gain = (short)shortval;
 
+    h->gain = (short)shortval;
     if (!read_chars(&p, &ch, 1))
         return 0;
+
     h->channel_mapping = ch;
-
-   if (h->channel_mapping != 0)
-   {
+    if (h->channel_mapping != 0) {
         if (!read_chars(&p, &ch, 1))
             return 0;
+
         h->nb_streams = ch;
-
         if (!read_chars(&p, &ch, 1))
             return 0;
-        h->nb_coupled = ch;
 
+        h->nb_coupled = ch;
         /* Multi-stream support */
-      for (i=0;i<h->channels;i++)
-      {
+        for (i=0; i < h->channels; i++) {
             if (!read_chars(&p, &h->stream_map[i], 1))
                 return 0;
         }
@@ -163,8 +168,10 @@ static int opus_header_parse(const unsigned char *packet, int len, OpusHeader *h
         h->stream_map[0]    = 0;
         h->stream_map[1]    = 1;
     }
+
     /* For version 0/1 we know there won't be any more data
-       so reject any that have data past the end.*/
+     * so reject any that have data past the end.
+     */
      if ((h->version==0 || h->version==1) && p.pos != len)
         return 0;
     return 1;
@@ -174,20 +181,20 @@ static int opus_header_parse(const unsigned char *packet, int len, OpusHeader *h
 static int packet_get_samples_per_frame(const unsigned char *data, int32_t Fs)
 {
     int audiosize;
-   if (data[0]&0x80)
-   {
+
+    if (data[0] & 0x80) {
         audiosize = ((data[0] >> 3) & 0x3);
         audiosize = (Fs << audiosize) / 400;
-   } else if ((data[0]&0x60) == 0x60)
-   {
+    } else if ((data[0]&0x60) == 0x60) {
         audiosize = (data[0] & 0x08) ? Fs / 50 : Fs / 100;
     } else {
         audiosize = ((data[0] >> 3) & 0x3);
-      if (audiosize == 3)
+        if (audiosize == 3) {
             audiosize = Fs * 60 / 1000;
-      else
+        } else {
             audiosize = (Fs << audiosize) / 100;
         }
+    }
     return audiosize;
 }
 
@@ -195,18 +202,21 @@ static int packet_get_samples_per_frame(const unsigned char *data, int32_t Fs)
 static int packet_get_nb_frames(const unsigned char packet[], int32_t len)
 {
     int count;
+
     if (len < 1)
         return -1;
+
     count = packet[0] & 0x3;
-   if (count==0)
+    if (count==0) {
         return 1;
-   else if (count!=3)
+    } else if (count!=3) {
         return 2;
-   else if (len<2)
+    } else if (len<2) {
         return -4;
-   else
+    } else {
         return packet[1] & 0x3F;
     }
+}
 
 /* -- opus functions -- */
 int _shout_open_opus(ogg_codec_t *codec, ogg_page *page)
@@ -242,9 +252,10 @@ static int read_opus_page(ogg_codec_t *codec, ogg_page *page)
     (void)          page;
 
     /* We use the strategy of counting the packet times and ignoring
-       the granpos. This has the advantage of needing less code to
-       sanely handle non-zero starttimes and slightly saner behavior
-       on files with holes. */
+     * the granpos. This has the advantage of needing less code to
+     * sanely handle non-zero starttimes and slightly saner behavior
+     * on files with holes.
+     */
     while (ogg_stream_packetout(&codec->os, &packet) > 0) {
         if (packet.bytes > 0 && (packet.bytes < 2 || memcmp(packet.packet, "Op", 2) != 0)) {
             int32_t spf;
@@ -257,8 +268,9 @@ static int read_opus_page(ogg_codec_t *codec, ogg_page *page)
                     needskip = opus_data->oh.preskip - opus_data->skipped;
                     spp *= spf;
                     /* Opus files can begin with some frames which are
-                       just there to prime the decoder and are not played
-                       these should just be sent as fast as we get them.*/
+                     * just there to prime the decoder and are not played
+                     * these should just be sent as fast as we get them.
+                     */
                     if (needskip > 0) {
                         int skip;
                         skip = spp < needskip ? spp : needskip;
@@ -274,7 +286,6 @@ static int read_opus_page(ogg_codec_t *codec, ogg_page *page)
             }
         }
     }
-
     return SHOUTERR_SUCCESS;
 }
 

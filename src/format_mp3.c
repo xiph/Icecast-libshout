@@ -106,8 +106,8 @@ int shout_open_mp3(shout_t *self)
 
     if (!(mp3_data = (mp3_data_t *)calloc(1, sizeof(mp3_data_t))))
         return SHOUTERR_MALLOC;
-    self->format_data = mp3_data;
 
+    self->format_data = mp3_data;
     self->send        = send_mp3;
     self->close       = close_mp3;
 
@@ -129,6 +129,7 @@ static int send_mp3(shout_t* self, const unsigned char* buff, size_t len)
     start       = 0;
     error       = 0;
     end         = len - 1;
+
     memset(&mh, 0, sizeof(mh));
 
     /* finish the previous frame */
@@ -165,9 +166,9 @@ static int send_mp3(shout_t* self, const unsigned char* buff, size_t len)
         mp3_data->header_bridges = 0;
     }
 
-    /** this is the main loop
-     *** we handle everything but the last 4 bytes...
-     **/
+    /* this is the main loop
+     *  we handle everything but the last 4 bytes...
+     */
     while ((pos + 4) <= len) {
         /* find mp3 header */
         head = (buff[pos] << 24) |
@@ -203,10 +204,11 @@ static int send_mp3(shout_t* self, const unsigned char* buff, size_t len)
                 error = 1;
                 end = pos - 1;
                 count = end - start + 1;
-				if (count > 0)
+                if (count > 0) {
                     ret = shout_send_raw(self, &buff[start], count);
-				else
+                } else {
                     ret = 0;
+                }
 
                 if (ret != count) {
                     if (bridge_buff != NULL)
@@ -259,8 +261,10 @@ static void parse_header(mp3_header_t *mh, uint32_t header)
 {
     mh->syncword    = (header >> 20) & 0x0fff;
     mh->version     = ((header >> 19) & 0x01) ? 0 : 1;
+
     if ((mh->syncword & 0x01) == 0)
         mh->version = 2;
+
     mh->layer               = 3 - ((header >> 17) & 0x03);
     mh->error_protection    = ((header >> 16) & 0x01) ? 0 : 1;
     mh->bitrate_index       = (header >> 12) & 0x0F;
@@ -277,10 +281,11 @@ static void parse_header(mp3_header_t *mh, uint32_t header)
     mh->bitrate     = bitrate[mh->version][mh->layer][mh->bitrate_index];
     mh->samplerate  = samplerate[mh->version][mh->samplerate_index];
 
-	if (mh->version == 0)
+    if (mh->version == 0) {
         mh->samples = 1152;
-	else
+    } else {
         mh->samples = 576;
+    }
 
     if (mh->samplerate)
         mh->framesize = (mh->samples * mh->bitrate * 1000 / mh->samplerate) / 8 + mh->padding;
@@ -314,6 +319,5 @@ static int mp3_header(uint32_t head, mp3_header_t *mh)
 static void close_mp3(shout_t *self)
 {
     mp3_data_t *mp3_data = (mp3_data_t*)self->format_data;
-
     free(mp3_data);
 }

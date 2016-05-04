@@ -132,9 +132,9 @@ static inline int tls_check_pattern(const char *key, const char *pattern)
             return 0;
         pattern++;
     }
-
     return *key == 0 && *pattern == 0;
 }
+
 static inline int tls_check_host(X509 *cert, const char *hostname)
 {
     char common_name[256] = "";
@@ -151,7 +151,9 @@ static inline int tls_check_host(X509 *cert, const char *hostname)
     if (!tls_check_pattern(hostname, common_name))
         return SHOUTERR_TLSBADCERT;
 
-    /* check for inlined \0, see https://www.blackhat.com/html/bh-usa-09/bh-usa-09-archives.html#Marlinspike */
+    /* check for inlined \0, 
+     * see https://www.blackhat.com/html/bh-usa-09/bh-usa-09-archives.html#Marlinspike 
+     */
     for (i = -1; ; i = j) {
         j = X509_NAME_get_index_by_NID(xname, NID_commonName, i);
         if (j == -1)
@@ -213,7 +215,9 @@ int shout_tls_try_connect(shout_tls_t *tls)
         return tls_setup_process(tls);
     return SHOUTERR_UNSUPPORTED;
 }
-int shout_tls_close(shout_tls_t *tls) {
+
+int shout_tls_close(shout_tls_t *tls)
+{
     if (tls->ssl) {
         SSL_shutdown(tls->ssl);
         SSL_free(tls->ssl);

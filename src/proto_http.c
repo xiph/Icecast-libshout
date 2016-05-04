@@ -74,22 +74,27 @@ int shout_create_http_request(shout_t *self)
         case SHOUT_FORMAT_OGG:
             mimetype = "application/ogg";
         break;
+
         case SHOUT_FORMAT_MP3:
             mimetype = "audio/mpeg";
         break;
+
         case SHOUT_FORMAT_WEBM:
             mimetype = "video/webm";
         break;
+
         case SHOUT_FORMAT_WEBMAUDIO:
             mimetype = "audio/webm";
         break;
+
         default:
             return SHOUTERR_INSANE;
         break;
     }
 
     /* this is lazy code that relies on the only error from queue_* being
-     * SHOUTERR_MALLOC */
+     * SHOUTERR_MALLOC
+     */
     do {
         if (!(mount = _shout_util_url_encode_resource(self->mount)))
             break;
@@ -163,17 +168,20 @@ int shout_get_http_response(shout_t *self)
     int          newlines = 0;
 
     /* work from the back looking for \r?\n\r?\n. Anything else means more
-     * is coming. */
+     * is coming.
+     */
     for (queue = self->rqueue.head; queue->next; queue = queue->next) ;
     pc = (char*)queue->data + queue->len - 1;
     blen = queue->len;
     while (blen) {
-		if (*pc == '\n')
+        if (*pc == '\n') {
             newlines++;
+        } else if (*pc != '\r') {
             /* we may have to scan the entire queue if we got a response with
-         * data after the head line (this can happen with eg 401) */
-		else if (*pc != '\r')
+             * data after the head line (this can happen with eg 401)
+             */
             newlines = 0;
+        }
 
         if (newlines == 2)
             return SHOUTERR_SUCCESS;
@@ -335,8 +343,13 @@ int shout_parse_http_response(shout_t *self)
             }
 #ifdef HAVE_OPENSSL
             switch (code) {
-            case 426: self->tls_mode = SHOUT_TLS_RFC2817; break;
-            case 101: self->upgrade_to_tls = 1; break;
+                case 426:
+                    self->tls_mode = SHOUT_TLS_RFC2817;
+                break;
+
+                case 101:
+                    self->upgrade_to_tls = 1;
+                break;
             }
 #endif
             self->retry++;

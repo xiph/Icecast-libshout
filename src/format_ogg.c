@@ -52,6 +52,7 @@ static void free_codecs(ogg_data_t *ogg_data);
 static int  send_page(shout_t *self, ogg_page *page);
 
 typedef int (*codec_open_t)(ogg_codec_t *codec, ogg_page *page);
+
 static codec_open_t codecs[] = {
     _shout_open_vorbis,
 #ifdef HAVE_THEORA
@@ -123,10 +124,8 @@ static int send_ogg(shout_t *self, const unsigned char *data, size_t len)
                         if (self->senttime < codec->senttime)
                             self->senttime = codec->senttime;
                     }
-
                     break;
                 }
-
                 codec = codec->next;
             }
         }

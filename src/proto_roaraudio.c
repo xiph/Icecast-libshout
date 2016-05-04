@@ -57,7 +57,11 @@ typedef enum {
 #define STREAM_NONE ((uint16_t)0xFFFF)
 #define HEADER_SIZE 10
 
-static int command_send(shout_t *self, shout_roar_command_t command, uint16_t stream, const void *data, size_t datalen)
+static int command_send(shout_t                *self,
+                        shout_roar_command_t    command,
+                        uint16_t                stream,
+                        const void             *data,
+                        size_t                  datalen)
 {
     uint8_t header[HEADER_SIZE];
 
@@ -278,17 +282,21 @@ int shout_parse_roaraudio_response(shout_t *self)
         case STATE_IDENT:
             self->protocol_state = STATE_AUTH;
         break;
+
         case STATE_AUTH:
             self->protocol_state = STATE_NEW_STREAM;
         break;
+
         case STATE_NEW_STREAM:
             self->protocol_extra = (((unsigned int)header[2]) << 8) | (unsigned int)header[3];
             self->protocol_state = STATE_EXEC;
         break;
+
         case STATE_EXEC:
             /* ok. everything worked. Continue normally! */
             return SHOUTERR_SUCCESS;
         break;
+
         default:
             return SHOUTERR_INSANE;
         break;

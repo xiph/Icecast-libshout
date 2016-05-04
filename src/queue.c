@@ -68,7 +68,6 @@ int shout_queue_data(shout_queue_t *queue, const unsigned char *data, size_t len
         len -= plen;
         queue->len += plen;
     }
-
     return SHOUTERR_SUCCESS;
 }
 
@@ -94,18 +93,19 @@ int shout_queue_printf(shout_t *self, const char *fmt, ...)
 
     self->error = SHOUTERR_SUCCESS;
     if (len > 0) {
-		if ((size_t)len < sizeof(buffer))
+		if ((size_t)len < sizeof(buffer)) {
             shout_queue_data(&self->wqueue, (unsigned char*)buf, len);
-		else {
+        } else {
             buf = malloc(++len);
             if (buf) {
                 len = vsnprintf(buf, len, fmt, ap_retry);
                 shout_queue_data(&self->wqueue, (unsigned char*)buf, len);
                 free(buf);
-			} else
+			} else {
                 self->error = SHOUTERR_MALLOC;
             }
         }
+    }
 
     va_end(ap_retry);
     va_end(ap);

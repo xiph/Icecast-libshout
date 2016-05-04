@@ -53,7 +53,6 @@ static int  theora_ilog(unsigned int v);
 int _shout_open_theora(ogg_codec_t *codec, ogg_page *page)
 {
     ogg_packet  packet;
-
     (void)      page;
 
     theora_data_t *theora_data = calloc(1, sizeof(theora_data_t));
@@ -67,7 +66,6 @@ int _shout_open_theora(ogg_codec_t *codec, ogg_page *page)
 
     if (theora_decode_header(&theora_data->ti, &theora_data->tc, &packet) < 0) {
         free_theora_data(theora_data);
-
         return SHOUTERR_UNSUPPORTED;
     }
 
@@ -75,6 +73,7 @@ int _shout_open_theora(ogg_codec_t *codec, ogg_page *page)
     codec->read_page    = read_theora_page;
     codec->free_data    = free_theora_data;
     codec->headers      = 1;
+
     theora_data->initial_frames = 0;
 
     return SHOUTERR_SUCCESS;
@@ -88,15 +87,13 @@ static int read_theora_page(ogg_codec_t *codec, ogg_page *page)
 
     granulepos = ogg_page_granulepos(page);
 
-	if (granulepos == 0)
-	{
+	if (granulepos == 0) {
         while (ogg_stream_packetout(&codec->os, &packet) > 0) {
 			if (theora_decode_header(&theora_data->ti, &theora_data->tc, &packet) < 0)
                 return SHOUTERR_INSANE;
             codec->headers++;
         }
-		if (codec->headers == 3)
-        {
+		if (codec->headers == 3) {
             theora_data->granule_shift   = theora_ilog(theora_data->ti.keyframe_frequency_force - 1);
             theora_data->per_frame       = (double)theora_data->ti.fps_denominator / theora_data->ti.fps_numerator * 1000000;
             theora_data->get_start_frame = 1;
@@ -105,30 +102,24 @@ static int read_theora_page(ogg_codec_t *codec, ogg_page *page)
         return SHOUTERR_SUCCESS;
     }
 
-    while (ogg_stream_packetout(&codec->os, &packet) > 0)
-    {
+    while (ogg_stream_packetout(&codec->os, &packet) > 0) {
         if (theora_data->get_start_frame)
             theora_data->initial_frames++;
     }
-	if (granulepos > 0 && codec->headers >= 3)
-    {
+	if (granulepos > 0 && codec->headers >= 3) {
         iframe = granulepos >> theora_data->granule_shift;
         pframe = granulepos - (iframe << theora_data->granule_shift);
 
-        if (theora_data->get_start_frame)
-        {
+        if (theora_data->get_start_frame) {
             /* work out the real start frame, which may not be 0 */
             theora_data->start_frame = iframe + pframe - theora_data->initial_frames;
             codec->senttime = 0;
             theora_data->get_start_frame = 0;
-        }
-        else
-        {
+        } else {
             uint64_t frames = ((iframe + pframe) - theora_data->start_frame);
             codec->senttime = (uint64_t)(frames * theora_data->per_frame);
         }
     }
-
     return SHOUTERR_SUCCESS;
 }
 
