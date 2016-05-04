@@ -19,7 +19,7 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#include <config.h>
+#   include <config.h>
 #endif
 
 #include <sys/types.h>
@@ -28,10 +28,10 @@
 #include <stdlib.h>
 
 #ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
+#   include <sys/socket.h>
 #endif
 #ifdef HAVE_WINSOCK2_H
-#include <winsock2.h>
+#   include <winsock2.h>
 #endif
 
 #include <shout/shout.h>
@@ -144,17 +144,17 @@ char *_shout_util_base64_encode(char *data)
         *out++ = base64table[((*data & 0x03) << 4) | ((*(data + 1) & 0xF0) >> 4)];
 
         switch (chunk) {
-        case 3:
-            *out++ = base64table[((*(data + 1) & 0x0F) << 2) | ((*(data + 2) & 0xC0) >> 6)];
-            *out++ = base64table[(*(data + 2)) & 0x3F];
+            case 3:
+                *out++ = base64table[((*(data + 1) & 0x0F) << 2) | ((*(data + 2) & 0xC0) >> 6)];
+                *out++ = base64table[(*(data + 2)) & 0x3F];
             break;
-        case 2:
-            *out++ = base64table[((*(data + 1) & 0x0F) << 2)];
-            *out++ = '=';
+            case 2:
+                *out++ = base64table[((*(data + 1) & 0x0F) << 2)];
+                *out++ = '=';
             break;
-        case 1:
-            *out++ = '=';
-            *out++ = '=';
+            case 1:
+                *out++ = '=';
+                *out++ = '=';
             break;
         }
         data += chunk;
@@ -261,14 +261,14 @@ int _shout_util_dict_set(util_dict *dict, const char *key, const char *val)
         if (!dict) {
             return SHOUTERR_MALLOC;
         }
-	if (prev)
+        if (prev)
             prev->next = dict;
-        }
+    }
 
 	if (dict->key)
         free(dict->val);
 	else if (!(dict->key = strdup(key))) {
-		if (prev)
+        if (prev)
             prev->next = NULL;
         _shout_util_dict_free(dict);
 
@@ -295,10 +295,10 @@ char *_shout_util_dict_urlencode(util_dict *dict, char delim)
 
     for (res = NULL; dict; dict = dict->next) {
         /* encode key */
-		if (!dict->key)
+        if (!dict->key)
             continue;
         if (!(enc = _shout_util_url_encode(dict->key))) {
-			if (res)
+            if (res)
                 free(res);
             return NULL;
         }
@@ -325,7 +325,7 @@ char *_shout_util_dict_urlencode(util_dict *dict, char delim)
         }
 
         /* encode value */
-		if (!dict->val)
+        if (!dict->val)
             continue;
         if (!(enc = _shout_util_url_encode(dict->val))) {
             free(res);
@@ -351,12 +351,12 @@ const char *_shout_util_dict_next(util_dict **dict, const char **key, const char
     *key = NULL;
     *val = NULL;
 
-	if (!dict)
+    if (!dict)
         return NULL;
     *dict = (*dict)->next;
     while (*dict && !(*dict)->key)
         *dict = (*dict)->next;
-	if (!*dict)
+    if (!*dict)
         return NULL;
     *key = (*dict)->key;
     *val = (*dict)->val;

@@ -20,11 +20,11 @@
  */
 
 #ifdef HAVE_CONFIG_H
-# include <config.h>
+#   include <config.h>
 #endif
 
 #ifdef HAVE_INTTYPES_H
-#include <inttypes.h>
+#   include <inttypes.h>
 #endif
 #include <stdlib.h>
 
@@ -35,15 +35,15 @@
 
 /* -- local data structures -- */
 typedef struct {
-    vorbis_info vi;
-    vorbis_comment vc;
-    int prevW;
+    vorbis_info     vi;
+    vorbis_comment  vc;
+    int             prevW;
 } vorbis_data_t;
 
 /* -- local prototypes -- */
-static int read_vorbis_page(ogg_codec_t *codec, ogg_page *page);
+static int  read_vorbis_page(ogg_codec_t *codec, ogg_page *page);
 static void free_vorbis_data(void *codec_data);
-static int vorbis_blocksize(vorbis_data_t *vd, ogg_packet *p);
+static int  vorbis_blocksize(vorbis_data_t *vd, ogg_packet *p);
 
 /* -- vorbis functions -- */
 int _shout_open_vorbis(ogg_codec_t *codec, ogg_page *page)
@@ -67,20 +67,20 @@ int _shout_open_vorbis(ogg_codec_t *codec, ogg_page *page)
         return SHOUTERR_UNSUPPORTED;
     }
 
-    codec->codec_data = vorbis_data;
-    codec->read_page = read_vorbis_page;
-    codec->free_data = free_vorbis_data;
+    codec->codec_data   = vorbis_data;
+    codec->read_page    = read_vorbis_page;
+    codec->free_data    = free_vorbis_data;
 
     return SHOUTERR_SUCCESS;
 }
 
 static int read_vorbis_page(ogg_codec_t *codec, ogg_page *page)
 {
-    ogg_packet packet;
-    vorbis_data_t *vorbis_data = codec->codec_data;
-    uint64_t samples = 0;
+    ogg_packet      packet;
+    vorbis_data_t  *vorbis_data = codec->codec_data;
+    uint64_t        samples = 0;
 
-    (void)page;
+    (void)          page;
 
     if (codec->headers < 3) {
         while (ogg_stream_packetout(&codec->os, &packet) > 0) {
@@ -112,7 +112,7 @@ static void free_vorbis_data(void *codec_data)
 static int vorbis_blocksize(vorbis_data_t *vd, ogg_packet *p)
 {
     int this = vorbis_packet_blocksize(&vd->vi, p);
-    int ret = (this + vd->prevW) / 4;
+    int ret  = (this + vd->prevW) / 4;
 
     if (!vd->prevW) {
         vd->prevW = this;

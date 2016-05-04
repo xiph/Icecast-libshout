@@ -20,14 +20,14 @@
  */
 
 #ifdef HAVE_CONFIG_H
- #include <config.h>
+#   include <config.h>
 #endif
 
 #include <stdlib.h>
 #include <string.h>
 
 #ifdef HAVE_INTTYPES_H
-#include <inttypes.h>
+#   include <inttypes.h>
 #endif
 
 #include <shout/shout.h>
@@ -38,14 +38,14 @@
 /* no local state */
 
 /* -- static prototypes -- */
-static int send_webm(shout_t *self, const unsigned char *data, size_t len);
+static int  send_webm(shout_t *self, const unsigned char *data, size_t len);
 static void close_webm(shout_t *self);
 
 int shout_open_webm(shout_t *self)
 {
-    self->format_data = NULL;
-    self->send = send_webm;
-    self->close = close_webm;
+    self->format_data   = NULL;
+    self->send          = send_webm;
+    self->close         = close_webm;
 
     return SHOUTERR_SUCCESS;
 }

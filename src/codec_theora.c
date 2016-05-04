@@ -20,11 +20,11 @@
  */
 
 #ifdef HAVE_CONFIG_H
-# include <config.h>
+#   include <config.h>
 #endif
 
 #ifdef HAVE_INTTYPES_H
-# include <inttypes.h>
+#   include <inttypes.h>
 #endif
 #include <stdlib.h>
 
@@ -35,29 +35,29 @@
 
 /* -- local data structures -- */
 typedef struct {
-    theora_info ti;
-    theora_comment tc;
-    uint32_t granule_shift;
-    double per_frame;
-    uint64_t start_frame;
-    int initial_frames;
-    int get_start_frame;
+    theora_info     ti;
+    theora_comment  tc;
+    uint32_t        granule_shift;
+    double          per_frame;
+    uint64_t        start_frame;
+    int             initial_frames;
+    int             get_start_frame;
 } theora_data_t;
 
 /* -- local prototypes -- */
-static int read_theora_page(ogg_codec_t *codec, ogg_page *page);
+static int  read_theora_page(ogg_codec_t *codec, ogg_page *page);
 static void free_theora_data(void *codec_data);
-static int theora_ilog(unsigned int v);
+static int  theora_ilog(unsigned int v);
 
 /* -- theora functions -- */
 int _shout_open_theora(ogg_codec_t *codec, ogg_page *page)
 {
-    ogg_packet packet;
+    ogg_packet  packet;
 
-    (void)page;
+    (void)      page;
 
     theora_data_t *theora_data = calloc(1, sizeof(theora_data_t));
-	if (! theora_data)
+	if (!theora_data)
         return SHOUTERR_MALLOC;
 
     theora_info_init(&theora_data->ti);
@@ -71,10 +71,10 @@ int _shout_open_theora(ogg_codec_t *codec, ogg_page *page)
         return SHOUTERR_UNSUPPORTED;
     }
 
-    codec->codec_data = theora_data;
-    codec->read_page = read_theora_page;
-    codec->free_data = free_theora_data;
-    codec->headers = 1;
+    codec->codec_data   = theora_data;
+    codec->read_page    = read_theora_page;
+    codec->free_data    = free_theora_data;
+    codec->headers      = 1;
     theora_data->initial_frames = 0;
 
     return SHOUTERR_SUCCESS;
@@ -82,9 +82,9 @@ int _shout_open_theora(ogg_codec_t *codec, ogg_page *page)
 
 static int read_theora_page(ogg_codec_t *codec, ogg_page *page)
 {
-    theora_data_t *theora_data = codec->codec_data;
-    ogg_packet packet;
-    ogg_int64_t granulepos, iframe, pframe;
+    theora_data_t  *theora_data = codec->codec_data;
+    ogg_packet      packet;
+    ogg_int64_t     granulepos, iframe, pframe;
 
     granulepos = ogg_page_granulepos(page);
 
@@ -97,8 +97,8 @@ static int read_theora_page(ogg_codec_t *codec, ogg_page *page)
         }
 		if (codec->headers == 3)
         {
-            theora_data->granule_shift = theora_ilog(theora_data->ti.keyframe_frequency_force - 1);
-            theora_data->per_frame = (double)theora_data->ti.fps_denominator / theora_data->ti.fps_numerator * 1000000;
+            theora_data->granule_shift   = theora_ilog(theora_data->ti.keyframe_frequency_force - 1);
+            theora_data->per_frame       = (double)theora_data->ti.fps_denominator / theora_data->ti.fps_numerator * 1000000;
             theora_data->get_start_frame = 1;
         }
 
@@ -109,7 +109,7 @@ static int read_theora_page(ogg_codec_t *codec, ogg_page *page)
     {
         if (theora_data->get_start_frame)
             theora_data->initial_frames++;
-        }
+    }
 	if (granulepos > 0 && codec->headers >= 3)
     {
         iframe = granulepos >> theora_data->granule_shift;

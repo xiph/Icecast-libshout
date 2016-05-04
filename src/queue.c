@@ -22,7 +22,7 @@
  */
 
 #ifdef HAVE_CONFIG_H
- #include <config.h>
+#   include <config.h>
 #endif
 
 #include <stdlib.h>
@@ -36,7 +36,7 @@
 int shout_queue_data(shout_queue_t *queue, const unsigned char *data, size_t len)
 {
     shout_buf_t *buf;
-    size_t plen;
+    size_t       plen;
 
 	if (!len)
         return SHOUTERR_SUCCESS;
@@ -45,7 +45,7 @@ int shout_queue_data(shout_queue_t *queue, const unsigned char *data, size_t len
         queue->head = calloc(1, sizeof(shout_buf_t));
 		if (!queue->head)
             return SHOUTERR_MALLOC;
-        }
+    }
 
     for (buf = queue->head; buf->next; buf = buf->next) ;
 
@@ -80,10 +80,10 @@ int shout_queue_str(shout_t *self, const char *str)
 /* this should be shared with sock_write. Create libicecommon. */
 int shout_queue_printf(shout_t *self, const char *fmt, ...)
 {
-    char buffer[1024];
-    char *buf;
-    va_list ap, ap_retry;
-    int len;
+    char        buffer[1024];
+    char       *buf;
+    va_list     ap, ap_retry;
+    int         len;
 
     buf = buffer;
 
@@ -129,8 +129,8 @@ void shout_queue_free(shout_queue_t *queue)
 ssize_t shout_queue_collect(shout_buf_t *queue, char **buf)
 {
     shout_buf_t *node;
-    size_t pos = 0;
-    size_t len = 0;
+    size_t       pos = 0;
+    size_t       len = 0;
 
     for (node = queue; node; node = node->next)
         len += node->len;

@@ -19,7 +19,7 @@
  */
 
 #ifdef HAVE_CONFIG_H
-# include <config.h>
+#   include <config.h>
 #endif
 
 #include <speex/speex.h>
@@ -34,42 +34,42 @@ typedef struct {
 } speex_data_t;
 
 /* -- local prototypes -- */
-static int read_speex_page(ogg_codec_t *codec, ogg_page *page);
+static int  read_speex_page(ogg_codec_t *codec, ogg_page *page);
 static void free_speex_data(void *codec_data);
 
 /* -- speex functions -- */
 int _shout_open_speex(ogg_codec_t *codec, ogg_page *page)
 {
-    speex_data_t *speex_data = calloc(1, sizeof(speex_data_t));
-    ogg_packet packet;
+    speex_data_t   *speex_data = calloc(1, sizeof(speex_data_t));
+    ogg_packet      packet;
 
-    (void)page;
+    (void)          page;
 
 	if (!speex_data)
         return SHOUTERR_MALLOC;
 
     ogg_stream_packetout(&codec->os, &packet);
 
-    if (!(speex_data->sh = speex_packet_to_header((char*)packet.packet, packet.bytes))) {
+    if ( !(speex_data->sh = speex_packet_to_header((char*)packet.packet, packet.bytes)) ) {
         free_speex_data(speex_data);
 
         return SHOUTERR_UNSUPPORTED;
     }
 
-    codec->codec_data = speex_data;
-    codec->read_page = read_speex_page;
-    codec->free_data = free_speex_data;
+    codec->codec_data   = speex_data;
+    codec->read_page    = read_speex_page;
+    codec->free_data    = free_speex_data;
 
     return SHOUTERR_SUCCESS;
 }
 
 static int read_speex_page(ogg_codec_t *codec, ogg_page *page)
 {
-    ogg_packet packet;
-    speex_data_t *speex_data = codec->codec_data;
-    uint64_t samples = 0;
+    ogg_packet      packet;
+    speex_data_t   *speex_data = codec->codec_data;
+    uint64_t        samples = 0;
 
-    (void)page;
+    (void)          page;
 
     while (ogg_stream_packetout(&codec->os, &packet) > 0)
         samples += speex_data->sh->frames_per_packet * speex_data->sh->frame_size;

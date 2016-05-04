@@ -34,17 +34,17 @@
 
 /* -- local datatypes -- */
 typedef struct {
-    unsigned int frames;
+    unsigned int    frames;
     /* the number of samples for the current frame */
-    int frame_samples;
+    int             frame_samples;
     /* the samplerate of the current frame */
-    int frame_samplerate;
+    int             frame_samplerate;
     /* how many bytes for the rest of this frame */
-    unsigned int frame_left;
+    unsigned int    frame_left;
     /* is the header bridged?? */
-    int header_bridges;
+    int             header_bridges;
     /* put part of header here if it spans a boundary */
-    unsigned char header_bridge[3];
+    unsigned char   header_bridge[3];
 } mp3_data_t;
 
 typedef struct {
@@ -94,41 +94,41 @@ static const unsigned int samplerate[3][4] =
 };
 
 /* -- static prototypes -- */
-static int send_mp3(shout_t *self, const unsigned char *data, size_t len);
+static int  send_mp3(shout_t *self, const unsigned char *data, size_t len);
 static void close_mp3(shout_t *self);
 
 static void parse_header(mp3_header_t *mh, uint32_t header);
-static int mp3_header(uint32_t head, mp3_header_t *mh);
+static int  mp3_header(uint32_t head, mp3_header_t *mh);
 
 int shout_open_mp3(shout_t *self)
 {
     mp3_data_t *mp3_data;
 
-	if (!(mp3_data = (mp3_data_t *)calloc(1, sizeof(mp3_data_t))))
+    if (!(mp3_data = (mp3_data_t *)calloc(1, sizeof(mp3_data_t))))
         return SHOUTERR_MALLOC;
     self->format_data = mp3_data;
 
-    self->send = send_mp3;
-    self->close = close_mp3;
+    self->send        = send_mp3;
+    self->close       = close_mp3;
 
     return SHOUTERR_SUCCESS;
 }
 
 static int send_mp3(shout_t* self, const unsigned char* buff, size_t len)
 {
-    mp3_data_t* mp3_data = (mp3_data_t*)self->format_data;
-    unsigned long pos;
-    uint32_t head;
-    int ret, count;
-    int start, end, error, i;
-    unsigned char *bridge_buff;
-    mp3_header_t mh;
+    mp3_data_t      *mp3_data = (mp3_data_t*)self->format_data;
+    unsigned long    pos;
+    uint32_t         head;
+    int              ret, count;
+    int              start, end, error, i;
+    unsigned char   *bridge_buff;
+    mp3_header_t     mh;
 
     bridge_buff = NULL;
-    pos = 0;
-    start = 0;
-    error = 0;
-    end = len - 1;
+    pos         = 0;
+    start       = 0;
+    error       = 0;
+    end         = len - 1;
     memset(&mh, 0, sizeof(mh));
 
     /* finish the previous frame */
@@ -183,8 +183,8 @@ static int send_mp3(shout_t* self, const unsigned char* buff, size_t len)
                 error = 0;
             }
 
-            mp3_data->frame_samples = mh.samples;
-            mp3_data->frame_samplerate = mh.samplerate;
+            mp3_data->frame_samples     = mh.samples;
+            mp3_data->frame_samplerate  = mh.samplerate;
 
             /* do we have a complete frame in this buffer? */
             if (len - pos >= mh.framesize) {
@@ -209,7 +209,7 @@ static int send_mp3(shout_t* self, const unsigned char* buff, size_t len)
                     ret = 0;
 
                 if (ret != count) {
-					if (bridge_buff != NULL)
+                    if (bridge_buff != NULL)
                         free(bridge_buff);
                     return self->error = SHOUTERR_SOCKET;
                 }
@@ -234,12 +234,12 @@ static int send_mp3(shout_t* self, const unsigned char* buff, size_t len)
     if (!error) {
         /* if there's no errors, lets send the frames */
         count = end - start + 1;
-		if (count > 0)
+        if (count > 0)
             ret = shout_send_raw(self, &buff[start], count);
-		else
+        else
             ret = 0;
 
-		if (bridge_buff != NULL)
+        if (bridge_buff != NULL)
             free(bridge_buff);
 
         if (ret == count) {
@@ -249,7 +249,7 @@ static int send_mp3(shout_t* self, const unsigned char* buff, size_t len)
         }
     }
 
-	if (bridge_buff != NULL)
+    if (bridge_buff != NULL)
         free(bridge_buff);
 
     return self->error = SHOUTERR_SUCCESS;
@@ -257,34 +257,34 @@ static int send_mp3(shout_t* self, const unsigned char* buff, size_t len)
 
 static void parse_header(mp3_header_t *mh, uint32_t header)
 {
-    mh->syncword = (header >> 20) & 0x0fff;
-    mh->version = ((header >> 19) & 0x01) ? 0 : 1;
-	if ((mh->syncword & 0x01) == 0)
+    mh->syncword    = (header >> 20) & 0x0fff;
+    mh->version     = ((header >> 19) & 0x01) ? 0 : 1;
+    if ((mh->syncword & 0x01) == 0)
         mh->version = 2;
-    mh->layer = 3 - ((header >> 17) & 0x03);
-    mh->error_protection = ((header >> 16) & 0x01) ? 0 : 1;
-    mh->bitrate_index = (header >> 12) & 0x0F;
-    mh->samplerate_index = (header >> 10) & 0x03;
-    mh->padding = (header >> 9) & 0x01;
-    mh->extension = (header >> 8) & 0x01;
-    mh->mode = (header >> 6) & 0x03;
-    mh->mode_ext = (header >> 4) & 0x03;
-    mh->copyright = (header >> 3) & 0x01;
-    mh->original = (header >> 2) & 0x01;
-    mh->emphasis = header & 0x03;
+    mh->layer               = 3 - ((header >> 17) & 0x03);
+    mh->error_protection    = ((header >> 16) & 0x01) ? 0 : 1;
+    mh->bitrate_index       = (header >> 12) & 0x0F;
+    mh->samplerate_index    = (header >> 10) & 0x03;
+    mh->padding             = (header >> 9) & 0x01;
+    mh->extension           = (header >> 8) & 0x01;
+    mh->mode                = (header >> 6) & 0x03;
+    mh->mode_ext            = (header >> 4) & 0x03;
+    mh->copyright           = (header >> 3) & 0x01;
+    mh->original            = (header >> 2) & 0x01;
+    mh->emphasis            = header & 0x03;
 
-    mh->stereo = (mh->mode == MPEG_MODE_MONO) ? 1 : 2;
-    mh->bitrate = bitrate[mh->version][mh->layer][mh->bitrate_index];
-    mh->samplerate = samplerate[mh->version][mh->samplerate_index];
+    mh->stereo      = (mh->mode == MPEG_MODE_MONO) ? 1 : 2;
+    mh->bitrate     = bitrate[mh->version][mh->layer][mh->bitrate_index];
+    mh->samplerate  = samplerate[mh->version][mh->samplerate_index];
 
 	if (mh->version == 0)
         mh->samples = 1152;
 	else
         mh->samples = 576;
 
-	if(mh->samplerate)
+    if (mh->samplerate)
         mh->framesize = (mh->samples * mh->bitrate * 1000 / mh->samplerate) / 8 + mh->padding;
-    }
+}
 
 /* mp3 frame parsing stuff */
 static int mp3_header(uint32_t head, mp3_header_t *mh)
@@ -293,19 +293,19 @@ static int mp3_header(uint32_t head, mp3_header_t *mh)
     parse_header(mh, head);
 
     /* check for syncword */
-	if ((mh->syncword & 0x0ffe) != 0x0ffe)
+    if ((mh->syncword & 0x0ffe) != 0x0ffe)
         return 0;
 
     /* check that layer is valid */
-	if (mh->layer == 0)
+    if (mh->layer == 0)
         return 0;
 
     /* make sure bitrate is sane */
-	if (mh->bitrate == 0)
+    if (mh->bitrate == 0)
         return 0;
 
     /* make sure samplerate is sane */
-	if (mh->samplerate == 0)
+    if (mh->samplerate == 0)
         return 0;
 
     return 1;

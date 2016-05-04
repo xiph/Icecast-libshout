@@ -31,21 +31,21 @@ typedef struct _util_dict {
     struct _util_dict *next;
 } util_dict;
 
-char *_shout_util_strdup(const char *s);
+char 		*_shout_util_strdup(const char *s);
 
-util_dict *_shout_util_dict_new(void);
-void _shout_util_dict_free(util_dict *dict);
+util_dict 	*_shout_util_dict_new(void);
+void 		 _shout_util_dict_free(util_dict *dict);
 /* dict, key must not be NULL. */
-int _shout_util_dict_set(util_dict *dict, const char *key, const char *val);
-const char *_shout_util_dict_get(util_dict *dict, const char *key);
-char *_shout_util_dict_urlencode(util_dict *dict, char delim);
+int 		 _shout_util_dict_set(util_dict *dict, const char *key, const char *val);
+const char 	*_shout_util_dict_get(util_dict *dict, const char *key);
+char 		*_shout_util_dict_urlencode(util_dict *dict, char delim);
 
 const char *_shout_util_dict_next(util_dict **dict, const char **key, const char **val);
 #define _SHOUT_DICT_FOREACH(init, var, keyvar, valvar) for ((var) = (init), (keyvar) = (var)->key ? (var)->key : _shout_util_dict_next(& (var), & (keyvar), & (valvar)), (valvar) = (var)->val; (var); _shout_util_dict_next(& (var), & (keyvar), & (valvar)))
 
-char *_shout_util_base64_encode(char *data);
-char *_shout_util_url_encode(const char *data);
-char *_shout_util_url_encode_resource(const char *data);
-int _shout_util_read_header(int sock, char *buff, unsigned long len);
+char 	*_shout_util_base64_encode(char *data);
+char 	*_shout_util_url_encode(const char *data);
+char 	*_shout_util_url_encode_resource(const char *data);
+int  	 _shout_util_read_header(int sock, char *buff, unsigned long len);
 
 #endif /* __LIBSHOUT_UTIL_H__ */

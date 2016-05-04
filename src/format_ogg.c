@@ -20,14 +20,14 @@
  */
 
 #ifdef HAVE_CONFIG_H
- #include <config.h>
+#   include <config.h>
 #endif
 
 #include <stdlib.h>
 #include <string.h>
 
 #ifdef HAVE_INTTYPES_H
-#include <inttypes.h>
+#   include <inttypes.h>
 #endif
 
 #include <ogg/ogg.h>
@@ -38,18 +38,18 @@
 
 /* -- local datatypes -- */
 typedef struct {
-    ogg_sync_state oy;
-    ogg_codec_t *codecs;
-    char bos;
+    ogg_sync_state  oy;
+    ogg_codec_t    *codecs;
+    char            bos;
 } ogg_data_t;
 
 /* -- static prototypes -- */
-static int send_ogg(shout_t *self, const unsigned char *data, size_t len);
+static int  send_ogg(shout_t *self, const unsigned char *data, size_t len);
 static void close_ogg(shout_t *self);
-static int open_codec(ogg_codec_t *codec, ogg_page *page);
+static int  open_codec(ogg_codec_t *codec, ogg_page *page);
 static void free_codec(ogg_codec_t *codec);
 static void free_codecs(ogg_data_t *ogg_data);
-static int send_page(shout_t *self, ogg_page *page);
+static int  send_page(shout_t *self, ogg_page *page);
 
 typedef int (*codec_open_t)(ogg_codec_t *codec, ogg_page *page);
 static codec_open_t codecs[] = {
@@ -68,14 +68,14 @@ int shout_open_ogg(shout_t *self)
 {
     ogg_data_t *ogg_data;
 
-	if (!(ogg_data = (ogg_data_t *)calloc(1, sizeof(ogg_data_t))))
+    if (!(ogg_data = (ogg_data_t *)calloc(1, sizeof(ogg_data_t))))
         return self->error = SHOUTERR_MALLOC;
     self->format_data = ogg_data;
 
     ogg_sync_init(&ogg_data->oy);
     ogg_data->bos = 1;
 
-    self->send = send_ogg;
+    self->send  = send_ogg;
     self->close = close_ogg;
 
     return SHOUTERR_SUCCESS;
@@ -83,10 +83,10 @@ int shout_open_ogg(shout_t *self)
 
 static int send_ogg(shout_t *self, const unsigned char *data, size_t len)
 {
-    ogg_data_t *ogg_data = (ogg_data_t*)self->format_data;
+    ogg_data_t  *ogg_data = (ogg_data_t*)self->format_data;
     ogg_codec_t *codec;
-    char *buffer;
-    ogg_page page;
+    char        *buffer;
+    ogg_page     page;
 
     buffer = ogg_sync_buffer(&ogg_data->oy, len);
     memcpy(buffer, data, len);
@@ -100,10 +100,10 @@ static int send_ogg(shout_t *self, const unsigned char *data, size_t len)
             }
 
             codec = calloc(1, sizeof(ogg_codec_t));
-			if (! codec)
+            if (! codec)
                 return self->error = SHOUTERR_MALLOC;
 
-			if ((self->error = open_codec(codec, &page)) != SHOUTERR_SUCCESS)
+            if ((self->error = open_codec(codec, &page)) != SHOUTERR_SUCCESS)
                 return self->error;
 
             codec->headers = 1;
@@ -120,9 +120,9 @@ static int send_ogg(shout_t *self, const unsigned char *data, size_t len)
                         ogg_stream_pagein(&codec->os, &page);
                         codec->read_page(codec, &page);
 
-						if (self->senttime < codec->senttime)
+                        if (self->senttime < codec->senttime)
                             self->senttime = codec->senttime;
-                        }
+                    }
 
                     break;
                 }
@@ -131,7 +131,7 @@ static int send_ogg(shout_t *self, const unsigned char *data, size_t len)
             }
         }
 
-		if ((self->error = send_page(self, &page)) != SHOUTERR_SUCCESS)
+        if ((self->error = send_page(self, &page)) != SHOUTERR_SUCCESS)
             return self->error;
         }
 
@@ -148,14 +148,14 @@ static void close_ogg(shout_t *self)
 
 static int open_codec(ogg_codec_t *codec, ogg_page *page)
 {
-    codec_open_t this_codec;
-    int i = 0;
+    codec_open_t    this_codec;
+    int             i = 0;
 
     while ((this_codec = codecs[i])) {
         ogg_stream_init(&codec->os, ogg_page_serialno(page));
         ogg_stream_pagein(&codec->os, page);
 
-		if (this_codec(codec, page) == SHOUTERR_SUCCESS)
+        if (this_codec(codec, page) == SHOUTERR_SUCCESS)
             return SHOUTERR_SUCCESS;
 
         ogg_stream_clear(&codec->os);
@@ -170,7 +170,7 @@ static void free_codecs(ogg_data_t *ogg_data)
 {
     ogg_codec_t *codec, *next;
 
-	if (ogg_data == NULL)
+    if (ogg_data == NULL)
         return;
 
     codec = ogg_data->codecs;
@@ -184,7 +184,7 @@ static void free_codecs(ogg_data_t *ogg_data)
 
 static void free_codec(ogg_codec_t *codec)
 {
-	if (codec->free_data)
+    if (codec->free_data)
         codec->free_data(codec->codec_data);
     ogg_stream_clear(&codec->os);
     free(codec);
@@ -195,10 +195,10 @@ static int send_page(shout_t *self, ogg_page *page)
     int ret;
 
     ret = shout_send_raw(self, page->header, page->header_len);
-	if (ret != page->header_len)
+    if (ret != page->header_len)
         return self->error = SHOUTERR_SOCKET;
     ret = shout_send_raw(self, page->body, page->body_len);
-	if (ret != page->body_len)
+    if (ret != page->body_len)
         return self->error = SHOUTERR_SOCKET;
 
     return SHOUTERR_SUCCESS;

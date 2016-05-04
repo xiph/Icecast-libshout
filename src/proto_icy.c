@@ -22,7 +22,7 @@
  */
 
 #ifdef HAVE_CONFIG_H
- #include <config.h>
+#   include <config.h>
 #endif
 
 #include <shout/shout.h>
@@ -32,7 +32,7 @@ int shout_create_icy_request(shout_t *self)
 {
     const char *bitrate;
     const char *val;
-    int ret;
+    int         ret;
 
     bitrate = shout_get_audio_info(self, SHOUT_AI_BITRATE);
 	if (!bitrate)

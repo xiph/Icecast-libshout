@@ -22,7 +22,7 @@
  */
 
 #ifdef HAVE_CONFIG_H
- #include <config.h>
+#   include <config.h>
 #endif
 
 #include <stdio.h>
@@ -37,13 +37,13 @@
 char *shout_http_basic_authorization(shout_t *self)
 {
     char *out, *in;
-    int len;
+    int   len;
 
-	if (!self || !self->user || !self->password)
+    if (!self || !self->user || !self->password)
         return NULL;
 
     len = strlen(self->user) + strlen(self->password) + 2;
-	if (!(in = malloc(len)))
+    if (!(in = malloc(len)))
         return NULL;
     snprintf(in, len, "%s:%s", self->user, self->password);
     out = _shout_util_base64_encode(in);
@@ -62,41 +62,41 @@ char *shout_http_basic_authorization(shout_t *self)
 
 int shout_create_http_request(shout_t *self)
 {
-    char *auth;
-    char *ai;
-    int ret = SHOUTERR_MALLOC;
-    util_dict *dict;
-    const char *key, *val;
-    const char *mimetype;
-    char *mount = NULL;
+    char        *auth;
+    char        *ai;
+    int          ret = SHOUTERR_MALLOC;
+    util_dict   *dict;
+    const char  *key, *val;
+    const char  *mimetype;
+    char        *mount = NULL;
 
     switch (self->format) {
-    case SHOUT_FORMAT_OGG:
-        mimetype = "application/ogg";
+        case SHOUT_FORMAT_OGG:
+            mimetype = "application/ogg";
         break;
-    case SHOUT_FORMAT_MP3:
-        mimetype = "audio/mpeg";
+        case SHOUT_FORMAT_MP3:
+            mimetype = "audio/mpeg";
         break;
-    case SHOUT_FORMAT_WEBM:
-        mimetype = "video/webm";
+        case SHOUT_FORMAT_WEBM:
+            mimetype = "video/webm";
         break;
-    case SHOUT_FORMAT_WEBMAUDIO:
-        mimetype = "audio/webm";
+        case SHOUT_FORMAT_WEBMAUDIO:
+            mimetype = "audio/webm";
         break;
-    default:
-        return SHOUTERR_INSANE;
+        default:
+            return SHOUTERR_INSANE;
         break;
     }
 
     /* this is lazy code that relies on the only error from queue_* being
      * SHOUTERR_MALLOC */
     do {
-		if (!(mount = _shout_util_url_encode_resource(self->mount)))
+        if (!(mount = _shout_util_url_encode_resource(self->mount)))
             break;
-		if (shout_queue_printf(self, "SOURCE %s HTTP/1.0\r\n", mount))
+        if (shout_queue_printf(self, "SOURCE %s HTTP/1.0\r\n", mount))
             break;
         if (self->password && (self->server_caps & LIBSHOUT_CAP_GOTCAPS)) {
-			if (! (auth = shout_http_basic_authorization(self)))
+            if (! (auth = shout_http_basic_authorization(self)))
                 break;
             if (shout_queue_str(self, auth)) {
                 free(auth);
@@ -104,19 +104,19 @@ int shout_create_http_request(shout_t *self)
             }
             free(auth);
         }
-		if (self->useragent && shout_queue_printf(self, "Host: %s:%i\r\n", self->host, self->port))
+        if (self->useragent && shout_queue_printf(self, "Host: %s:%i\r\n", self->host, self->port))
             break;
-		if (self->useragent && shout_queue_printf(self, "User-Agent: %s\r\n", self->useragent))
+        if (self->useragent && shout_queue_printf(self, "User-Agent: %s\r\n", self->useragent))
             break;
-		if (shout_queue_printf(self, "Content-Type: %s\r\n", mimetype))
+        if (shout_queue_printf(self, "Content-Type: %s\r\n", mimetype))
             break;
-		if (shout_queue_printf(self, "ice-public: %d\r\n", self->public))
+        if (shout_queue_printf(self, "ice-public: %d\r\n", self->public))
             break;
 
-		_SHOUT_DICT_FOREACH(self->meta, dict, key, val) {
-			if (val && shout_queue_printf(self, "ice-%s: %s\r\n", key, val))
+        _SHOUT_DICT_FOREACH(self->meta, dict, key, val) {
+            if (val && shout_queue_printf(self, "ice-%s: %s\r\n", key, val))
                 break;
-            }
+        }
 
         if ((ai = _shout_util_dict_urlencode(self->audio_info, ';'))) {
             if (shout_queue_printf(self, "ice-audio-info: %s\r\n", ai)) {
@@ -125,13 +125,13 @@ int shout_create_http_request(shout_t *self)
             }
             free(ai);
         }
-		if (shout_queue_str(self, "\r\n"))
+        if (shout_queue_str(self, "\r\n"))
             break;
 
         ret = SHOUTERR_SUCCESS;
     } while (0);
 
-	if (mount)
+    if (mount)
         free(mount);
 
     return ret;
@@ -140,14 +140,14 @@ int shout_create_http_request(shout_t *self)
 int shout_create_http_request_upgrade(shout_t *self, const char *proto)
 {
     do {
-		if (shout_queue_str(self, "GET / HTTP/1.1\r\nConnection: Upgrade\r\n"))
+        if (shout_queue_str(self, "GET / HTTP/1.1\r\nConnection: Upgrade\r\n"))
             break;
-		if (shout_queue_printf(self, "Upgrade: %s\r\n", proto))
+        if (shout_queue_printf(self, "Upgrade: %s\r\n", proto))
             break;
         /* Send Host:-header as this one may be used to select cert! */
-		if (shout_queue_printf(self, "Host: %s:%i\r\n", self->host, self->port))
+        if (shout_queue_printf(self, "Host: %s:%i\r\n", self->host, self->port))
             break;
-		if (shout_queue_str(self, "\r\n"))
+        if (shout_queue_str(self, "\r\n"))
             break;
         return SHOUTERR_SUCCESS;
     } while (0);
@@ -157,10 +157,10 @@ int shout_create_http_request_upgrade(shout_t *self, const char *proto)
 
 int shout_get_http_response(shout_t *self)
 {
-    int blen;
-    char *pc;
+    int          blen;
+    char        *pc;
     shout_buf_t *queue;
-    int newlines = 0;
+    int          newlines = 0;
 
     /* work from the back looking for \r?\n\r?\n. Anything else means more
      * is coming. */
@@ -170,12 +170,12 @@ int shout_get_http_response(shout_t *self)
     while (blen) {
 		if (*pc == '\n')
             newlines++;
-        /* we may have to scan the entire queue if we got a response with
+            /* we may have to scan the entire queue if we got a response with
          * data after the head line (this can happen with eg 401) */
 		else if (*pc != '\r')
             newlines = 0;
 
-		if (newlines == 2)
+        if (newlines == 2)
             return SHOUTERR_SUCCESS;
 
         blen--;
@@ -192,11 +192,11 @@ int shout_get_http_response(shout_t *self)
 }
 
 static inline void parse_http_response_caps(shout_t *self, const char *header, const char *str) {
-    const char * end;
-    size_t len;
-    char buf[64];
+    const char *end;
+    size_t      len;
+    char        buf[64];
 
-	if (!self || !header || !str)
+    if (!self || !header || !str)
         return;
 
     do {
@@ -208,7 +208,7 @@ static inline void parse_http_response_caps(shout_t *self, const char *header, c
             len = strlen(str);
         }
 
-		if (len > (sizeof(buf) - 1))
+        if (len > (sizeof(buf) - 1))
             return;
         memcpy(buf, str, len);
         buf[len] = 0;
@@ -243,12 +243,12 @@ static inline void parse_http_response_caps(shout_t *self, const char *header, c
 
 static inline int eat_body(shout_t *self, size_t len, const char *buf, size_t buflen)
 {
-    const char *p;
-    size_t header_len = 0;
-    char buffer[256];
-    ssize_t got;
+    const char  *p;
+    size_t       header_len = 0;
+    char         buffer[256];
+    ssize_t      got;
 
-	if (!len)
+    if (!len)
         return 0;
 
     for (p = buf; p < (buf + buflen - 3); p++) {
@@ -266,7 +266,7 @@ static inline int eat_body(shout_t *self, size_t len, const char *buf, size_t bu
         header_len = buflen;
     }
 
-	if ( (buflen - header_len) > len)
+    if ((buflen - header_len) > len)
         return -1;
 
     len -= buflen - header_len;
@@ -287,17 +287,17 @@ static inline int eat_body(shout_t *self, size_t len, const char *buf, size_t bu
 
 int shout_parse_http_response(shout_t *self)
 {
-    http_parser_t *parser;
-    char *header = NULL;
-    ssize_t hlen;
-    int code;
-    const char *retcode;
-    int ret;
-    char *mount;
+    http_parser_t   *parser;
+    char            *header = NULL;
+    ssize_t          hlen;
+    int              code;
+    const char      *retcode;
+    int              ret;
+    char            *mount;
 
     /* all this copying! */
     hlen = shout_queue_collect(self->rqueue.head, &header);
-	if (hlen <= 0)
+    if (hlen <= 0)
         return SHOUTERR_MALLOC;
     shout_queue_free(&self->rqueue);
 
@@ -330,9 +330,9 @@ int shout_parse_http_response(shout_t *self)
         } else if (code == 401 || code == 405 || code == 426 || code == 101) {
             const char *content_length = httpp_getvar(parser, "content-length");
             if (content_length) {
-				if (eat_body(self, atoi(content_length), header, hlen) == -1)
+                if (eat_body(self, atoi(content_length), header, hlen) == -1)
                     goto failure;
-                }
+            }
 #ifdef HAVE_OPENSSL
             switch (code) {
             case 426: self->tls_mode = SHOUT_TLS_RFC2817; break;
@@ -340,7 +340,7 @@ int shout_parse_http_response(shout_t *self)
             }
 #endif
             self->retry++;
-			if (self->retry > LIBSHOUT_MAX_RETRY)
+            if (self->retry > LIBSHOUT_MAX_RETRY)
                 self->retry = 0;
 
             goto retry;

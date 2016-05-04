@@ -20,16 +20,16 @@
  */
 
 #ifdef HAVE_CONFIG_H
- #include <config.h>
+#   include <config.h>
 #endif
 
 #ifdef HAVE_INTTYPES_H
-#include <inttypes.h>
+#   include <inttypes.h>
 #endif
 
 /* for htonl(). */
 #ifdef HAVE_ARPA_INET_H
-#include <arpa/inet.h>
+#   include <arpa/inet.h>
 #endif
 
 #include <stdio.h>
@@ -47,11 +47,11 @@ typedef enum {
 } shout_roar_protocol_state_t;
 
 typedef enum {
-    CMD_IDENTIFY = 1,
-    CMD_AUTH = 2,
-    CMD_NEW_STREAM = 3,
+    CMD_IDENTIFY    = 1,
+    CMD_AUTH        = 2,
+    CMD_NEW_STREAM  = 3,
     CMD_EXEC_STREAM = 5,
-    CMD_OK = 254
+    CMD_OK          = 254
 } shout_roar_command_t;
 
 #define STREAM_NONE ((uint16_t)0xFFFF)
@@ -102,11 +102,11 @@ static int command_send(shout_t *self, shout_roar_command_t command, uint16_t st
 
 static int shout_create_roaraudio_request_ident(shout_t *self)
 {
-    int ret;
-    size_t datalen;
-    uint8_t *data;
+    int         ret;
+    size_t      datalen;
+    uint8_t    *data;
     const char *agent;
-    uint32_t pid = getpid();
+    uint32_t    pid = getpid();
 
     /* We implement version 1 IDENTIFY header.
      * It has the following structure:
@@ -217,9 +217,9 @@ int shout_create_roaraudio_request(shout_t *self)
 
 int shout_get_roaraudio_response(shout_t *self)
 {
-    shout_buf_t *queue;
-    size_t total_len = 0;
-    uint8_t header[HEADER_SIZE];
+    shout_buf_t   *queue;
+    size_t         total_len = 0;
+    uint8_t        header[HEADER_SIZE];
 
     for (queue = self->rqueue.head; queue; queue = queue->next) {
         if (total_len < 10)
@@ -275,22 +275,22 @@ int shout_parse_roaraudio_response(shout_t *self)
         return SHOUTERR_NOLOGIN;
 
     switch ((shout_roar_protocol_state_t)self->protocol_state) {
-    case STATE_IDENT:
-        self->protocol_state = STATE_AUTH;
+        case STATE_IDENT:
+            self->protocol_state = STATE_AUTH;
         break;
-    case STATE_AUTH:
-        self->protocol_state = STATE_NEW_STREAM;
+        case STATE_AUTH:
+            self->protocol_state = STATE_NEW_STREAM;
         break;
-    case STATE_NEW_STREAM:
-        self->protocol_extra = (((unsigned int)header[2]) << 8) | (unsigned int)header[3];
-        self->protocol_state = STATE_EXEC;
+        case STATE_NEW_STREAM:
+            self->protocol_extra = (((unsigned int)header[2]) << 8) | (unsigned int)header[3];
+            self->protocol_state = STATE_EXEC;
         break;
-    case STATE_EXEC:
-        /* ok. everything worked. Continue normally! */
-        return SHOUTERR_SUCCESS;
+        case STATE_EXEC:
+            /* ok. everything worked. Continue normally! */
+            return SHOUTERR_SUCCESS;
         break;
-    default:
-        return SHOUTERR_INSANE;
+        default:
+            return SHOUTERR_INSANE;
         break;
     }
 
