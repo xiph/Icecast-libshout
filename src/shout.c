@@ -129,7 +129,8 @@ shout_t *shout_new(void)
         return NULL;
     }
 
-    self->tls_mode  = SHOUT_TLS_AUTO;
+    self->tls_mode      = SHOUT_TLS_AUTO;
+    self->tls_mode_used = SHOUTERR_NOTLS;
 #endif
 
     self->port      = LIBSHOUT_DEFAULT_PORT;
@@ -398,7 +399,7 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
         return SHOUTERR_NOCONNECT;
 
 #ifdef HAVE_OPENSSL
-    switch (self->tls_mode) {
+    switch (self->tls_mode_used) {
         case SHOUT_TLS_DISABLED:
             /* nothing to do */
         break;
@@ -1199,22 +1200,40 @@ retry:
 
         case SHOUT_STATE_TLS_PENDING:
 #ifdef HAVE_OPENSSL
-            if (self->tls_mode == SHOUT_TLS_DISABLED) {
-                /* nothing to be done */
-            } else if (self->tls_mode == SHOUT_TLS_AUTO || self->tls_mode == SHOUT_TLS_AUTO_NO_PLAIN) {
-                if (self->server_caps & LIBSHOUT_CAP_GOTCAPS) {
-                    /* We had a probe allready, otherwise just do nothing to poke the server. */
-                    if (self->server_caps & LIBSHOUT_CAP_UPGRADETLS) {
-                        self->tls_mode = SHOUT_TLS_RFC2817;
-                    } else {
-                        if (self->tls_mode == SHOUT_TLS_AUTO_NO_PLAIN)
-                            return SHOUTERR_NOTLS;
-                        self->tls_mode = SHOUT_TLS_DISABLED;
-                    }
-                    self->state = SHOUT_STATE_TLS_PENDING;
-                    goto retry;
+            if (self->tls_mode_used < 0) {
+                switch (self->tls_mode) {
+                    case SHOUT_TLS_DISABLED:
+                    case SHOUT_TLS_RFC2818:
+                    case SHOUT_TLS_RFC2817:
+                        self->tls_mode_used = self->tls_mode;
+                    break;
+                    case SHOUT_TLS_AUTO:
+                    case SHOUT_TLS_AUTO_NO_PLAIN:
+                        if (self->server_caps & LIBSHOUT_CAP_GOTCAPS) {
+                            /* We had a probe allready, otherwise just poke the server. */
+                            if (self->server_caps & LIBSHOUT_CAP_UPGRADETLS) {
+                                self->tls_mode_used = SHOUT_TLS_RFC2817;
+                            } else {
+                                if (self->tls_mode == SHOUT_TLS_AUTO_NO_PLAIN) {
+                                    self->tls_mode_used = SHOUTERR_NOTLS;
+                                    return SHOUTERR_NOTLS;
+                                }
+                                self->tls_mode_used = SHOUT_TLS_DISABLED;
+                            }
+                            self->state = SHOUT_STATE_TLS_PENDING;
+                            goto retry;
+                        } else {
+                            /* TODO: do something. */
+                        }
+                    break;
+                    default:
+                        rc = SHOUTERR_INSANE;
+                        goto failure;
+                    break;
                 }
-            } else if (self->tls_mode == SHOUT_TLS_RFC2818 || self->upgrade_to_tls) {
+            }
+
+            if (self->tls_mode_used == SHOUT_TLS_RFC2818 || self->upgrade_to_tls) {
                 if (!self->tls) {
                     self->tls = shout_tls_new(self, self->socket);
                     if (!self->tls) /* just guessing that it's a malloc error */
@@ -1225,7 +1244,7 @@ retry:
                         return SHOUTERR_BUSY;
                     goto failure;
                 }
-            } else if (self->tls_mode == SHOUT_TLS_RFC2817) {
+            } else if (self->tls_mode_used == SHOUT_TLS_RFC2817) {
                 if ((rc = shout_create_http_request_upgrade(self, "TLS/1.0")) != SHOUTERR_SUCCESS) {
                     if (rc == SHOUTERR_BUSY)
                         return SHOUTERR_BUSY;
@@ -1233,9 +1252,6 @@ retry:
                 }
                 self->state = SHOUT_STATE_REQ_PENDING;
                 goto retry;
-            } else {
-                rc = SHOUTERR_INSANE;
-                goto failure;
             }
 #endif
             self->state = SHOUT_STATE_REQ_CREATION;
@@ -1279,7 +1295,7 @@ retry:
             } else if (rc == SHOUTERR_SOCKET && !(self->server_caps & LIBSHOUT_CAP_GOTCAPS) &&
                 (self->tls_mode == SHOUT_TLS_AUTO || self->tls_mode == SHOUT_TLS_AUTO_NO_PLAIN)) {
                 self->state = SHOUT_STATE_RECONNECT;
-                self->tls_mode = SHOUT_TLS_RFC2818;
+                self->tls_mode_used = SHOUT_TLS_RFC2818;
                 goto retry;
 #endif
             }
