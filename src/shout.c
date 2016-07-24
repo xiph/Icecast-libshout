@@ -1222,8 +1222,6 @@ retry:
                             }
                             self->state = SHOUT_STATE_TLS_PENDING;
                             goto retry;
-                        } else {
-                            /* TODO: do something. */
                         }
                     break;
                     default:
