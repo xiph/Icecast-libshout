@@ -91,5 +91,7 @@ int shout_parse_xaudiocast_response(shout_t *self)
     }
     free(response);
 
+    self->server_caps |= LIBSHOUT_CAP_GOTCAPS;
+
     return SHOUTERR_SUCCESS;
 }

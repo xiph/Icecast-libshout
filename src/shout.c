@@ -1209,20 +1209,7 @@ retry:
                     break;
                     case SHOUT_TLS_AUTO:
                     case SHOUT_TLS_AUTO_NO_PLAIN:
-                        if (self->server_caps & LIBSHOUT_CAP_GOTCAPS) {
-                            /* We had a probe allready, otherwise just poke the server. */
-                            if ((self->server_caps & LIBSHOUT_CAP_UPGRADETLS) && (self->server_caps & LIBSHOUT_CAP_OPTIONS)) {
-                                self->tls_mode_used = SHOUT_TLS_RFC2817;
-                            } else {
-                                if (self->tls_mode == SHOUT_TLS_AUTO_NO_PLAIN) {
-                                    self->tls_mode_used = SHOUTERR_NOTLS;
-                                    return SHOUTERR_NOTLS;
-                                }
-                                self->tls_mode_used = SHOUT_TLS_DISABLED;
-                            }
-                            self->state = SHOUT_STATE_TLS_PENDING;
-                            goto retry;
-                        }
+                        /* Do nothing. This case is handled post poke. */
                     break;
                     default:
                         rc = SHOUTERR_INSANE;
@@ -1305,15 +1292,42 @@ retry:
             if (rc != SHOUTERR_SUCCESS)
                 goto failure;
 
-            if ((rc = parse_response(self)) != SHOUTERR_SUCCESS) {
-                if (rc == SHOUTERR_RETRY)
-                    goto retry;
+            rc = parse_response(self);
+            if (rc == SHOUTERR_RETRY)
+                goto retry;
 
-                if (self->retry) {
-                    self->state = SHOUT_STATE_TLS_PENDING;
-                    goto retry;
-                }
+            if (rc != SHOUTERR_SUCCESS && !self->retry) {
                 goto failure;
+            }
+
+            if (!(self->server_caps & LIBSHOUT_CAP_GOTCAPS)) {
+                rc = SHOUTERR_INSANE;
+                goto failure;
+            }
+
+#ifdef HAVE_OPENSSL
+            if (self->tls_mode_used < 0) {
+                switch (self->tls_mode) {
+                    case SHOUT_TLS_AUTO:
+                    case SHOUT_TLS_AUTO_NO_PLAIN:
+                        if ((self->server_caps & LIBSHOUT_CAP_UPGRADETLS) && (self->server_caps & LIBSHOUT_CAP_OPTIONS)) {
+                            self->tls_mode_used = SHOUT_TLS_RFC2817;
+                        } else {
+                            if (self->tls_mode == SHOUT_TLS_AUTO_NO_PLAIN) {
+                                self->tls_mode_used = SHOUTERR_NOTLS;
+                                rc = SHOUTERR_NOTLS;
+                                goto failure;
+                            }
+                            self->tls_mode_used = SHOUT_TLS_DISABLED;
+                        }
+                    break;
+                }
+            }
+#endif
+
+            if (rc != SHOUTERR_SUCCESS && self->retry) {
+                self->state = SHOUT_STATE_TLS_PENDING;
+                goto retry;
             }
 
             switch (self->format) {

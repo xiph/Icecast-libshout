@@ -281,6 +281,7 @@ int shout_parse_roaraudio_response(shout_t *self)
     switch ((shout_roar_protocol_state_t)self->protocol_state) {
         case STATE_IDENT:
             self->protocol_state = STATE_AUTH;
+            self->server_caps |= LIBSHOUT_CAP_GOTCAPS;
         break;
 
         case STATE_AUTH:
