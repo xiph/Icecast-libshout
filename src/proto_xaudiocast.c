@@ -105,11 +105,20 @@ int shout_parse_xaudiocast_response(shout_t *self)
 
     if (!strstr(response, "OK")) {
         free(response);
-        return SHOUTERR_NOLOGIN;
+
+        /* check to see if that is a response to a POKE. */
+        if (!(self->server_caps & LIBSHOUT_CAP_GOTCAPS)) {
+            self->server_caps |= LIBSHOUT_CAP_GOTCAPS;
+            self->retry++;
+            if (self->retry > LIBSHOUT_MAX_RETRY)
+                self->retry = 0;
+            return SHOUTERR_SOCKET;
+        } else {
+            return SHOUTERR_NOLOGIN;
+        }
     }
     free(response);
 
     self->server_caps |= LIBSHOUT_CAP_GOTCAPS;
-
     return SHOUTERR_SUCCESS;
 }

@@ -1338,7 +1338,11 @@ retry:
 #endif
 
             if (rc != SHOUTERR_SUCCESS && self->retry) {
-                self->state = SHOUT_STATE_TLS_PENDING;
+                if (rc == SHOUTERR_SOCKET) {
+                    self->state = SHOUT_STATE_RECONNECT;
+                } else {
+                    self->state = SHOUT_STATE_TLS_PENDING;
+                }
                 goto retry;
             }
 
@@ -1371,6 +1375,11 @@ retry:
         /* special case, no fallthru to this */
 
         case SHOUT_STATE_RECONNECT:
+#ifdef HAVE_OPENSSL
+            if (self->tls)
+                shout_tls_close(self->tls);
+            self->tls = NULL;
+#endif
             sock_close(self->socket);
             self->state = SHOUT_STATE_UNCONNECTED;
             goto retry;
