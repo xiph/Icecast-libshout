@@ -197,6 +197,7 @@ int     shout_get_http_response(shout_t *self);
 int     shout_parse_http_response(shout_t *self);
 
 int     shout_create_xaudiocast_request(shout_t *self);
+int     shout_get_xaudiocast_response(shout_t *self);
 int     shout_parse_xaudiocast_response(shout_t *self);
 
 int     shout_create_icy_request(shout_t *self);

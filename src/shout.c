@@ -1154,10 +1154,22 @@ static int get_response(shout_t *self)
     if ((rc = shout_queue_data(&self->rqueue, (unsigned char*)buf, rc)))
         return rc;
 
-    if (self->protocol == SHOUT_PROTOCOL_ROARAUDIO)
-        return shout_get_roaraudio_response(self);
+    switch (self->protocol) {
+        case SHOUT_PROTOCOL_HTTP:
+            return shout_get_http_response(self);
+        break;
+        case SHOUT_PROTOCOL_XAUDIOCAST:
+        /* fall through */
+        case SHOUT_PROTOCOL_ICY:
+            return shout_get_xaudiocast_response(self);
+        break;
+        case SHOUT_PROTOCOL_ROARAUDIO:
+            return shout_get_roaraudio_response(self);
+        break;
+    }
 
-    return shout_get_http_response(self);
+    /* we should never reach this code */
+    return SHOUTERR_INSANE;
 }
 
 static int try_connect(shout_t *self)

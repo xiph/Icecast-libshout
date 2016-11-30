@@ -77,6 +77,24 @@ int shout_create_xaudiocast_request(shout_t *self)
     return ret;
 }
 
+int shout_get_xaudiocast_response(shout_t *self)
+{
+    shout_buf_t *queue = self->rqueue.head;
+    unsigned int i;
+
+    do {
+        for (i = 0; i < queue->len; i++) {
+            if (queue->data[i] == '\n') {
+                /* got response */
+                return SHOUTERR_SUCCESS;
+            }
+        }
+    } while ((queue = queue->next));
+
+    /* need more data */
+    return SHOUTERR_BUSY;
+}
+
 int shout_parse_xaudiocast_response(shout_t *self)
 {
     char *response;
