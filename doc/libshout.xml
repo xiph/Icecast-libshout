@@ -717,7 +717,7 @@ Defaults to a list of ciphers considerd secure as of day of release.
 <caution>Setting this to a insecure list may render encryption and authentication useless.</caution>
 <warning>Any application using this call must expose this list to the user.
 If the user can not alter this list your application will harm security badly by
-preventing the user to get to a save value by setting it manually or upgrading
+preventing the user to get to a safe value by setting it manually or upgrading
 libshout.
 <emphasis>Do not use this call if you don't know what you are doing.</emphasis></warning>
 
