@@ -256,7 +256,7 @@ Returns the shout error code of the last error that occured in this connection.
 <funcprototype>
   <funcdef>int <function>shout_send</function></funcdef>
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
-  <paramdef>const unsigned char *<parameter>data></parameter></paramdef>
+  <paramdef>const unsigned char *<parameter>data</parameter></paramdef>
   <paramdef><type>size_t</type> <parameter>len</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
@@ -299,7 +299,7 @@ established by a successful call to
 <funcprototype>
   <funcdef><type>ssize_t</type> <function>shout_send_raw</function></funcdef>
   <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
-  <paramdef>const unsigned char *<parameter>data></parameter></paramdef>
+  <paramdef>const unsigned char *<parameter>data</parameter></paramdef>
   <paramdef><type>size_t</type> <parameter>len</parameter></paramdef>
 </funcprototype>
 </funcsynopsis>
