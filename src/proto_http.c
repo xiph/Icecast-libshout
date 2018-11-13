@@ -230,6 +230,8 @@ static inline void parse_http_response_caps(shout_t *self, const char *header, c
                 self->server_caps |= LIBSHOUT_CAP_POST;
             } else if (strcasecmp(buf, "GET") == 0) {
                 self->server_caps |= LIBSHOUT_CAP_GET;
+            } else if (strcasecmp(buf, "OPTIONS") == 0) {
+                self->server_caps |= LIBSHOUT_CAP_OPTIONS;
             }
         } else if (strcmp(header, "Accept-Encoding") == 0) {
             if (strcasecmp(buf, "chunked") == 0) {
