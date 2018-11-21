@@ -145,7 +145,7 @@ int shout_create_http_request(shout_t *self)
 int shout_create_http_request_upgrade(shout_t *self, const char *proto)
 {
     do {
-        if (shout_queue_str(self, "GET / HTTP/1.1\r\nConnection: Upgrade\r\n"))
+        if (shout_queue_str(self, "OPTIONS * HTTP/1.1\r\nConnection: Upgrade\r\n"))
             break;
         if (shout_queue_printf(self, "Upgrade: %s\r\n", proto))
             break;
@@ -333,17 +333,22 @@ int shout_parse_http_response(shout_t *self)
         self->server_caps |= LIBSHOUT_CAP_GOTCAPS;
         retcode = httpp_getvar(parser, HTTPP_VAR_ERROR_CODE);
         code = atoi(retcode);
+#ifdef HAVE_OPENSSL
+        if (!self->upgrade_to_tls && code >= 200 && code < 300) {
+#else
         if (code >= 200 && code < 300) {
+#endif
             httpp_destroy(parser);
             free(header);
             return SHOUTERR_SUCCESS;
-        } else if (code == 401 || code == 405 || code == 426 || code == 101) {
+        } else if ((code >= 200 && code < 300) || code == 401 || code == 405 || code == 426 || code == 101) {
             const char *content_length = httpp_getvar(parser, "content-length");
             if (content_length) {
                 if (eat_body(self, atoi(content_length), header, hlen) == -1)
                     goto failure;
             }
 #ifdef HAVE_OPENSSL
+            self->upgrade_to_tls = 0;
             switch (code) {
                 case 426:
                     self->tls_mode = SHOUT_TLS_RFC2817;

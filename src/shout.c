@@ -1211,7 +1211,7 @@ retry:
                     case SHOUT_TLS_AUTO_NO_PLAIN:
                         if (self->server_caps & LIBSHOUT_CAP_GOTCAPS) {
                             /* We had a probe allready, otherwise just poke the server. */
-                            if (self->server_caps & LIBSHOUT_CAP_UPGRADETLS) {
+                            if ((self->server_caps & LIBSHOUT_CAP_UPGRADETLS) && (self->server_caps & LIBSHOUT_CAP_OPTIONS)) {
                                 self->tls_mode_used = SHOUT_TLS_RFC2817;
                             } else {
                                 if (self->tls_mode == SHOUT_TLS_AUTO_NO_PLAIN) {
@@ -1242,7 +1242,11 @@ retry:
                         return SHOUTERR_BUSY;
                     goto failure;
                 }
-            } else if (self->tls_mode_used == SHOUT_TLS_RFC2817) {
+                if (self->upgrade_to_tls) {
+                    self->state = SHOUT_STATE_RESP_PENDING;
+                    goto retry;
+                }
+            } else if (!self->tls && self->tls_mode_used == SHOUT_TLS_RFC2817) {
                 if ((rc = shout_create_http_request_upgrade(self, "TLS/1.0")) != SHOUTERR_SUCCESS) {
                     if (rc == SHOUTERR_BUSY)
                         return SHOUTERR_BUSY;
