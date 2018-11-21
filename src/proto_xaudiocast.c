@@ -77,6 +77,24 @@ int shout_create_xaudiocast_request(shout_t *self)
     return ret;
 }
 
+int shout_get_xaudiocast_response(shout_t *self)
+{
+    shout_buf_t *queue = self->rqueue.head;
+    unsigned int i;
+
+    do {
+        for (i = 0; i < queue->len; i++) {
+            if (queue->data[i] == '\n') {
+                /* got response */
+                return SHOUTERR_SUCCESS;
+            }
+        }
+    } while ((queue = queue->next));
+
+    /* need more data */
+    return SHOUTERR_BUSY;
+}
+
 int shout_parse_xaudiocast_response(shout_t *self)
 {
     char *response;
@@ -87,9 +105,20 @@ int shout_parse_xaudiocast_response(shout_t *self)
 
     if (!strstr(response, "OK")) {
         free(response);
-        return SHOUTERR_NOLOGIN;
+
+        /* check to see if that is a response to a POKE. */
+        if (!(self->server_caps & LIBSHOUT_CAP_GOTCAPS)) {
+            self->server_caps |= LIBSHOUT_CAP_GOTCAPS;
+            self->retry++;
+            if (self->retry > LIBSHOUT_MAX_RETRY)
+                self->retry = 0;
+            return SHOUTERR_SOCKET;
+        } else {
+            return SHOUTERR_NOLOGIN;
+        }
     }
     free(response);
 
+    self->server_caps |= LIBSHOUT_CAP_GOTCAPS;
     return SHOUTERR_SUCCESS;
 }

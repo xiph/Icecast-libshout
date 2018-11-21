@@ -28,7 +28,16 @@
 #include <shout/shout.h>
 #include "shout_private.h"
 
-int shout_create_icy_request(shout_t *self)
+static int shout_create_icy_request_poke(shout_t *self)
+{
+    if (shout_queue_printf(self, "!POKE\nicy-name:libshout server poke request\n\n")) {
+        return SHOUTERR_MALLOC;
+    } else {
+        return SHOUTERR_SUCCESS;
+    }
+}
+
+static int shout_create_icy_request_real(shout_t *self)
 {
     const char *bitrate;
     const char *val;
@@ -68,4 +77,13 @@ int shout_create_icy_request(shout_t *self)
     } while (0);
 
     return ret;
+}
+
+int shout_create_icy_request(shout_t *self)
+{
+    if (self->server_caps & LIBSHOUT_CAP_GOTCAPS) {
+        return shout_create_icy_request_real(self);
+    } else {
+        return shout_create_icy_request_poke(self);
+    }
 }

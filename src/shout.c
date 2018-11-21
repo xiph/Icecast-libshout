@@ -1154,10 +1154,22 @@ static int get_response(shout_t *self)
     if ((rc = shout_queue_data(&self->rqueue, (unsigned char*)buf, rc)))
         return rc;
 
-    if (self->protocol == SHOUT_PROTOCOL_ROARAUDIO)
-        return shout_get_roaraudio_response(self);
+    switch (self->protocol) {
+        case SHOUT_PROTOCOL_HTTP:
+            return shout_get_http_response(self);
+        break;
+        case SHOUT_PROTOCOL_XAUDIOCAST:
+        /* fall through */
+        case SHOUT_PROTOCOL_ICY:
+            return shout_get_xaudiocast_response(self);
+        break;
+        case SHOUT_PROTOCOL_ROARAUDIO:
+            return shout_get_roaraudio_response(self);
+        break;
+    }
 
-    return shout_get_http_response(self);
+    /* we should never reach this code */
+    return SHOUTERR_INSANE;
 }
 
 static int try_connect(shout_t *self)
@@ -1209,20 +1221,7 @@ retry:
                     break;
                     case SHOUT_TLS_AUTO:
                     case SHOUT_TLS_AUTO_NO_PLAIN:
-                        if (self->server_caps & LIBSHOUT_CAP_GOTCAPS) {
-                            /* We had a probe allready, otherwise just poke the server. */
-                            if ((self->server_caps & LIBSHOUT_CAP_UPGRADETLS) && (self->server_caps & LIBSHOUT_CAP_OPTIONS)) {
-                                self->tls_mode_used = SHOUT_TLS_RFC2817;
-                            } else {
-                                if (self->tls_mode == SHOUT_TLS_AUTO_NO_PLAIN) {
-                                    self->tls_mode_used = SHOUTERR_NOTLS;
-                                    return SHOUTERR_NOTLS;
-                                }
-                                self->tls_mode_used = SHOUT_TLS_DISABLED;
-                            }
-                            self->state = SHOUT_STATE_TLS_PENDING;
-                            goto retry;
-                        }
+                        /* Do nothing. This case is handled post poke. */
                     break;
                     default:
                         rc = SHOUTERR_INSANE;
@@ -1305,15 +1304,46 @@ retry:
             if (rc != SHOUTERR_SUCCESS)
                 goto failure;
 
-            if ((rc = parse_response(self)) != SHOUTERR_SUCCESS) {
-                if (rc == SHOUTERR_RETRY)
-                    goto retry;
+            rc = parse_response(self);
+            if (rc == SHOUTERR_RETRY)
+                goto retry;
 
-                if (self->retry) {
-                    self->state = SHOUT_STATE_TLS_PENDING;
-                    goto retry;
-                }
+            if (rc != SHOUTERR_SUCCESS && !self->retry) {
                 goto failure;
+            }
+
+            if (!(self->server_caps & LIBSHOUT_CAP_GOTCAPS)) {
+                rc = SHOUTERR_INSANE;
+                goto failure;
+            }
+
+#ifdef HAVE_OPENSSL
+            if (self->tls_mode_used < 0) {
+                switch (self->tls_mode) {
+                    case SHOUT_TLS_AUTO:
+                    case SHOUT_TLS_AUTO_NO_PLAIN:
+                        if ((self->server_caps & LIBSHOUT_CAP_UPGRADETLS) && (self->server_caps & LIBSHOUT_CAP_OPTIONS)) {
+                            self->tls_mode_used = SHOUT_TLS_RFC2817;
+                        } else {
+                            if (self->tls_mode == SHOUT_TLS_AUTO_NO_PLAIN) {
+                                self->tls_mode_used = SHOUTERR_NOTLS;
+                                rc = SHOUTERR_NOTLS;
+                                goto failure;
+                            }
+                            self->tls_mode_used = SHOUT_TLS_DISABLED;
+                        }
+                    break;
+                }
+            }
+#endif
+
+            if (rc != SHOUTERR_SUCCESS && self->retry) {
+                if (rc == SHOUTERR_SOCKET) {
+                    self->state = SHOUT_STATE_RECONNECT;
+                } else {
+                    self->state = SHOUT_STATE_TLS_PENDING;
+                }
+                goto retry;
             }
 
             switch (self->format) {
@@ -1345,6 +1375,11 @@ retry:
         /* special case, no fallthru to this */
 
         case SHOUT_STATE_RECONNECT:
+#ifdef HAVE_OPENSSL
+            if (self->tls)
+                shout_tls_close(self->tls);
+            self->tls = NULL;
+#endif
             sock_close(self->socket);
             self->state = SHOUT_STATE_UNCONNECTED;
             goto retry;
