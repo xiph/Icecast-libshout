@@ -29,3 +29,12 @@
 
 #include <shout/shout.h>
 #include "shout_private.h"
+
+shout_connection_t *shout_connection_new(shout_t *self);
+int                 shout_connection_ref(shout_connection_t *con);
+int                 shout_connection_unref(shout_connection_t *con);
+int                 shout_connection_iter(shout_connection_t *con, shout_t *shout);
+int                 shout_connection_select_tlsmode(shout_connection_t *con, int tlsmode);
+int                 shout_connection_set_nonblocking(shout_connection_t *con, unsigned int nonblocking);
+int                 shout_connection_set_next_timeout(shout_connection_t *con, shout_t *shout, uint32_t timeout /* [ms] */);
+int                 shout_connection_connect(shout_connection_t *con, shout_t *shout);

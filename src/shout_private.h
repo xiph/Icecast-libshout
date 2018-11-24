@@ -101,6 +101,62 @@ typedef enum {
     SHOUT_STATE_RECONNECT
 } shout_state_e;
 
+typedef enum {
+    SHOUT_SOCKSTATE_UNCONNECTED = 0,
+    SHOUT_SOCKSTATE_CONNECTING,
+    SHOUT_SOCKSTATE_CONNECTED,
+    SHOUT_SOCKSTATE_TLS_CONNECTING,
+    SHOUT_SOCKSTATE_TLS_CONNECTED,
+    SHOUT_SOCKSTATE_TLS_VERIFIED
+} shout_connect_socket_state_t;
+
+typedef enum {
+    SHOUT_MSGSTATE_IDLE = 0,
+    SHOUT_MSGSTATE_SENDING0,
+    SHOUT_MSGSTATE_WAITING0,
+    SHOUT_MSGSTATE_RECEIVING0,
+    SHOUT_MSGSTATE_RECEIVED0,
+    SHOUT_MSGSTATE_PARSED_INFORMATIONAL0,
+    SHOUT_MSGSTATE_SENDING1,
+    SHOUT_MSGSTATE_WAITING1,
+    SHOUT_MSGSTATE_RECEIVING1,
+    SHOUT_MSGSTATE_RECEIVED1,
+    SHOUT_MSGSTATE_PARSED_INFORMATIONAL1,
+    SHOUT_MSGSTATE_PARSED_FINAL
+} shout_connect_message_state_t;
+
+typedef union shout_protocol_extra_tag {
+    int si;
+    void *vp;
+} shout_protocol_extra_t;
+
+typedef struct shout_connection_tag shout_connection_t;
+
+struct shout_connection_tag {
+    size_t                          refc;
+
+    int                             selected_tls_mode;
+    shout_connect_socket_state_t    target_socket_state;
+    shout_connect_socket_state_t    current_socket_state;
+    shout_connect_message_state_t   target_message_state;
+    shout_connect_message_state_t   current_message_state;
+    int                             target_protocol_state;
+    int                             current_protocol_state;
+    shout_protocol_extra_t          protocol_extra;
+
+    int (*msg_get)(shout_t *self, shout_connection_t *connection);
+    int (*msg_parse)(shout_t *self, shout_connection_t *connection);
+    int (*state_changed)(shout_t *self, shout_connection_t *connection);
+    int (*any_timeout)(shout_t *self, shout_connection_t *connection);
+
+#ifdef HAVE_OPENSSL
+    shout_tls_t   *tls;
+#endif
+    sock_t         socket;
+    shout_queue_t  rqueue;
+    shout_queue_t  wqueue;
+};
+
 struct shout {
     /* hostname or IP of icecast server */
     char *host;
@@ -179,6 +235,16 @@ ssize_t shout_queue_collect(shout_buf_t *queue, char **buf);
 ssize_t shout_conn_read(shout_t *self, void *buf, size_t len);
 ssize_t shout_conn_write(shout_t *self, const void *buf, size_t len);
 int     shout_conn_recoverable(shout_t *self);
+
+/* connection */
+shout_connection_t *shout_connection_new(shout_t *self);
+int                 shout_connection_ref(shout_connection_t *con);
+int                 shout_connection_unref(shout_connection_t *con);
+int                 shout_connection_iter(shout_connection_t *con, shout_t *shout);
+int                 shout_connection_select_tlsmode(shout_connection_t *con, int tlsmode);
+int                 shout_connection_set_nonblocking(shout_connection_t *con, unsigned int nonblocking);
+int                 shout_connection_set_next_timeout(shout_connection_t *con, shout_t *shout, uint32_t timeout /* [ms] */);
+int                 shout_connection_connect(shout_connection_t *con, shout_t *shout);
 
 #ifdef HAVE_OPENSSL
 shout_tls_t *shout_tls_new(shout_t *self, sock_t socket);
