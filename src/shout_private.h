@@ -112,11 +112,13 @@ typedef enum {
 
 typedef enum {
     SHOUT_MSGSTATE_IDLE = 0,
+    SHOUT_MSGSTATE_CREATING0,
     SHOUT_MSGSTATE_SENDING0,
     SHOUT_MSGSTATE_WAITING0,
     SHOUT_MSGSTATE_RECEIVING0,
     SHOUT_MSGSTATE_RECEIVED0,
     SHOUT_MSGSTATE_PARSED_INFORMATIONAL0,
+    SHOUT_MSGSTATE_CREATING1,
     SHOUT_MSGSTATE_SENDING1,
     SHOUT_MSGSTATE_WAITING1,
     SHOUT_MSGSTATE_RECEIVING1,
@@ -124,6 +126,13 @@ typedef enum {
     SHOUT_MSGSTATE_PARSED_INFORMATIONAL1,
     SHOUT_MSGSTATE_PARSED_FINAL
 } shout_connect_message_state_t;
+
+typedef enum {
+    SHOUT_RS_DONE,
+    SHOUT_RS_TIMEOUT,
+    SHOUT_RS_NOTNOW,
+    SHOUT_RS_ERROR
+} shout_connection_return_state_t;
 
 typedef union shout_protocol_extra_tag {
     int si;
@@ -144,10 +153,12 @@ struct shout_connection_tag {
     int                             current_protocol_state;
     shout_protocol_extra_t          protocol_extra;
 
-    int (*msg_get)(shout_t *self, shout_connection_t *connection);
-    int (*msg_parse)(shout_t *self, shout_connection_t *connection);
-    int (*state_changed)(shout_t *self, shout_connection_t *connection);
+    shout_connection_return_state_t (*msg_create)(shout_t *self, shout_connection_t *connection);
+    shout_connection_return_state_t (*msg_get)(shout_t *self, shout_connection_t *connection);
+    shout_connection_return_state_t (*msg_parse)(shout_t *self, shout_connection_t *connection);
+    shout_connection_return_state_t (*protocol_iter)(shout_t *self, shout_connection_t *connection);
     int (*any_timeout)(shout_t *self, shout_connection_t *connection);
+    int (*destory)(shout_connection_t *connection);
 
 #ifdef HAVE_OPENSSL
     shout_tls_t   *tls;
