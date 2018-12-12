@@ -358,6 +358,7 @@ static shout_connection_return_state_t shout_connection_iter__protocol(shout_con
 int                 shout_connection_iter(shout_connection_t *con, shout_t *shout)
 {
     int found;
+    int retry;
 
     if (!con || !shout)
         return SHOUTERR_INSANE;
@@ -367,7 +368,7 @@ int                 shout_connection_iter(shout_connection_t *con, shout_t *shou
 
 
 #define __iter(what) \
-    while (con->target_ ## what ## _state != con->current_ ## what ## _state) { \
+    while (!retry && con->target_ ## what ## _state != con->current_ ## what ## _state) { \
         found = 1; \
         shout_connection_return_state_t ret = shout_connection_iter__ ## what (con, shout); \
         switch (ret) { \
@@ -376,8 +377,7 @@ int                 shout_connection_iter(shout_connection_t *con, shout_t *shou
             break; \
             case SHOUT_RS_TIMEOUT: \
             case SHOUT_RS_NOTNOW: \
-                goto retry; \
-                return SHOUTERR_RETRY; \
+                retry = 1; \
             break; \
             case SHOUT_RS_ERROR: \
                 return shout->error; \
@@ -385,13 +385,13 @@ int                 shout_connection_iter(shout_connection_t *con, shout_t *shou
         } \
     }
 
-retry:
     do {
         found = 0;
+        retry = 0;
         __iter(socket)
         __iter(message)
         __iter(protocol)
-    } while (found);
+    } while (found || retry);
 
     return SHOUTERR_SUCCESS;
 }
