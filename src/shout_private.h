@@ -90,6 +90,7 @@ typedef struct {
     size_t           len;
 } shout_queue_t;
 
+/*
 typedef enum {
     SHOUT_STATE_UNCONNECTED = 0,
     SHOUT_STATE_CONNECT_PENDING,
@@ -100,6 +101,7 @@ typedef enum {
     SHOUT_STATE_CONNECTED,
     SHOUT_STATE_RECONNECT
 } shout_state_e;
+*/
 
 typedef enum {
     SHOUT_SOCKSTATE_UNCONNECTED = 0,
@@ -204,28 +206,18 @@ struct shout {
     char        *ca_file;
     char        *allowed_ciphers;
     char        *client_certificate;
-    shout_tls_t *tls;
 #endif
 
     /* server capabilities (LIBSHOUT_CAP_*) */
     uint32_t server_caps;
 
-    /* Should we retry on error? */
-    int retry;
-
     /* socket the connection is on */
-    sock_t          socket;
-    shout_state_e   state;
-    int             protocol_state;     /* extra state information from the protocol */
-    int             protocol_extra;     /* extra data from the protocol */
+    shout_connection_t *connection;
     int             nonblocking;
 
     void *format_data;
     int (*send)(shout_t* self, const unsigned char* buff, size_t len);
     void (*close)(shout_t* self);
-
-    shout_queue_t rqueue;
-    shout_queue_t wqueue;
 
     /* start of this period's timeclock */
     uint64_t starttime;
@@ -237,8 +229,8 @@ struct shout {
 
 /* helper functions */
 int     shout_queue_data(shout_queue_t *queue, const unsigned char *data, size_t len);
-int     shout_queue_str(shout_t *self, const char *str);
-int     shout_queue_printf(shout_t *self, const char *fmt, ...);
+int     shout_queue_str(shout_connection_t *self, const char *str);
+int     shout_queue_printf(shout_connection_t *self, const char *fmt, ...);
 void    shout_queue_free(shout_queue_t *queue);
 ssize_t shout_queue_collect(shout_buf_t *queue, char **buf);
 
@@ -256,6 +248,9 @@ int                 shout_connection_select_tlsmode(shout_connection_t *con, int
 int                 shout_connection_set_nonblocking(shout_connection_t *con, unsigned int nonblocking);
 int                 shout_connection_set_next_timeout(shout_connection_t *con, shout_t *shout, uint32_t timeout /* [ms] */);
 int                 shout_connection_connect(shout_connection_t *con, shout_t *shout);
+int                 shout_connection_disconnect(shout_connection_t *con);
+ssize_t             shout_connection_send(shout_connection_t *con, shout_t *shout, const void *buf, size_t len);
+ssize_t             shout_connection_get_sendq(shout_connection_t *con, shout_t *shout);
 
 #ifdef HAVE_OPENSSL
 shout_tls_t *shout_tls_new(shout_t *self, sock_t socket);
@@ -268,18 +263,18 @@ int          shout_tls_recoverable(shout_tls_t *tls);
 
 /* protocols */
 char   *shout_http_basic_authorization(shout_t *self);
-int     shout_create_http_request(shout_t *self);
+shout_connection_return_state_t shout_create_http_request(shout_t *self, shout_connection_t *connection);
 int     shout_create_http_request_upgrade(shout_t *self, const char *proto);
-int     shout_get_http_response(shout_t *self);
-int     shout_parse_http_response(shout_t *self);
+shout_connection_return_state_t shout_get_http_response(shout_t *self, shout_connection_t *connection);
+shout_connection_return_state_t shout_parse_http_response(shout_t *self, shout_connection_t *connection);
 
-int     shout_create_xaudiocast_request(shout_t *self);
+shout_connection_return_state_t shout_create_xaudiocast_request(shout_t *self, shout_connection_t *connection);
 int     shout_get_xaudiocast_response(shout_t *self);
 int     shout_parse_xaudiocast_response(shout_t *self);
 
-int     shout_create_icy_request(shout_t *self);
+shout_connection_return_state_t shout_create_icy_request(shout_t *self, shout_connection_t *connection);
 
-int     shout_create_roaraudio_request(shout_t *self);
+shout_connection_return_state_t shout_create_roaraudio_request(shout_t *self, shout_connection_t *connection);
 int     shout_get_roaraudio_response(shout_t *self);
 int     shout_parse_roaraudio_response(shout_t *self);
 

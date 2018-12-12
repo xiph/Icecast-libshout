@@ -71,13 +71,8 @@ int                 shout_connection_unref(shout_connection_t *con)
     if (con->destory)
         con->destory(con);
 
-#ifdef HAVE_OPENSSL
-    if (con->tls)
-        shout_tls_close(con->tls);
-    con->tls = NULL;
-#endif
+    shout_connection_disconnect(con);
 
-    sock_close(con->socket);
     free(con);
 
     return SHOUTERR_SUCCESS;
@@ -96,15 +91,21 @@ static struct timeval shout_connection_iter__wait_for_io__get_timeout(shout_conn
 static shout_connection_return_state_t shout_connection_iter__wait_for_io(shout_connection_t *con, shout_t *shout, int for_read, int for_write)
 {
     struct timeval tv = shout_connection_iter__wait_for_io__get_timeout(con, shout);
-    fd_set fhset;
+    fd_set fhset_r;
+    fd_set fhset_w;
+    fd_set fhset_e;
     int ret;
 
-    FD_ZERO(&fhset);
-    FD_SET(con->socket, &fhset);
+    FD_ZERO(&fhset_r);
+    FD_ZERO(&fhset_w);
+    FD_ZERO(&fhset_e);
+    FD_SET(con->socket, &fhset_r);
+    FD_SET(con->socket, &fhset_w);
+    FD_SET(con->socket, &fhset_e);
 
-    ret = select(con->socket + 1, (for_read) ? &fhset : NULL, (for_write) ? &fhset : NULL, &fhset, &tv);
+    ret = select(con->socket + 1, (for_read) ? &fhset_r : NULL, (for_write) ? &fhset_w : NULL, &fhset_e, &tv);
 
-    if (ret > 0 && FD_ISSET(con->socket, &fhset)) {
+    if (ret > 0 && (FD_ISSET(con->socket, &fhset_r) || FD_ISSET(con->socket, &fhset_w) || FD_ISSET(con->socket, &fhset_e))) {
         return SHOUT_RS_DONE;
     } else if (ret == 0) {
         shout->error = SHOUTERR_RETRY;
@@ -133,7 +134,7 @@ static shout_connection_return_state_t shout_connection_iter__socket(shout_conne
                 return ret;
             }
 
-            if (sock_connected(con->socket, 0) == 0) {
+            if (sock_connected(con->socket, 0) == 1) {
                 con->current_socket_state = SHOUT_SOCKSTATE_CONNECTED;
                 return SHOUT_RS_DONE;
             }
@@ -273,16 +274,18 @@ static shout_connection_return_state_t shout_connection_iter__message(shout_conn
             return ret;
         break;
         case SHOUT_MSGSTATE_SENDING0:
-        case SHOUT_MSGSTATE_SENDING1:
             ret = shout_connection_iter__message__send_queue(con, shout);
             if (ret == SHOUT_RS_DONE) {
-                if (con->current_message_state == SHOUT_MSGSTATE_SENDING0) {
-                    con->current_message_state = SHOUT_MSGSTATE_WAITING0;
-                } else {
-                    con->current_message_state = SHOUT_MSGSTATE_WAITING1;
-                }
+                con->current_message_state = SHOUT_MSGSTATE_WAITING0;
             }
             return ret;
+        break;
+        case SHOUT_MSGSTATE_SENDING1:
+            if (con->wqueue.len) {
+                return shout_connection_iter__message__send_queue(con, shout);
+            } else {
+                return SHOUT_RS_ERROR;
+            }
         break;
         case SHOUT_MSGSTATE_WAITING0:
         case SHOUT_MSGSTATE_WAITING1:
@@ -354,6 +357,8 @@ static shout_connection_return_state_t shout_connection_iter__protocol(shout_con
 
 int                 shout_connection_iter(shout_connection_t *con, shout_t *shout)
 {
+    int found;
+
     if (!con || !shout)
         return SHOUTERR_INSANE;
 
@@ -363,6 +368,7 @@ int                 shout_connection_iter(shout_connection_t *con, shout_t *shou
 
 #define __iter(what) \
     while (con->target_ ## what ## _state != con->current_ ## what ## _state) { \
+        found = 1; \
         shout_connection_return_state_t ret = shout_connection_iter__ ## what (con, shout); \
         switch (ret) { \
             case SHOUT_RS_DONE: \
@@ -370,7 +376,7 @@ int                 shout_connection_iter(shout_connection_t *con, shout_t *shou
             break; \
             case SHOUT_RS_TIMEOUT: \
             case SHOUT_RS_NOTNOW: \
-                return SHOUTERR_RETRY; \
+                goto retry; \
                 return SHOUTERR_RETRY; \
             break; \
             case SHOUT_RS_ERROR: \
@@ -379,9 +385,13 @@ int                 shout_connection_iter(shout_connection_t *con, shout_t *shou
         } \
     }
 
-    __iter(socket)
-    __iter(message)
-    __iter(protocol)
+retry:
+    do {
+        found = 0;
+        __iter(socket)
+        __iter(message)
+        __iter(protocol)
+    } while (found);
 
     return SHOUTERR_SUCCESS;
 }
@@ -443,5 +453,44 @@ int                 shout_connection_connect(shout_connection_t *con, shout_t *s
     }
 
     con->current_socket_state = SHOUT_SOCKSTATE_CONNECTING;
+    con->target_socket_state = SHOUT_SOCKSTATE_CONNECTED;
     return SHOUTERR_SUCCESS;
+}
+int                 shout_connection_disconnect(shout_connection_t *con)
+{
+    if (!con)
+        return SHOUTERR_INSANE;
+
+#ifdef HAVE_OPENSSL
+    if (con->tls)
+        shout_tls_close(con->tls);
+    con->tls = NULL;
+#endif
+
+    if (con->socket != SOCK_ERROR)
+        sock_close(con->socket);
+    con->socket = SOCK_ERROR;
+
+    con->target_socket_state = SHOUT_SOCKSTATE_UNCONNECTED;
+    con->current_socket_state = SHOUT_SOCKSTATE_UNCONNECTED;
+
+    return SHOUTERR_SUCCESS;
+}
+ssize_t             shout_connection_send(shout_connection_t *con, shout_t *shout, const void *buf, size_t len)
+{
+    int ret;
+
+    if (!con || !shout)
+        return -1;
+
+    if (con->current_message_state != SHOUT_MSGSTATE_SENDING1)
+        return -1;
+
+    ret = shout_queue_data(&(con->wqueue), buf, len);
+    if (ret != SHOUTERR_SUCCESS)
+        return -1;
+
+    shout_connection_iter(con, shout);
+
+    return len;
 }

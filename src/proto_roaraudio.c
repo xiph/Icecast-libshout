@@ -97,9 +97,9 @@ static int command_send(shout_t                *self,
     header[8] = (datalen & 0xFF00) >> 8;
     header[9] = (datalen & 0x00FF);
 
-    shout_queue_data(&self->wqueue, header, HEADER_SIZE);
+    shout_queue_data(&self->connection->wqueue, header, HEADER_SIZE);
     if (datalen)
-        shout_queue_data(&self->wqueue, data, datalen);
+        shout_queue_data(&self->connection->wqueue, data, datalen);
 
     return SHOUTERR_SUCCESS;
 }
@@ -196,27 +196,33 @@ static int shout_create_roaraudio_request_exec(shout_t *self)
      * after that. This very much like with SOURCE requests.
      * so no hard deal to intigrate.
      */
-    return command_send(self, CMD_EXEC_STREAM, self->protocol_extra, NULL, 0);
+    return command_send(self, CMD_EXEC_STREAM, self->connection->protocol_extra.si, NULL, 0);
 }
 
-int shout_create_roaraudio_request(shout_t *self)
+shout_connection_return_state_t shout_create_roaraudio_request(shout_t *self, shout_connection_t *connection)
 {
-    switch ((shout_roar_protocol_state_t)self->protocol_state) {
+    int ret;
+
+    switch ((shout_roar_protocol_state_t)self->connection->current_protocol_state) {
     case STATE_IDENT:
-        return shout_create_roaraudio_request_ident(self);
+        ret = shout_create_roaraudio_request_ident(self);
         break;
     case STATE_AUTH:
-        return shout_create_roaraudio_request_auth(self);
+        ret = shout_create_roaraudio_request_auth(self);
         break;
     case STATE_NEW_STREAM:
-        return shout_create_roaraudio_request_new_stream(self);
+        ret = shout_create_roaraudio_request_new_stream(self);
         break;
     case STATE_EXEC:
-        return shout_create_roaraudio_request_exec(self);
+        ret = shout_create_roaraudio_request_exec(self);
+        break;
+    default:
+        ret = SHOUTERR_INSANE;
         break;
     }
 
-    return SHOUTERR_INSANE;
+    self->error = ret;
+    return ret == SHOUTERR_SUCCESS ? SHOUT_RS_DONE : SHOUT_RS_ERROR;
 }
 
 int shout_get_roaraudio_response(shout_t *self)
@@ -225,7 +231,7 @@ int shout_get_roaraudio_response(shout_t *self)
     size_t         total_len = 0;
     uint8_t        header[HEADER_SIZE];
 
-    for (queue = self->rqueue.head; queue; queue = queue->next) {
+    for (queue = self->connection->rqueue.head; queue; queue = queue->next) {
         if (total_len < 10)
             memcpy(header + total_len, queue->data, queue->len > (HEADER_SIZE - total_len) ? (HEADER_SIZE - total_len) : queue->len);
         total_len += queue->len;
@@ -262,11 +268,11 @@ int shout_parse_roaraudio_response(shout_t *self)
      * "data length" is already checked by shout_get_roaraudio_response().
      */
 
-    if (shout_queue_collect(self->rqueue.head, &data) != HEADER_SIZE) {
+    if (shout_queue_collect(self->connection->rqueue.head, &data) != HEADER_SIZE) {
         free(data);
         return SHOUTERR_INSANE;
     }
-    shout_queue_free(&self->rqueue);
+    shout_queue_free(&self->connection->rqueue);
     memcpy(header, data, HEADER_SIZE);
     free(data);
 
@@ -278,19 +284,19 @@ int shout_parse_roaraudio_response(shout_t *self)
     if (header[1] != CMD_OK)
         return SHOUTERR_NOLOGIN;
 
-    switch ((shout_roar_protocol_state_t)self->protocol_state) {
+    switch ((shout_roar_protocol_state_t)self->connection->current_protocol_state) {
         case STATE_IDENT:
-            self->protocol_state = STATE_AUTH;
+            self->connection->current_protocol_state = STATE_AUTH;
             self->server_caps |= LIBSHOUT_CAP_GOTCAPS;
         break;
 
         case STATE_AUTH:
-            self->protocol_state = STATE_NEW_STREAM;
+            self->connection->current_protocol_state = STATE_NEW_STREAM;
         break;
 
         case STATE_NEW_STREAM:
-            self->protocol_extra = (((unsigned int)header[2]) << 8) | (unsigned int)header[3];
-            self->protocol_state = STATE_EXEC;
+            self->connection->protocol_extra.si = (((unsigned int)header[2]) << 8) | (unsigned int)header[3];
+            self->connection->current_protocol_state = STATE_EXEC;
         break;
 
         case STATE_EXEC:
@@ -303,6 +309,6 @@ int shout_parse_roaraudio_response(shout_t *self)
         break;
     }
 
-    self->state = SHOUT_STATE_REQ_CREATION;
+    self->connection->current_message_state = SHOUT_MSGSTATE_CREATING0;
     return SHOUTERR_RETRY;
 }

@@ -50,13 +50,7 @@
 #endif
 
 /* -- local prototypes -- */
-static int send_queue(shout_t *self);
-static int get_response(shout_t *self);
 static int try_connect(shout_t *self);
-static int try_write(shout_t *self, const void *data, size_t len);
-
-static int create_request(shout_t *self);
-static int parse_response(shout_t *self);
 
 /* -- static data -- */
 static int _initialized = 0;
@@ -145,7 +139,7 @@ void shout_free(shout_t *self)
     if (!self)
         return;
 
-    if (self->state != SHOUT_STATE_UNCONNECTED)
+    if (!self->connection)
         return;
 
     if (self->host)
@@ -182,7 +176,7 @@ int shout_open(shout_t *self)
     /* sanity check */
     if (!self)
         return SHOUTERR_INSANE;
-    if (self->state != SHOUT_STATE_UNCONNECTED)
+    if (self->connection)
         return SHOUTERR_CONNECTED;
     if (!self->host || !self->password || !self->port)
         return self->error = SHOUTERR_INSANE;
@@ -198,24 +192,15 @@ int shout_close(shout_t *self)
     if (!self)
         return SHOUTERR_INSANE;
 
-    if (self->state == SHOUT_STATE_UNCONNECTED)
+    if (!self->connection)
         return self->error = SHOUTERR_UNCONNECTED;
 
-    if (self->state == SHOUT_STATE_CONNECTED && self->close)
+    if (self->connection && self->connection->current_message_state == SHOUT_MSGSTATE_SENDING1 && self->close)
         self->close(self);
 
-#ifdef HAVE_OPENSSL
-    if (self->tls)
-        shout_tls_close(self->tls);
-    self->tls = NULL;
-#endif
-
-    sock_close(self->socket);
-    self->state = SHOUT_STATE_UNCONNECTED;
+    shout_connection_unref(self->connection);
     self->starttime = 0;
     self->senttime = 0;
-    shout_queue_free(&self->rqueue);
-    shout_queue_free(&self->wqueue);
 
     return self->error = SHOUTERR_SUCCESS;
 }
@@ -225,51 +210,27 @@ int shout_send(shout_t *self, const unsigned char *data, size_t len)
     if (!self)
         return SHOUTERR_INSANE;
 
-    if (self->state != SHOUT_STATE_CONNECTED)
+    if (!self->connection || self->connection->current_message_state != SHOUT_MSGSTATE_SENDING1)
         return self->error = SHOUTERR_UNCONNECTED;
 
     if (self->starttime <= 0)
         self->starttime = timing_get_time();
 
     if (!len)
-        return send_queue(self);
+        return shout_connection_iter(self->connection, self);
 
     return self->send(self, data, len);
 }
 
 ssize_t shout_send_raw(shout_t *self, const unsigned char *data, size_t len)
 {
-    ssize_t ret;
-
     if (!self)
         return SHOUTERR_INSANE;
 
-    if (self->state != SHOUT_STATE_CONNECTED)
+    if (!self->connection || self->connection->current_message_state != SHOUT_MSGSTATE_SENDING1)
         return SHOUTERR_UNCONNECTED;
 
-    self->error = SHOUTERR_SUCCESS;
-
-    /* send immediately if possible (should be the common case) */
-    if (len && !self->wqueue.len) {
-        if ((ret = try_write(self, data, len)) < 0)
-            return self->error;
-        if (ret < (ssize_t)len) {
-            self->error = shout_queue_data(&self->wqueue, data + ret, len - ret);
-            if (self->error != SHOUTERR_SUCCESS)
-                return self->error;
-        }
-        return len;
-    }
-
-    self->error = shout_queue_data(&self->wqueue, data, len);
-    if (self->error != SHOUTERR_SUCCESS)
-        return self->error;
-
-    ret = send_queue(self);
-    if (ret == SHOUTERR_SUCCESS || (len && ret == SHOUTERR_BUSY))
-        return len;
-
-    return ret;
+    return shout_connection_send(self->connection, self, data, len);
 }
 
 ssize_t shout_queuelen(shout_t *self)
@@ -277,7 +238,7 @@ ssize_t shout_queuelen(shout_t *self)
     if (!self)
         return SHOUTERR_INSANE;
 
-    return (ssize_t)self->wqueue.len;
+    return shout_connection_get_sendq(self->connection, self);
 }
 
 
@@ -577,9 +538,9 @@ int shout_get_connected(shout_t *self)
     if (!self)
         return SHOUTERR_INSANE;
 
-    if (self->state == SHOUT_STATE_CONNECTED)
+    if (self->connection && self->connection->current_message_state == SHOUT_MSGSTATE_SENDING1)
         return SHOUTERR_CONNECTED;
-    if (self->state != SHOUT_STATE_UNCONNECTED) {
+    if (self->connection && self->connection->current_message_state != SHOUT_MSGSTATE_SENDING1) {
         if ((rc = try_connect(self)) == SHOUTERR_SUCCESS)
             return SHOUTERR_CONNECTED;
         return rc;
@@ -593,7 +554,7 @@ int shout_set_host(shout_t *self, const char *host)
     if (!self)
         return SHOUTERR_INSANE;
 
-    if (self->state != SHOUT_STATE_UNCONNECTED)
+    if (self->connection)
         return self->error = SHOUTERR_CONNECTED;
 
     if (self->host)
@@ -618,7 +579,7 @@ int shout_set_port(shout_t *self, unsigned short port)
     if (!self)
         return SHOUTERR_INSANE;
 
-    if (self->state != SHOUT_STATE_UNCONNECTED)
+    if (self->connection)
         return self->error = SHOUTERR_CONNECTED;
 
     self->port = port;
@@ -639,7 +600,7 @@ int shout_set_password(shout_t *self, const char *password)
     if (!self)
         return SHOUTERR_INSANE;
 
-    if (self->state != SHOUT_STATE_UNCONNECTED)
+    if (self->connection)
         return self->error = SHOUTERR_CONNECTED;
 
     if (self->password)
@@ -666,7 +627,7 @@ int shout_set_mount(shout_t *self, const char *mount)
     if (!self || !mount)
         return SHOUTERR_INSANE;
 
-    if (self->state != SHOUT_STATE_UNCONNECTED)
+    if (self->connection)
         return self->error = SHOUTERR_CONNECTED;
 
     if (self->mount)
@@ -727,7 +688,7 @@ int shout_set_agent(shout_t *self, const char *agent)
     if (!self)
         return SHOUTERR_INSANE;
 
-    if (self->state != SHOUT_STATE_UNCONNECTED)
+    if (self->connection)
         return self->error = SHOUTERR_CONNECTED;
 
     if (self->useragent)
@@ -753,7 +714,7 @@ int shout_set_user(shout_t *self, const char *username)
     if (!self)
         return SHOUTERR_INSANE;
 
-    if (self->state != SHOUT_STATE_UNCONNECTED)
+    if (self->connection)
         return self->error = SHOUTERR_CONNECTED;
 
     if (self->user)
@@ -788,7 +749,7 @@ int shout_set_dumpfile(shout_t *self, const char *dumpfile)
     if (!self)
         return SHOUTERR_INSANE;
 
-    if (self->state != SHOUT_STATE_UNCONNECTED)
+    if (self->connection)
         return SHOUTERR_CONNECTED;
 
     if (self->dumpfile)
@@ -831,7 +792,7 @@ int shout_set_meta(shout_t *self, const char *name, const char *value)
     if (!self || !name)
         return SHOUTERR_INSANE;
 
-    if (self->state != SHOUT_STATE_UNCONNECTED)
+    if (self->connection)
         return self->error = SHOUTERR_CONNECTED;
 
     for (i = 0; name[i]; i++)
@@ -854,7 +815,7 @@ int shout_set_public(shout_t *self, unsigned int public)
     if (!self || (public != 0 && public != 1))
         return SHOUTERR_INSANE;
 
-    if (self->state != SHOUT_STATE_UNCONNECTED)
+    if (self->connection)
         return self->error = SHOUTERR_CONNECTED;
 
     self->public = public;
@@ -875,7 +836,7 @@ int shout_set_format(shout_t *self, unsigned int format)
     if (!self)
         return SHOUTERR_INSANE;
 
-    if (self->state != SHOUT_STATE_UNCONNECTED)
+    if (self->connection)
         return self->error = SHOUTERR_CONNECTED;
 
     if (format != SHOUT_FORMAT_OGG && format != SHOUT_FORMAT_MP3 &&
@@ -901,7 +862,7 @@ int shout_set_protocol(shout_t *self, unsigned int protocol)
     if (!self)
         return SHOUTERR_INSANE;
 
-    if (self->state != SHOUT_STATE_UNCONNECTED)
+    if (self->connection)
         return self->error = SHOUTERR_CONNECTED;
 
     if (protocol != SHOUT_PROTOCOL_HTTP &&
@@ -929,7 +890,7 @@ int shout_set_nonblocking(shout_t *self, unsigned int nonblocking)
     if (!self || (nonblocking != 0 && nonblocking != 1))
         return SHOUTERR_INSANE;
 
-    if (self->state != SHOUT_STATE_UNCONNECTED)
+    if (self->connection)
         return self->error = SHOUTERR_CONNECTED;
 
     self->nonblocking = nonblocking;
@@ -975,7 +936,7 @@ int shout_set_ca_directory(shout_t *self, const char *directory)
     if (!self)
         return SHOUTERR_INSANE;
 
-    if (self->state != SHOUT_STATE_UNCONNECTED)
+    if (self->connection)
         return self->error = SHOUTERR_CONNECTED;
 
     if (self->ca_directory)
@@ -1000,7 +961,7 @@ int shout_set_ca_file(shout_t *self, const char *file)
     if (!self)
         return SHOUTERR_INSANE;
 
-    if (self->state != SHOUT_STATE_UNCONNECTED)
+    if (self->connection)
         return self->error = SHOUTERR_CONNECTED;
 
     if (self->ca_file)
@@ -1025,7 +986,7 @@ int shout_set_allowed_ciphers(shout_t *self, const char *ciphers)
     if (!self)
         return SHOUTERR_INSANE;
 
-    if (self->state != SHOUT_STATE_UNCONNECTED)
+    if (self->connection)
         return self->error = SHOUTERR_CONNECTED;
 
     if (self->allowed_ciphers)
@@ -1050,7 +1011,7 @@ int shout_set_client_certificate(shout_t *self, const char *certificate)
     if (!self)
         return SHOUTERR_INSANE;
 
-    if (self->state != SHOUT_STATE_UNCONNECTED)
+    if (self->connection)
         return self->error = SHOUTERR_CONNECTED;
 
     if (self->client_certificate)
@@ -1137,43 +1098,69 @@ const char *shout_get_client_certificate(shout_t *self)
 }
 #endif
 
-/* -- static function definitions -- */
-static int get_response(shout_t *self)
+static void setup_protocol(shout_t *self)
 {
-    char buf[1024];
-    int rc;
+    unsigned int protocol = shout_get_protocol(self);
 
-    rc = shout_conn_read(self, buf, sizeof(buf));
-
-    if (rc < 0 && shout_conn_recoverable(self))
-        return SHOUTERR_BUSY;
-
-    if (rc <= 0)
-        return SHOUTERR_SOCKET;
-
-    if ((rc = shout_queue_data(&self->rqueue, (unsigned char*)buf, rc)))
-        return rc;
-
-    switch (self->protocol) {
+    switch (protocol) {
         case SHOUT_PROTOCOL_HTTP:
-            return shout_get_http_response(self);
+            self->connection->msg_create = shout_create_http_request;
+            self->connection->msg_get = shout_get_http_response;
+            self->connection->msg_parse = shout_parse_http_response;
         break;
         case SHOUT_PROTOCOL_XAUDIOCAST:
-        /* fall through */
+            self->connection->msg_create = shout_create_xaudiocast_request;
+        break;
         case SHOUT_PROTOCOL_ICY:
-            return shout_get_xaudiocast_response(self);
+            self->connection->msg_create = shout_create_icy_request;
         break;
         case SHOUT_PROTOCOL_ROARAUDIO:
-            return shout_get_roaraudio_response(self);
+            self->connection->msg_create = shout_create_roaraudio_request;
         break;
     }
-
-    /* we should never reach this code */
-    return SHOUTERR_INSANE;
 }
 
+/* -- static function definitions -- */
 static int try_connect(shout_t *self)
 {
+    int ret;
+
+    if (!self->connection) {
+        self->connection = shout_connection_new(self);
+        setup_protocol(self);
+        shout_connection_connect(self->connection, self);
+        self->connection->target_message_state = SHOUT_MSGSTATE_SENDING1;
+        self->connection->current_message_state = SHOUT_MSGSTATE_CREATING0;
+    }
+
+    ret = shout_connection_iter(self->connection, self);
+
+    if (self->connection->current_message_state == SHOUT_MSGSTATE_SENDING1 && !self->send) {
+        int rc;
+        switch (self->format) {
+            case SHOUT_FORMAT_OGG:
+                rc = self->error = shout_open_ogg(self);
+                break;
+            case SHOUT_FORMAT_MP3:
+                rc = self->error = shout_open_mp3(self);
+                break;
+            case SHOUT_FORMAT_WEBM:
+            case SHOUT_FORMAT_WEBMAUDIO:
+                rc = self->error = shout_open_webm(self);
+                break;
+
+            default:
+                rc = SHOUTERR_INSANE;
+                break;
+        }
+        if (rc != SHOUTERR_SUCCESS) {
+            return ret;
+        }
+    }
+
+    return ret;
+
+#if 0
     int rc;
     int port;
 
@@ -1391,113 +1378,5 @@ retry:
 failure:
     shout_close(self);
     return rc;
-}
-
-static int try_write(shout_t *self, const void *data_p, size_t len)
-{
-    int             ret;
-    size_t          pos = 0;
-    unsigned char  *data = (unsigned char*)data_p;
-
-    /* loop until whole buffer is written (unless it would block) */
-    do {
-        ret = shout_conn_write(self, data + pos, len - pos);
-        if (ret > 0)
-            pos += ret;
-    } while (pos < len && ret >= 0);
-
-    if (ret < 0) {
-        if (shout_conn_recoverable(self)) {
-            self->error = SHOUTERR_BUSY;
-            return pos;
-        }
-        self->error = SHOUTERR_SOCKET;
-        return ret;
-    }
-    return pos;
-}
-
-ssize_t shout_conn_read(shout_t *self, void *buf, size_t len)
-{
-#ifdef HAVE_OPENSSL
-    if (self->tls)
-        return shout_tls_read(self->tls, buf, len);
 #endif
-    return sock_read_bytes(self->socket, buf, len);
-}
-
-ssize_t shout_conn_write(shout_t *self, const void *buf, size_t len)
-{
-#ifdef HAVE_OPENSSL
-    if (self->tls)
-        return shout_tls_write(self->tls, buf, len);
-#endif
-    return sock_write_bytes(self->socket, buf, len);
-}
-int shout_conn_recoverable(shout_t *self)
-{
-#ifdef HAVE_OPENSSL
-    if (self->tls)
-        return shout_tls_recoverable(self->tls);
-#endif
-    return sock_recoverable(sock_error());
-}
-
-static int send_queue(shout_t *self)
-{
-    shout_buf_t *buf;
-    int          ret;
-
-    if (!self->wqueue.len)
-        return SHOUTERR_SUCCESS;
-
-    buf = self->wqueue.head;
-    while (buf) {
-        ret = try_write(self, buf->data + buf->pos, buf->len - buf->pos);
-        if (ret < 0)
-            return self->error;
-
-        buf->pos += ret;
-        self->wqueue.len -= ret;
-        if (buf->pos == buf->len) {
-            self->wqueue.head = buf->next;
-            free(buf);
-            buf = self->wqueue.head;
-            if (buf)
-                buf->prev = NULL;
-        } else {
-            /* incomplete write */
-            return SHOUTERR_BUSY;
-        }
-    }
-    return self->error = SHOUTERR_SUCCESS;
-}
-
-static int create_request(shout_t *self)
-{
-    if (self->protocol == SHOUT_PROTOCOL_HTTP) {
-        return shout_create_http_request(self);
-    } else if (self->protocol == SHOUT_PROTOCOL_XAUDIOCAST) {
-        return shout_create_xaudiocast_request(self);
-    } else if (self->protocol == SHOUT_PROTOCOL_ICY) {
-        return shout_create_icy_request(self);
-    } else if (self->protocol == SHOUT_PROTOCOL_ROARAUDIO) {
-        return shout_create_roaraudio_request(self);
-    }
-
-    return self->error = SHOUTERR_UNSUPPORTED;
-}
-
-static int parse_response(shout_t *self)
-{
-    if (self->protocol == SHOUT_PROTOCOL_HTTP) {
-        return shout_parse_http_response(self);
-    } else if (self->protocol == SHOUT_PROTOCOL_XAUDIOCAST ||
-        self->protocol == SHOUT_PROTOCOL_ICY) {
-        return shout_parse_xaudiocast_response(self);
-    } else if (self->protocol == SHOUT_PROTOCOL_ROARAUDIO) {
-        return shout_parse_roaraudio_response(self);
-    }
-
-    return self->error = SHOUTERR_UNSUPPORTED;
 }

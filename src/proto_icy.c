@@ -30,7 +30,7 @@
 
 static int shout_create_icy_request_poke(shout_t *self)
 {
-    if (shout_queue_printf(self, "!POKE\nicy-name:libshout server poke request\n\n")) {
+    if (shout_queue_printf(self->connection, "!POKE\nicy-name:libshout server poke request\n\n")) {
         return SHOUTERR_MALLOC;
     } else {
         return SHOUTERR_SUCCESS;
@@ -49,28 +49,28 @@ static int shout_create_icy_request_real(shout_t *self)
 
     ret = SHOUTERR_MALLOC;
     do {
-		if (shout_queue_printf(self, "%s\n", self->password))
+		if (shout_queue_printf(self->connection, "%s\n", self->password))
             break;
-		if (shout_queue_printf(self, "icy-name:%s\n", shout_get_meta(self, "name")))
+		if (shout_queue_printf(self->connection, "icy-name:%s\n", shout_get_meta(self, "name")))
             break;
         val = shout_get_meta(self, "url");
-		if (shout_queue_printf(self, "icy-url:%s\n", val ? val : "http://www.icecast.org/"))
+		if (shout_queue_printf(self->connection, "icy-url:%s\n", val ? val : "http://www.icecast.org/"))
             break;
         val = shout_get_meta(self, "irc");
-		if (shout_queue_printf(self, "icy-irc:%s\n", val ? val : ""))
+		if (shout_queue_printf(self->connection, "icy-irc:%s\n", val ? val : ""))
             break;
         val = shout_get_meta(self, "aim");
-		if (shout_queue_printf(self, "icy-aim:%s\n", val ? val : ""))
+		if (shout_queue_printf(self->connection, "icy-aim:%s\n", val ? val : ""))
             break;
         val = shout_get_meta(self, "icq");
-		if (shout_queue_printf(self, "icy-icq:%s\n", val ? val : ""))
+		if (shout_queue_printf(self->connection, "icy-icq:%s\n", val ? val : ""))
             break;
-		if (shout_queue_printf(self, "icy-pub:%i\n", self->public))
+		if (shout_queue_printf(self->connection, "icy-pub:%i\n", self->public))
             break;
         val = shout_get_meta(self, "genre");
-		if (shout_queue_printf(self, "icy-genre:%s\n", val ? val : "icecast"))
+		if (shout_queue_printf(self->connection, "icy-genre:%s\n", val ? val : "icecast"))
             break;
-		if (shout_queue_printf(self, "icy-br:%s\n\n", bitrate))
+		if (shout_queue_printf(self->connection, "icy-br:%s\n\n", bitrate))
             break;
 
         ret = SHOUTERR_SUCCESS;
@@ -79,11 +79,16 @@ static int shout_create_icy_request_real(shout_t *self)
     return ret;
 }
 
-int shout_create_icy_request(shout_t *self)
+shout_connection_return_state_t shout_create_icy_request(shout_t *self, shout_connection_t *connection)
 {
+    int ret;
+
     if (self->server_caps & LIBSHOUT_CAP_GOTCAPS) {
-        return shout_create_icy_request_real(self);
+        ret = shout_create_icy_request_real(self);
     } else {
-        return shout_create_icy_request_poke(self);
+        ret = shout_create_icy_request_poke(self);
     }
+
+    self->error = ret;
+    return ret == SHOUTERR_SUCCESS ? SHOUT_RS_DONE : SHOUT_RS_ERROR;
 }

@@ -34,6 +34,11 @@
 #include "shout_private.h"
 #include "common/httpp/httpp.h"
 
+typedef enum {
+    STATE_CHALLENGE = 0,
+    STATE_SOURCE,
+} shout_http_protocol_state_t;
+
 char *shout_http_basic_authorization(shout_t *self)
 {
     char *out, *in;
@@ -60,7 +65,7 @@ char *shout_http_basic_authorization(shout_t *self)
     return in;
 }
 
-int shout_create_http_request(shout_t *self)
+shout_connection_return_state_t shout_create_http_request(shout_t *self, shout_connection_t *connection)
 {
     char        *auth;
     char        *ai;
@@ -88,7 +93,8 @@ int shout_create_http_request(shout_t *self)
         break;
 
         default:
-            return SHOUTERR_INSANE;
+            self->error = SHOUTERR_INSANE;
+            return SHOUT_RS_ERROR;
         break;
     }
 
@@ -98,39 +104,39 @@ int shout_create_http_request(shout_t *self)
     do {
         if (!(mount = _shout_util_url_encode_resource(self->mount)))
             break;
-        if (shout_queue_printf(self, "SOURCE %s HTTP/1.0\r\n", mount))
+        if (shout_queue_printf(self->connection, "SOURCE %s HTTP/1.0\r\n", mount))
             break;
         if (self->password && (self->server_caps & LIBSHOUT_CAP_GOTCAPS)) {
             if (! (auth = shout_http_basic_authorization(self)))
                 break;
-            if (shout_queue_str(self, auth)) {
+            if (shout_queue_str(self->connection, auth)) {
                 free(auth);
                 break;
             }
             free(auth);
         }
-        if (self->useragent && shout_queue_printf(self, "Host: %s:%i\r\n", self->host, self->port))
+        if (shout_queue_printf(self->connection, "Host: %s:%i\r\n", self->host, self->port))
             break;
-        if (self->useragent && shout_queue_printf(self, "User-Agent: %s\r\n", self->useragent))
+        if (self->useragent && shout_queue_printf(self->connection, "User-Agent: %s\r\n", self->useragent))
             break;
-        if (shout_queue_printf(self, "Content-Type: %s\r\n", mimetype))
+        if (shout_queue_printf(self->connection, "Content-Type: %s\r\n", mimetype))
             break;
-        if (shout_queue_printf(self, "ice-public: %d\r\n", self->public))
+        if (shout_queue_printf(self->connection, "ice-public: %d\r\n", self->public))
             break;
 
         _SHOUT_DICT_FOREACH(self->meta, dict, key, val) {
-            if (val && shout_queue_printf(self, "ice-%s: %s\r\n", key, val))
+            if (val && shout_queue_printf(self->connection, "ice-%s: %s\r\n", key, val))
                 break;
         }
 
         if ((ai = _shout_util_dict_urlencode(self->audio_info, ';'))) {
-            if (shout_queue_printf(self, "ice-audio-info: %s\r\n", ai)) {
+            if (shout_queue_printf(self->connection, "ice-audio-info: %s\r\n", ai)) {
                 free(ai);
                 break;
             }
             free(ai);
         }
-        if (shout_queue_str(self, "\r\n"))
+        if (shout_queue_str(self->connection, "\r\n"))
             break;
 
         ret = SHOUTERR_SUCCESS;
@@ -139,20 +145,21 @@ int shout_create_http_request(shout_t *self)
     if (mount)
         free(mount);
 
-    return ret;
+    self->error = ret;
+    return ret == SHOUTERR_SUCCESS ? SHOUT_RS_DONE : SHOUT_RS_ERROR;
 }
 
 int shout_create_http_request_upgrade(shout_t *self, const char *proto)
 {
     do {
-        if (shout_queue_str(self, "OPTIONS * HTTP/1.1\r\nConnection: Upgrade\r\n"))
+        if (shout_queue_str(self->connection, "OPTIONS * HTTP/1.1\r\nConnection: Upgrade\r\n"))
             break;
-        if (shout_queue_printf(self, "Upgrade: %s\r\n", proto))
+        if (shout_queue_printf(self->connection, "Upgrade: %s\r\n", proto))
             break;
         /* Send Host:-header as this one may be used to select cert! */
-        if (shout_queue_printf(self, "Host: %s:%i\r\n", self->host, self->port))
+        if (shout_queue_printf(self->connection, "Host: %s:%i\r\n", self->host, self->port))
             break;
-        if (shout_queue_str(self, "\r\n"))
+        if (shout_queue_str(self->connection, "\r\n"))
             break;
         return SHOUTERR_SUCCESS;
     } while (0);
@@ -160,7 +167,7 @@ int shout_create_http_request_upgrade(shout_t *self, const char *proto)
     return SHOUTERR_MALLOC;
 }
 
-int shout_get_http_response(shout_t *self)
+shout_connection_return_state_t shout_get_http_response(shout_t *self, shout_connection_t *connection)
 {
     int          blen;
     char        *pc;
@@ -170,7 +177,7 @@ int shout_get_http_response(shout_t *self)
     /* work from the back looking for \r?\n\r?\n. Anything else means more
      * is coming.
      */
-    for (queue = self->rqueue.head; queue->next; queue = queue->next) ;
+    for (queue = connection->rqueue.head; queue->next; queue = queue->next) ;
     pc = (char*)queue->data + queue->len - 1;
     blen = queue->len;
     while (blen) {
@@ -183,8 +190,9 @@ int shout_get_http_response(shout_t *self)
             newlines = 0;
         }
 
-        if (newlines == 2)
-            return SHOUTERR_SUCCESS;
+        if (newlines == 2) {
+            return SHOUT_RS_DONE;
+        }
 
         blen--;
         pc--;
@@ -196,7 +204,7 @@ int shout_get_http_response(shout_t *self)
         }
     }
 
-    return SHOUTERR_BUSY;
+    return SHOUT_RS_NOTNOW;
 }
 
 static inline void parse_http_response_caps(shout_t *self, const char *header, const char *str) {
@@ -295,7 +303,7 @@ static inline int eat_body(shout_t *self, size_t len, const char *buf, size_t bu
     return 0;
 }
 
-int shout_parse_http_response(shout_t *self)
+shout_connection_return_state_t shout_parse_http_response(shout_t *self, shout_connection_t *connection)
 {
     http_parser_t   *parser;
     char            *header = NULL;
@@ -304,12 +312,15 @@ int shout_parse_http_response(shout_t *self)
     const char      *retcode;
     int              ret;
     char            *mount;
+    int              consider_retry = 0;
 
     /* all this copying! */
-    hlen = shout_queue_collect(self->rqueue.head, &header);
-    if (hlen <= 0)
-        return SHOUTERR_MALLOC;
-    shout_queue_free(&self->rqueue);
+    hlen = shout_queue_collect(self->connection->rqueue.head, &header);
+    if (hlen <= 0) {
+        self->error = SHOUTERR_MALLOC;
+        return SHOUT_RS_ERROR;
+    }
+    shout_queue_free(&self->connection->rqueue);
 
     parser = httpp_create_parser();
     httpp_initialize(parser, NULL);
@@ -317,7 +328,8 @@ int shout_parse_http_response(shout_t *self)
     if (!(mount = _shout_util_url_encode(self->mount))) {
         httpp_destroy(parser);
         free(header);
-        return SHOUTERR_MALLOC;
+        self->error = SHOUTERR_MALLOC;
+        return SHOUT_RS_ERROR;
     }
 
     ret = httpp_parse_response(parser, header, hlen, mount);
@@ -340,7 +352,9 @@ int shout_parse_http_response(shout_t *self)
 #endif
             httpp_destroy(parser);
             free(header);
-            return SHOUTERR_SUCCESS;
+            connection->current_message_state = SHOUT_MSGSTATE_SENDING1;
+            connection->target_message_state = SHOUT_MSGSTATE_WAITING1;
+            return SHOUT_RS_DONE;
         } else if ((code >= 200 && code < 300) || code == 401 || code == 405 || code == 426 || code == 101) {
             const char *content_length = httpp_getvar(parser, "content-length");
             if (content_length) {
@@ -359,20 +373,32 @@ int shout_parse_http_response(shout_t *self)
                 break;
             }
 #endif
-            self->retry++;
-            if (self->retry > LIBSHOUT_MAX_RETRY)
-                self->retry = 0;
-
-            goto retry;
-        } else {
-            self->retry = 0;
+            consider_retry = 1;
         }
     }
 
 failure:
-    self->retry = 0;
-retry:
     free(header);
     httpp_destroy(parser);
-    return self->error = SHOUTERR_NOLOGIN;
+
+    switch ((shout_http_protocol_state_t)connection->current_protocol_state) {
+        case STATE_CHALLENGE:
+            if (consider_retry) {
+                shout_connection_disconnect(connection);
+                shout_connection_connect(connection, self);
+                connection->current_message_state = SHOUT_MSGSTATE_CREATING0;
+                connection->target_message_state = SHOUT_MSGSTATE_SENDING1;
+                connection->target_protocol_state = STATE_SOURCE;
+                return SHOUT_RS_NOTNOW;
+            } else {
+                self->error = SHOUTERR_NOLOGIN;
+                return SHOUT_RS_ERROR;
+            }
+        break;
+        case STATE_SOURCE:
+        default:
+            self->error = SHOUTERR_NOLOGIN;
+            return SHOUT_RS_ERROR;
+        break;
+    }
 }
