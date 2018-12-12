@@ -162,6 +162,8 @@ struct shout_connection_tag {
     int (*any_timeout)(shout_t *self, shout_connection_t *connection);
     int (*destory)(shout_connection_t *connection);
 
+    int                             nonblocking;
+
 #ifdef HAVE_OPENSSL
     shout_tls_t   *tls;
 #endif

@@ -80,12 +80,20 @@ int                 shout_connection_unref(shout_connection_t *con)
 
 static struct timeval shout_connection_iter__wait_for_io__get_timeout(shout_connection_t *con, shout_t *shout)
 {
-    struct timeval tv = {
-        .tv_sec = 1,
+    static const struct timeval tv_blocking = {
+        .tv_sec = 8,
         .tv_usec = 0
     };
+    static const struct timeval tv_nonblocking = {
+        .tv_sec = 0,
+        .tv_usec = 1000
+    };
 
-    return tv;
+    if (con->nonblocking) {
+        return tv_nonblocking;
+    } else {
+        return tv_blocking;
+    }
 }
 
 static shout_connection_return_state_t shout_connection_iter__wait_for_io(shout_connection_t *con, shout_t *shout, int for_read, int for_write)
@@ -129,9 +137,11 @@ static shout_connection_return_state_t shout_connection_iter__socket(shout_conne
             }
         break;
         case SHOUT_SOCKSTATE_CONNECTING:
-            ret = shout_connection_iter__wait_for_io(con, shout, 1, 1);
-            if (ret != SHOUT_RS_DONE) {
-                return ret;
+            if (con->nonblocking) {
+                ret = shout_connection_iter__wait_for_io(con, shout, 1, 1);
+                if (ret != SHOUT_RS_DONE) {
+                    return ret;
+                }
             }
 
             if (sock_connected(con->socket, 0) == 1) {
@@ -377,6 +387,8 @@ int                 shout_connection_iter(shout_connection_t *con, shout_t *shou
             break; \
             case SHOUT_RS_TIMEOUT: \
             case SHOUT_RS_NOTNOW: \
+                if (con->nonblocking) \
+                    return SHOUTERR_RETRY; \
                 retry = 1; \
             break; \
             case SHOUT_RS_ERROR: \
@@ -431,7 +443,19 @@ int                 shout_connection_select_tlsmode(shout_connection_t *con, int
 
     return SHOUTERR_INSANE;
 }
-int                 shout_connection_set_nonblocking(shout_connection_t *con, unsigned int nonblocking);
+int                 shout_connection_set_nonblocking(shout_connection_t *con, unsigned int nonblocking)
+{
+    if (!con)
+        return SHOUTERR_INSANE;
+
+    if (con->socket != SOCK_ERROR)
+        return SHOUTERR_BUSY;
+
+    con->nonblocking = nonblocking;
+
+    return SHOUTERR_SUCCESS;
+}
+
 int                 shout_connection_set_next_timeout(shout_connection_t *con, shout_t *shout, uint32_t timeout /* [ms] */);
 int                 shout_connection_connect(shout_connection_t *con, shout_t *shout)
 {
@@ -443,11 +467,19 @@ int                 shout_connection_connect(shout_connection_t *con, shout_t *s
     if (con->socket != SOCK_ERROR || con->current_socket_state != SHOUT_SOCKSTATE_UNCONNECTED)
         return SHOUTERR_BUSY;
 
+    shout_connection_set_nonblocking(con, shout_get_nonblocking(shout));
+
     port = shout->port;
     if (shout_get_protocol(shout) == SHOUT_PROTOCOL_ICY)
         port++;
 
-    if ((con->socket = sock_connect_non_blocking(shout->host, port)) < 0) {
+    if (con->nonblocking) {
+        con->socket = sock_connect_non_blocking(shout->host, port);
+    } else {
+        con->socket = sock_connect(shout->host, port);
+    }
+
+    if (con->socket < 0) {
         con->socket = SOCK_ERROR;
         return SHOUTERR_NOCONNECT;
     }
