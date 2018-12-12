@@ -127,6 +127,7 @@ static shout_connection_return_state_t shout_connection_iter__wait_for_io(shout_
 static shout_connection_return_state_t shout_connection_iter__socket(shout_connection_t *con, shout_t *shout)
 {
     shout_connection_return_state_t ret;
+    int rc;
 
     switch (con->current_socket_state) {
         case SHOUT_SOCKSTATE_UNCONNECTED:
@@ -147,6 +148,24 @@ static shout_connection_return_state_t shout_connection_iter__socket(shout_conne
             if (sock_connected(con->socket, 0) == 1) {
                 con->current_socket_state = SHOUT_SOCKSTATE_CONNECTED;
                 return SHOUT_RS_DONE;
+            }
+        break;
+        case SHOUT_SOCKSTATE_CONNECTED:
+            shout_tls_try_connect(con->tls);
+            con->current_socket_state = SHOUT_SOCKSTATE_TLS_CONNECTING;
+            return SHOUT_RS_DONE;
+        break;
+        case SHOUT_SOCKSTATE_TLS_CONNECTING:
+        case SHOUT_SOCKSTATE_TLS_CONNECTED:
+            rc = shout_tls_try_connect(con->tls);
+            if (rc == SHOUTERR_SUCCESS) {
+                con->current_socket_state = SHOUT_SOCKSTATE_TLS_VERIFIED;
+                return SHOUT_RS_DONE;
+            } else if (rc == SHOUTERR_BUSY) {
+                return SHOUT_RS_NOTNOW;
+            } else {
+                shout->error = rc;
+                return SHOUT_RS_ERROR;
             }
         break;
     }
@@ -486,6 +505,10 @@ int                 shout_connection_connect(shout_connection_t *con, shout_t *s
 
     con->current_socket_state = SHOUT_SOCKSTATE_CONNECTING;
     con->target_socket_state = SHOUT_SOCKSTATE_CONNECTED;
+
+    if (shout->tls_mode == SHOUT_TLS_RFC2818)
+        return shout_connection_starttls(con, shout);
+
     return SHOUTERR_SUCCESS;
 }
 int                 shout_connection_disconnect(shout_connection_t *con)
@@ -525,4 +548,23 @@ ssize_t             shout_connection_send(shout_connection_t *con, shout_t *shou
     shout_connection_iter(con, shout);
 
     return len;
+}
+
+int                 shout_connection_starttls(shout_connection_t *con, shout_t *shout)
+{
+    if (!con || !shout)
+        return SHOUTERR_INSANE;
+
+    if (con->tls)
+        return SHOUTERR_BUSY;
+
+    con->tls = shout_tls_new(shout, con->socket);
+    if (!con->tls) /* just guessing that it's a malloc error */
+        return SHOUTERR_MALLOC;
+
+    con->target_socket_state = SHOUT_SOCKSTATE_TLS_VERIFIED;
+
+    shout_connection_iter(con, shout);
+
+    return SHOUTERR_SUCCESS;
 }
