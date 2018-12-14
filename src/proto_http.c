@@ -39,7 +39,7 @@ typedef enum {
     STATE_SOURCE,
 } shout_http_protocol_state_t;
 
-char *shout_http_basic_authorization(shout_t *self)
+static char *shout_http_basic_authorization(shout_t *self)
 {
     char *out, *in;
     int   len;
@@ -174,30 +174,30 @@ static shout_connection_return_state_t shout_create_http_request_generic(shout_t
         ret = SHOUTERR_SUCCESS;
 
         if (!param || is_post) {
-            if (shout_queue_printf(self->connection, "%s %s HTTP/1.1\r\n", method, res))
+            if (shout_queue_printf(connection, "%s %s HTTP/1.1\r\n", method, res))
                 break;
         } else {
-            if (shout_queue_printf(self->connection, "%s %s?%s HTTP/1.1\r\n", method, res, param))
+            if (shout_queue_printf(connection, "%s %s?%s HTTP/1.1\r\n", method, res, param))
                 break;
         }
 
         /* Send Host:-header as this one may be used to select cert! */
-        if (shout_queue_printf(self->connection, "Host: %s:%i\r\n", self->host, self->port))
+        if (shout_queue_printf(connection, "Host: %s:%i\r\n", self->host, self->port))
             break;
 
         if (fake_ua) {
             /* Thank you Nullsoft for your broken software. */
-            if (self->useragent && shout_queue_printf(self->connection, "User-Agent: %s (Mozilla compatible)\r\n", self->useragent))
+            if (self->useragent && shout_queue_printf(connection, "User-Agent: %s (Mozilla compatible)\r\n", self->useragent))
                 break;
         } else {
-            if (self->useragent && shout_queue_printf(self->connection, "User-Agent: %s\r\n", self->useragent))
+            if (self->useragent && shout_queue_printf(connection, "User-Agent: %s\r\n", self->useragent))
                 break;
         }
 
         if (self->password && auth) {
             if (! (basic_auth = shout_http_basic_authorization(self)))
                 break;
-            if (shout_queue_str(self->connection, basic_auth)) {
+            if (shout_queue_str(connection, basic_auth)) {
                 free(basic_auth);
                 break;
             }
@@ -205,12 +205,12 @@ static shout_connection_return_state_t shout_create_http_request_generic(shout_t
         }
 
         if (upgrade) {
-            if (shout_queue_printf(self->connection, "Connection: Upgrade\r\nUpgrade: %s\r\n", upgrade))
+            if (shout_queue_printf(connection, "Connection: Upgrade\r\nUpgrade: %s\r\n", upgrade))
                 break;
         }
 
         /* End of request */
-        if (shout_queue_str(self->connection, "\r\n"))
+        if (shout_queue_str(connection, "\r\n"))
             break;
     } while (0);
 

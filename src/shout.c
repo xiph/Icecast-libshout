@@ -291,184 +291,98 @@ int shout_metadata_add(shout_metadata_t *self, const char *name, const char *val
     return _shout_util_dict_set(self, name, value);
 }
 
-/* open second socket to server, send HTTP request to change metadata.
- * TODO: prettier error-handling.
- */
 int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 {
-    int         error;
-    sock_t      socket = -1;
-    int         rv;
-    char       *encvalue = NULL;
-    const char *request_template;
-    char       *request = NULL;
-    size_t      request_len;
-    char       *auth = NULL;
-    char       *mount = NULL;
-#ifdef HAVE_OPENSSL
-    shout_tls_t *tls = NULL;
-#endif
+    shout_connection_t *connection;
+    shout_http_plan_t plan;
+    size_t param_len;
+    char *param = NULL;
+    char *encvalue;
+    const char *param_template;
 
     if (!self || !metadata)
         return SHOUTERR_INSANE;
 
-    if (!(encvalue = _shout_util_dict_urlencode(metadata, '&')))
-        goto error_malloc;
+    encvalue = _shout_util_dict_urlencode(metadata, '&');
+    if (!encvalue)
+        return self->error = SHOUTERR_MALLOC;
 
-    if (!(mount = _shout_util_url_encode(self->mount)))
-        goto error_malloc;
+    memset(&plan, 0, sizeof(plan));
+
+    plan.is_source = 0;
+    plan.tls_mode = self->tls_mode;
 
     switch (self->protocol) {
-    case SHOUT_PROTOCOL_ICY:
-        request_template = "GET /admin.cgi?mode=updinfo&pass=%s&%s HTTP/1.0\r\nUser-Agent: %s (Mozilla compatible)\r\n\r\n";
-        request_len = strlen(request_template) + strlen(self->password) + strlen(encvalue) + strlen(shout_get_agent(self)) + 1;
-        if (!(request = malloc(request_len)))
-            goto error_malloc;
-        snprintf(request, request_len, request_template, self->password, encvalue, shout_get_agent(self));
-        break;
-    case SHOUT_PROTOCOL_HTTP:
-        auth = shout_http_basic_authorization(self);
+        case SHOUT_PROTOCOL_ICY:
+            param_template = "mode=updinfo&pass=%s&%s";
+            param_len = strlen(param_template) + strlen(encvalue) + 1 + strlen(self->password);
+            param = malloc(param_len);
+            if (!param) {
+                free(encvalue);
+                return self->error = SHOUTERR_MALLOC;
+            }
+            snprintf(param, param_len, param_template, self->password, encvalue);
 
-        request_template = "GET /admin/metadata?mode=updinfo&mount=%s&%s HTTP/1.0\r\nUser-Agent: %s\r\n%s\r\n";
-        request_len = strlen(request_template) + strlen(mount) + strlen(encvalue) + strlen(shout_get_agent(self)) + 1;
-        if (auth)
-            request_len += strlen(auth);
-        if (!(request = malloc(request_len)))
-            goto error_malloc;
-        snprintf(request, request_len, request_template, mount, encvalue, shout_get_agent(self), auth ? auth : "");
+            plan.param = param;
+            plan.fake_ua = 1;
+            plan.auth = 0;
+            plan.method = "GET";
+            plan.resource = "/admin.cgi";
         break;
-    default:
-        request_template = "GET /admin.cgi?mode=updinfo&pass=%s&mount=%s&%s HTTP/1.0\r\nUser-Agent: %s\r\n\r\n";
-        request_len = strlen(request_template) + strlen(self->password) + strlen(mount) + strlen(encvalue) + strlen(shout_get_agent(self)) + 1;
-        if (!(request = malloc(request_len)))
-            goto error_malloc;
-        snprintf(request, request_len, request_template, self->password, mount, encvalue, shout_get_agent(self));
+        case SHOUT_PROTOCOL_HTTP:
+            param_template = "mode=updinfo&mount=%s&%s";
+            param_len = strlen(param_template) + strlen(encvalue) + 1 + strlen(self->mount);
+            param = malloc(param_len);
+            if (!param) {
+                free(encvalue);
+                return self->error = SHOUTERR_MALLOC;
+            }
+            snprintf(param, param_len, param_template, self->mount, encvalue);
+
+            plan.param = param;
+            plan.auth = 1;
+            plan.resource = "/admin/metadata";
+        break;
+        default:
+            param_template = "mode=updinfo&pass=%s&mount=%s&%s";
+            param_len = strlen(param_template) + strlen(encvalue) + 1 + strlen(self->password) + strlen(self->mount);
+            param = malloc(param_len);
+            if (!param) {
+                free(encvalue);
+                return self->error = SHOUTERR_MALLOC;
+            }
+            snprintf(param, param_len, param_template, self->password, self->mount, encvalue);
+
+            plan.param = param;
+            plan.auth = 0;
+            plan.method = "GET";
+            plan.resource = "/admin.cgi";
         break;
     }
 
     free(encvalue);
-    encvalue = NULL;
 
-    free(mount);
-    mount = NULL;
-
-    if (auth)
-        free(auth);
-    auth = NULL;
-
-    if ((socket = sock_connect(self->host, self->port)) <= 0)
-        return SHOUTERR_NOCONNECT;
-
-#ifdef HAVE_OPENSSL
-    switch (self->tls_mode_used) {
-        case SHOUT_TLS_DISABLED:
-            /* nothing to do */
-        break;
-
-        case SHOUT_TLS_RFC2817:
-            /* Use TLS via HTTP Upgrade:-header [RFC2817]. */
-            do {
-                /* use a subscope to avoid more function level variables */
-                char    upgrade[512];
-                size_t  len;
-
-                /* send upgrade request */
-                snprintf(upgrade, sizeof(upgrade),
-                    "GET / HTTP/1.1\r\nConnection: Upgrade\r\nUpgrade: TLS/1.0\r\nHost: %s:%i\r\n\r\n",
-                    self->host, self->port);
-
-                upgrade[sizeof(upgrade) - 1] = 0;
-                len = strlen(upgrade);
-                if (len == (sizeof(upgrade) - 1))
-                    goto error_malloc;
-
-                rv = sock_write_bytes(socket, upgrade, len);
-                if (len != (size_t)rv)
-                    goto error_socket;
-
-                /* read status line */
-                if (!sock_read_line(socket, upgrade, sizeof(upgrade)))
-                    goto error_socket;
-                if (strncmp(upgrade, "HTTP/1.1 101 ", 13) != 0)
-                    goto error_socket;
-
-                /* read headers */
-                len = 0;
-                do {
-                    if (!sock_read_line(socket, upgrade, sizeof(upgrade)))
-                        goto error_socket;
-                    if (upgrade[0] == 0)
-                        break;
-                    if (!strncasecmp(upgrade, "Content-Length: ", 16) == 0)
-                        len = atoi(upgrade + 16);
-                } while (1);
-
-                /* read body */
-                while (len) {
-                    rv = sock_read_bytes(socket, upgrade, len > sizeof(upgrade) ? sizeof(upgrade) : len);
-                    if (rv < 1)
-                        goto error_socket;
-                    len -= rv;
-                }
-            } while (0);
-        /* fall thru */
-
-        case SHOUT_TLS_RFC2818:
-            /* Use TLS for transport layer like HTTPS [RFC2818] does. */
-            tls = shout_tls_new(self, socket);
-            if (!tls)
-                goto error_malloc;
-            error = shout_tls_try_connect(tls);
-            if (error != SHOUTERR_SUCCESS)
-                goto error;
-        break;
-
-        default:
-            /* Bad mode or auto detection not completed. */
-            error = SHOUTERR_INSANE;
-            goto error;
-        break;
+    connection = shout_connection_new(self, shout_http_impl, &plan);
+    if (!connection) {
+        free(param);
+        return self->error = SHOUTERR_MALLOC;
     }
-#endif
 
-#ifdef HAVE_OPENSSL
-    if (tls) {
-        rv = shout_tls_write(tls, request, strlen(request));
-    } else {
-        rv = sock_write(socket, "%s", request);
-    }
-#else
-    rv = sock_write(socket, "%s", request);
-#endif
+    shout_connection_select_tlsmode(connection, self->tls_mode);
+    shout_connection_set_nonblocking(connection, 0);
 
-    if (!rv)
-        goto error_socket;
+    shout_connection_connect(connection, self);
 
-    error = SHOUTERR_SUCCESS;
-    goto error;
+    connection->target_message_state = SHOUT_MSGSTATE_PARSED_FINAL;
+    connection->current_message_state = SHOUT_MSGSTATE_CREATING0;
 
-error_socket:
-    error = SHOUTERR_SOCKET;
-    goto error;
-error_malloc:
-    error = SHOUTERR_MALLOC;
-    goto error;
-error:
-#ifdef HAVE_OPENSSL
-    if (tls)
-        shout_tls_close(tls);
-#endif
-    if (socket != -1)
-        sock_close(socket);
-    if (encvalue)
-        free(encvalue);
-    if (request)
-        free(request);
-    if (auth)
-        free(auth);
-    if (mount)
-        free(mount);
-    return error;
+    shout_connection_iter(connection, self);
+
+    shout_connection_unref(connection);
+
+    free(param);
+
+    return SHOUTERR_SUCCESS;
 }
 
 /* getters/setters */
