@@ -65,9 +65,9 @@ char *shout_http_basic_authorization(shout_t *self)
     return in;
 }
 
-shout_connection_return_state_t shout_create_http_request(shout_t *self, shout_connection_t *connection)
+static shout_connection_return_state_t shout_create_http_request_source(shout_t *self, shout_connection_t *connection, int auth)
 {
-    char        *auth;
+    char        *basic_auth;
     char        *ai;
     int          ret = SHOUTERR_MALLOC;
     util_dict   *dict;
@@ -106,14 +106,14 @@ shout_connection_return_state_t shout_create_http_request(shout_t *self, shout_c
             break;
         if (shout_queue_printf(self->connection, "SOURCE %s HTTP/1.0\r\n", mount))
             break;
-        if (self->password && (self->server_caps & LIBSHOUT_CAP_GOTCAPS)) {
-            if (! (auth = shout_http_basic_authorization(self)))
+        if (self->password && auth) {
+            if (! (basic_auth = shout_http_basic_authorization(self)))
                 break;
-            if (shout_queue_str(self->connection, auth)) {
-                free(auth);
+            if (shout_queue_str(self->connection, basic_auth)) {
+                free(basic_auth);
                 break;
             }
-            free(auth);
+            free(basic_auth);
         }
         if (shout_queue_printf(self->connection, "Host: %s:%i\r\n", self->host, self->port))
             break;
@@ -149,22 +149,94 @@ shout_connection_return_state_t shout_create_http_request(shout_t *self, shout_c
     return ret == SHOUTERR_SUCCESS ? SHOUT_RS_DONE : SHOUT_RS_ERROR;
 }
 
-int shout_create_http_request_upgrade(shout_t *self, const char *proto)
+static shout_connection_return_state_t shout_create_http_request_generic(shout_t *self, shout_connection_t *connection, const char *method, const char *res, const char *param, int fake_ua, const char *upgrade, int auth)
 {
+    int          ret = SHOUTERR_MALLOC;
+    int          is_post = 0;
+    char        *basic_auth;
+
+    if (method) {
+        is_post = strcmp(method, "POST") == 0;
+    } else {
+        if (self->server_caps & LIBSHOUT_CAP_POST) {
+            method = "POST";
+            is_post = 1;
+        } else {
+            method = "GET";
+            is_post = 0;
+        }
+    }
+
+    /* this is lazy code that relies on the only error from queue_* being
+     * SHOUTERR_MALLOC
+     */
     do {
-        if (shout_queue_str(self->connection, "OPTIONS * HTTP/1.1\r\nConnection: Upgrade\r\n"))
-            break;
-        if (shout_queue_printf(self->connection, "Upgrade: %s\r\n", proto))
-            break;
+        ret = SHOUTERR_SUCCESS;
+
+        if (!param || is_post) {
+            if (shout_queue_printf(self->connection, "%s %s HTTP/1.1\r\n", method, res))
+                break;
+        } else {
+            if (shout_queue_printf(self->connection, "%s %s?%s HTTP/1.1\r\n", method, res, param))
+                break;
+        }
+
         /* Send Host:-header as this one may be used to select cert! */
         if (shout_queue_printf(self->connection, "Host: %s:%i\r\n", self->host, self->port))
             break;
+
+        if (fake_ua) {
+            /* Thank you Nullsoft for your broken software. */
+            if (self->useragent && shout_queue_printf(self->connection, "User-Agent: %s (Mozilla compatible)\r\n", self->useragent))
+                break;
+        } else {
+            if (self->useragent && shout_queue_printf(self->connection, "User-Agent: %s\r\n", self->useragent))
+                break;
+        }
+
+        if (self->password && auth) {
+            if (! (basic_auth = shout_http_basic_authorization(self)))
+                break;
+            if (shout_queue_str(self->connection, basic_auth)) {
+                free(basic_auth);
+                break;
+            }
+            free(basic_auth);
+        }
+
+        if (upgrade) {
+            if (shout_queue_printf(self->connection, "Connection: Upgrade\r\nUpgrade: %s\r\n", upgrade))
+                break;
+        }
+
+        /* End of request */
         if (shout_queue_str(self->connection, "\r\n"))
             break;
-        return SHOUTERR_SUCCESS;
     } while (0);
 
-    return SHOUTERR_MALLOC;
+    self->error = ret;
+    return ret == SHOUTERR_SUCCESS ? SHOUT_RS_DONE : SHOUT_RS_ERROR;
+}
+
+static shout_connection_return_state_t shout_create_http_request(shout_t *self, shout_connection_t *connection)
+{
+    const shout_http_plan_t *plan = connection->plan;
+
+    if (!plan) {
+        self->error = SHOUTERR_INSANE;
+        return SHOUT_RS_ERROR;
+    }
+
+    if (plan->is_source) {
+        /* FIXME: This should not depend on GOTCAPS but on request of the server. */
+        if (plan->auth && self->server_caps & LIBSHOUT_CAP_GOTCAPS) {
+            return shout_create_http_request_source(self, connection, 1);
+        } else {
+            return shout_create_http_request_source(self, connection, 0);
+        }
+    } else {
+        return shout_create_http_request_generic(self, connection, plan->method, plan->resource, plan->param, plan->fake_ua, NULL, plan->auth);
+    }
 }
 
 shout_connection_return_state_t shout_get_http_response(shout_t *self, shout_connection_t *connection)

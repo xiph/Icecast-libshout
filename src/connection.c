@@ -30,7 +30,7 @@
 #include <shout/shout.h>
 #include "shout_private.h"
 
-shout_connection_t *shout_connection_new(shout_t *self, const shout_protocol_impl_t *impl)
+shout_connection_t *shout_connection_new(shout_t *self, const shout_protocol_impl_t *impl, const void *plan)
 {
     shout_connection_t *con;
 
@@ -45,6 +45,7 @@ shout_connection_t *shout_connection_new(shout_t *self, const shout_protocol_imp
     con->socket = SOCK_ERROR;
     con->selected_tls_mode = SHOUT_TLS_AUTO;
     con->impl = impl;
+    con->plan = plan;
 
     return con;
 }

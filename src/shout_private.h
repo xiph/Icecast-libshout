@@ -141,6 +141,16 @@ typedef union shout_protocol_extra_tag {
     void *vp;
 } shout_protocol_extra_t;
 
+typedef struct {
+    int is_source;
+    int fake_ua;
+    int tls_mode;
+    int auth;
+    const char *method;
+    const char *resource;
+    const char *param;
+} shout_http_plan_t;
+
 typedef struct shout_connection_tag shout_connection_t;
 
 typedef struct {
@@ -163,6 +173,8 @@ struct shout_connection_tag {
     shout_protocol_extra_t          protocol_extra;
 
     const shout_protocol_impl_t *impl;
+    const void *plan;
+
     int (*any_timeout)(shout_t *self, shout_connection_t *connection);
     int (*destory)(shout_connection_t *connection);
 
@@ -214,6 +226,10 @@ struct shout {
     char        *client_certificate;
 #endif
 
+    union {
+        shout_http_plan_t http;
+    } source_plan;
+
     /* server capabilities (LIBSHOUT_CAP_*) */
     uint32_t server_caps;
 
@@ -246,7 +262,7 @@ ssize_t shout_conn_write(shout_t *self, const void *buf, size_t len);
 int     shout_conn_recoverable(shout_t *self);
 
 /* connection */
-shout_connection_t *shout_connection_new(shout_t *self, const shout_protocol_impl_t *impl);
+shout_connection_t *shout_connection_new(shout_t *self, const shout_protocol_impl_t *impl, const void *plan);
 int                 shout_connection_ref(shout_connection_t *con);
 int                 shout_connection_unref(shout_connection_t *con);
 int                 shout_connection_iter(shout_connection_t *con, shout_t *shout);

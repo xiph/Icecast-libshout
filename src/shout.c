@@ -1113,6 +1113,11 @@ static int try_connect(shout_t *self)
         switch (shout_get_protocol(self)) {
             case SHOUT_PROTOCOL_HTTP:
                 impl = shout_http_impl;
+                memset(&(self->source_plan.http), 0, sizeof(self->source_plan.http));
+                self->source_plan.http.is_source = 1;
+                self->source_plan.http.auth = 1;
+                self->source_plan.http.tls_mode = self->tls_mode;
+                self->source_plan.http.resource = self->mount;
             break;
             case SHOUT_PROTOCOL_XAUDIOCAST:
                 impl = shout_xaudiocast_impl;
@@ -1125,7 +1130,7 @@ static int try_connect(shout_t *self)
             break;
         }
 
-        self->connection = shout_connection_new(self, impl);
+        self->connection = shout_connection_new(self, impl, &(self->source_plan));
         shout_connection_connect(self->connection, self);
         self->connection->target_message_state = SHOUT_MSGSTATE_SENDING1;
         self->connection->current_message_state = SHOUT_MSGSTATE_CREATING0;
