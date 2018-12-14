@@ -104,39 +104,39 @@ static shout_connection_return_state_t shout_create_http_request_source(shout_t 
     do {
         if (!(mount = _shout_util_url_encode_resource(self->mount)))
             break;
-        if (shout_queue_printf(self->connection, "SOURCE %s HTTP/1.0\r\n", mount))
+        if (shout_queue_printf(connection, "SOURCE %s HTTP/1.0\r\n", mount))
             break;
         if (self->password && auth) {
             if (! (basic_auth = shout_http_basic_authorization(self)))
                 break;
-            if (shout_queue_str(self->connection, basic_auth)) {
+            if (shout_queue_str(connection, basic_auth)) {
                 free(basic_auth);
                 break;
             }
             free(basic_auth);
         }
-        if (shout_queue_printf(self->connection, "Host: %s:%i\r\n", self->host, self->port))
+        if (shout_queue_printf(connection, "Host: %s:%i\r\n", self->host, self->port))
             break;
-        if (self->useragent && shout_queue_printf(self->connection, "User-Agent: %s\r\n", self->useragent))
+        if (self->useragent && shout_queue_printf(connection, "User-Agent: %s\r\n", self->useragent))
             break;
-        if (shout_queue_printf(self->connection, "Content-Type: %s\r\n", mimetype))
+        if (shout_queue_printf(connection, "Content-Type: %s\r\n", mimetype))
             break;
-        if (shout_queue_printf(self->connection, "ice-public: %d\r\n", self->public))
+        if (shout_queue_printf(connection, "ice-public: %d\r\n", self->public))
             break;
 
         _SHOUT_DICT_FOREACH(self->meta, dict, key, val) {
-            if (val && shout_queue_printf(self->connection, "ice-%s: %s\r\n", key, val))
+            if (val && shout_queue_printf(connection, "ice-%s: %s\r\n", key, val))
                 break;
         }
 
         if ((ai = _shout_util_dict_urlencode(self->audio_info, ';'))) {
-            if (shout_queue_printf(self->connection, "ice-audio-info: %s\r\n", ai)) {
+            if (shout_queue_printf(connection, "ice-audio-info: %s\r\n", ai)) {
                 free(ai);
                 break;
             }
             free(ai);
         }
-        if (shout_queue_str(self->connection, "\r\n"))
+        if (shout_queue_str(connection, "\r\n"))
             break;
 
         ret = SHOUTERR_SUCCESS;
