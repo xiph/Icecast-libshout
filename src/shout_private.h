@@ -218,7 +218,6 @@ struct shout {
 #ifdef HAVE_OPENSSL
     int          upgrade_to_tls;
     int          tls_mode;
-    int          tls_mode_used;
     char        *ca_directory;
     char        *ca_file;
     char        *allowed_ciphers;

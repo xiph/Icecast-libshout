@@ -124,7 +124,6 @@ shout_t *shout_new(void)
     }
 
     self->tls_mode      = SHOUT_TLS_AUTO;
-    self->tls_mode_used = SHOUTERR_NOTLS;
 #endif
 
     self->port      = LIBSHOUT_DEFAULT_PORT;
