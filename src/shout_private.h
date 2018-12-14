@@ -261,6 +261,8 @@ ssize_t shout_conn_write(shout_t *self, const void *buf, size_t len);
 int     shout_conn_recoverable(shout_t *self);
 
 /* connection */
+ssize_t shout_connection__read(shout_connection_t *con, shout_t *shout, void *buf, size_t len);
+int shout_connection__recoverable(shout_connection_t *con, shout_t *shout);
 shout_connection_t *shout_connection_new(shout_t *self, const shout_protocol_impl_t *impl, const void *plan);
 int                 shout_connection_ref(shout_connection_t *con);
 int                 shout_connection_unref(shout_connection_t *con);

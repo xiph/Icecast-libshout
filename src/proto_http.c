@@ -381,7 +381,7 @@ static inline void parse_http_response_caps(shout_t *self, shout_connection_t *c
     return;
 }
 
-static inline int eat_body(shout_t *self, size_t len, const char *buf, size_t buflen)
+static inline int eat_body(shout_t *self, shout_connection_t *connection, size_t len, const char *buf, size_t buflen)
 {
     const char  *p;
     size_t       header_len = 0;
@@ -412,8 +412,8 @@ static inline int eat_body(shout_t *self, size_t len, const char *buf, size_t bu
     len -= buflen - header_len;
 
     while (len) {
-        got = shout_conn_read(self, buffer, len > sizeof(buffer) ? sizeof(buffer) : len);
-        if (got == -1 && shout_conn_recoverable(self)) {
+        got = shout_connection__read(connection, self, buffer, len > sizeof(buffer) ? sizeof(buffer) : len);
+        if (got == -1 && shout_connection__recoverable(connection, self)) {
             continue;
         } else if (got == -1) {
             return -1;
@@ -510,7 +510,7 @@ static shout_connection_return_state_t shout_parse_http_response(shout_t *self, 
         } else if ((code >= 200 && code < 300) || code == 401 || code == 405 || code == 426 || code == 101) {
             const char *content_length = httpp_getvar(parser, "content-length");
             if (content_length) {
-                if (eat_body(self, atoi(content_length), header, hlen) == -1) {
+                if (eat_body(self, connection, atoi(content_length), header, hlen) == -1) {
                     can_reuse = 0;
                     goto failure;
                 }
