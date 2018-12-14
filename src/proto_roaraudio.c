@@ -312,3 +312,8 @@ int shout_parse_roaraudio_response(shout_t *self)
     self->connection->current_message_state = SHOUT_MSGSTATE_CREATING0;
     return SHOUTERR_RETRY;
 }
+
+static const shout_protocol_impl_t shout_roaraudio_impl_real = {
+    .msg_create = shout_create_roaraudio_request
+};
+extern const shout_protocol_impl_t *shout_roaraudio_impl = &shout_roaraudio_impl_real;

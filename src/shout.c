@@ -1102,36 +1102,30 @@ const char *shout_get_client_certificate(shout_t *self)
 }
 #endif
 
-static void setup_protocol(shout_t *self)
-{
-    unsigned int protocol = shout_get_protocol(self);
-
-    switch (protocol) {
-        case SHOUT_PROTOCOL_HTTP:
-            self->connection->msg_create = shout_create_http_request;
-            self->connection->msg_get = shout_get_http_response;
-            self->connection->msg_parse = shout_parse_http_response;
-        break;
-        case SHOUT_PROTOCOL_XAUDIOCAST:
-            self->connection->msg_create = shout_create_xaudiocast_request;
-        break;
-        case SHOUT_PROTOCOL_ICY:
-            self->connection->msg_create = shout_create_icy_request;
-        break;
-        case SHOUT_PROTOCOL_ROARAUDIO:
-            self->connection->msg_create = shout_create_roaraudio_request;
-        break;
-    }
-}
-
 /* -- static function definitions -- */
 static int try_connect(shout_t *self)
 {
     int ret;
 
     if (!self->connection) {
-        self->connection = shout_connection_new(self);
-        setup_protocol(self);
+        const shout_protocol_impl_t *impl = NULL;
+
+        switch (shout_get_protocol(self)) {
+            case SHOUT_PROTOCOL_HTTP:
+                impl = shout_http_impl;
+            break;
+            case SHOUT_PROTOCOL_XAUDIOCAST:
+                impl = shout_xaudiocast_impl;
+            break;
+            case SHOUT_PROTOCOL_ICY:
+                impl = shout_icy_impl;
+            break;
+            case SHOUT_PROTOCOL_ROARAUDIO:
+                impl = shout_roaraudio_impl;
+            break;
+        }
+
+        self->connection = shout_connection_new(self, impl);
         shout_connection_connect(self->connection, self);
         self->connection->target_message_state = SHOUT_MSGSTATE_SENDING1;
         self->connection->current_message_state = SHOUT_MSGSTATE_CREATING0;

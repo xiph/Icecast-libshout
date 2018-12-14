@@ -122,3 +122,8 @@ int shout_parse_xaudiocast_response(shout_t *self)
     self->server_caps |= LIBSHOUT_CAP_GOTCAPS;
     return SHOUTERR_SUCCESS;
 }
+
+static const shout_protocol_impl_t shout_xaudiocast_impl_real = {
+    .msg_create = shout_create_xaudiocast_request
+};
+extern const shout_protocol_impl_t *shout_xaudiocast_impl = &shout_xaudiocast_impl_real;

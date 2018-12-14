@@ -143,6 +143,13 @@ typedef union shout_protocol_extra_tag {
 
 typedef struct shout_connection_tag shout_connection_t;
 
+typedef struct {
+    shout_connection_return_state_t (*msg_create)(shout_t *self, shout_connection_t *connection);
+    shout_connection_return_state_t (*msg_get)(shout_t *self, shout_connection_t *connection);
+    shout_connection_return_state_t (*msg_parse)(shout_t *self, shout_connection_t *connection);
+    shout_connection_return_state_t (*protocol_iter)(shout_t *self, shout_connection_t *connection);
+} shout_protocol_impl_t;
+
 struct shout_connection_tag {
     size_t                          refc;
 
@@ -155,10 +162,7 @@ struct shout_connection_tag {
     int                             current_protocol_state;
     shout_protocol_extra_t          protocol_extra;
 
-    shout_connection_return_state_t (*msg_create)(shout_t *self, shout_connection_t *connection);
-    shout_connection_return_state_t (*msg_get)(shout_t *self, shout_connection_t *connection);
-    shout_connection_return_state_t (*msg_parse)(shout_t *self, shout_connection_t *connection);
-    shout_connection_return_state_t (*protocol_iter)(shout_t *self, shout_connection_t *connection);
+    const shout_protocol_impl_t *impl;
     int (*any_timeout)(shout_t *self, shout_connection_t *connection);
     int (*destory)(shout_connection_t *connection);
 
@@ -242,7 +246,7 @@ ssize_t shout_conn_write(shout_t *self, const void *buf, size_t len);
 int     shout_conn_recoverable(shout_t *self);
 
 /* connection */
-shout_connection_t *shout_connection_new(shout_t *self);
+shout_connection_t *shout_connection_new(shout_t *self, const shout_protocol_impl_t *impl);
 int                 shout_connection_ref(shout_connection_t *con);
 int                 shout_connection_unref(shout_connection_t *con);
 int                 shout_connection_iter(shout_connection_t *con, shout_t *shout);
@@ -265,6 +269,11 @@ int          shout_tls_recoverable(shout_tls_t *tls);
 #endif
 
 /* protocols */
+extern const shout_protocol_impl_t *shout_http_impl;
+extern const shout_protocol_impl_t *shout_xaudiocast_impl;
+extern const shout_protocol_impl_t *shout_icy_impl;
+extern const shout_protocol_impl_t *shout_roaraudio_impl;
+
 char   *shout_http_basic_authorization(shout_t *self);
 shout_connection_return_state_t shout_create_http_request(shout_t *self, shout_connection_t *connection);
 int     shout_create_http_request_upgrade(shout_t *self, const char *proto);

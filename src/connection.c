@@ -30,11 +30,11 @@
 #include <shout/shout.h>
 #include "shout_private.h"
 
-shout_connection_t *shout_connection_new(shout_t *self)
+shout_connection_t *shout_connection_new(shout_t *self, const shout_protocol_impl_t *impl)
 {
     shout_connection_t *con;
 
-    if (!self)
+    if (!self || !impl)
         return NULL;
 
     con = calloc(1, sizeof(*con));
@@ -44,6 +44,7 @@ shout_connection_t *shout_connection_new(shout_t *self)
     con->refc = 1;
     con->socket = SOCK_ERROR;
     con->selected_tls_mode = SHOUT_TLS_AUTO;
+    con->impl = impl;
 
     return con;
 }
@@ -278,7 +279,7 @@ static shout_connection_return_state_t shout_connection_iter__message__recv(shou
         return SHOUT_RS_ERROR;
     }
 
-    return con->msg_get(shout, con);
+    return con->impl->msg_get(shout, con);
 }
 static shout_connection_return_state_t shout_connection_iter__message(shout_connection_t *con, shout_t *shout)
 {
@@ -290,8 +291,8 @@ static shout_connection_return_state_t shout_connection_iter__message(shout_conn
         break;
         case SHOUT_MSGSTATE_CREATING0:
         case SHOUT_MSGSTATE_CREATING1:
-            if (con->msg_create) {
-                ret = con->msg_create(shout, con);
+            if (con->impl->msg_create) {
+                ret = con->impl->msg_create(shout, con);
             }
             if (ret == SHOUT_RS_DONE) {
                 if (con->current_message_state == SHOUT_MSGSTATE_CREATING0) {
@@ -342,8 +343,8 @@ static shout_connection_return_state_t shout_connection_iter__message(shout_conn
         break;
         case SHOUT_MSGSTATE_RECEIVED0:
         case SHOUT_MSGSTATE_RECEIVED1:
-            if (con->msg_parse)
-                ret = con->msg_parse(shout, con);
+            if (con->impl->msg_parse)
+                ret = con->impl->msg_parse(shout, con);
             return ret;
         break;
         case SHOUT_MSGSTATE_PARSED_INFORMATIONAL0:
@@ -365,12 +366,12 @@ static shout_connection_return_state_t shout_connection_iter__protocol(shout_con
 {
     shout_connection_return_state_t ret;
 
-    if (!con->protocol_iter) {
+    if (!con->impl->protocol_iter) {
         con->current_protocol_state = con->target_protocol_state;
         return SHOUT_RS_DONE;
     }
 
-    ret = con->protocol_iter(shout, con);
+    ret = con->impl->protocol_iter(shout, con);
     switch (ret) {
         case SHOUT_RS_ERROR:
             shout->error = SHOUTERR_SOCKET;

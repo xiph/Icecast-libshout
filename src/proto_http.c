@@ -402,3 +402,10 @@ failure:
         break;
     }
 }
+
+static const shout_protocol_impl_t shout_http_impl_real = {
+    .msg_create = shout_create_http_request,
+    .msg_get = shout_get_http_response,
+    .msg_parse = shout_parse_http_response
+};
+const shout_protocol_impl_t * shout_http_impl = &shout_http_impl_real;

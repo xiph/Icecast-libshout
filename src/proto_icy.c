@@ -92,3 +92,8 @@ shout_connection_return_state_t shout_create_icy_request(shout_t *self, shout_co
     self->error = ret;
     return ret == SHOUTERR_SUCCESS ? SHOUT_RS_DONE : SHOUT_RS_ERROR;
 }
+
+static const shout_protocol_impl_t shout_icy_impl_real = {
+    .msg_create = shout_create_icy_request
+};
+extern const shout_protocol_impl_t *shout_icy_impl = &shout_icy_impl_real;
