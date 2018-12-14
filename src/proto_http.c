@@ -518,15 +518,18 @@ static shout_connection_return_state_t shout_parse_http_response(shout_t *self, 
 #ifdef HAVE_OPENSSL
             switch (code) {
                 case 426:
-                    if (!connection->tls) {
+                    if (connection->tls) {
+                        self->error = SHOUTERR_NOLOGIN;
+                        return SHOUT_RS_ERROR;
+                    } else if (connection->selected_tls_mode == SHOUT_TLS_DISABLED) {
+                        self->error = SHOUTERR_NOCONNECT;
+                        return SHOUT_RS_ERROR;
+                    } else {
                         /* Reset challenge state here as we do not know if it's the same inside TLS */
                         connection->server_caps |= LIBSHOUT_CAP_CHALLENGED;
                         connection->server_caps -= LIBSHOUT_CAP_CHALLENGED;
                         shout_connection_select_tlsmode(connection, SHOUT_TLS_RFC2817);
                         return shout_parse_http_select_next_state(self, connection, can_reuse, STATE_UPGRADE);
-                    } else {
-                        self->error = SHOUTERR_NOLOGIN;
-                        return SHOUT_RS_ERROR;
                     }
                 break;
 
