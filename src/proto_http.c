@@ -255,6 +255,11 @@ static shout_connection_return_state_t shout_get_http_response(shout_t *self, sh
     shout_buf_t *queue;
     int          newlines = 0;
 
+    if (!connection->rqueue.len) {
+        self->error = SHOUTERR_SOCKET;
+        return SHOUT_RS_ERROR;
+    }
+
     /* work from the back looking for \r?\n\r?\n. Anything else means more
      * is coming.
      */

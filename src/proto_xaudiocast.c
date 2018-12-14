@@ -78,52 +78,66 @@ shout_connection_return_state_t shout_create_xaudiocast_request(shout_t *self, s
     return ret == SHOUTERR_SUCCESS ? SHOUT_RS_DONE : SHOUT_RS_ERROR;
 }
 
-int shout_get_xaudiocast_response(shout_t *self)
+shout_connection_return_state_t shout_get_xaudiocast_response(shout_t *self, shout_connection_t *connection)
 {
-    shout_buf_t *queue = self->connection->rqueue.head;
-    unsigned int i;
+    shout_buf_t *queue = connection->rqueue.head;
+    size_t i;
+
+    if (!connection->rqueue.len)
+        return SHOUT_RS_DONE;
 
     do {
         for (i = 0; i < queue->len; i++) {
             if (queue->data[i] == '\n') {
                 /* got response */
-                return SHOUTERR_SUCCESS;
+                return SHOUT_RS_DONE;
             }
         }
     } while ((queue = queue->next));
 
     /* need more data */
-    return SHOUTERR_BUSY;
+    return SHOUT_RS_NOTNOW;
 }
 
-int shout_parse_xaudiocast_response(shout_t *self)
+shout_connection_return_state_t shout_parse_xaudiocast_response(shout_t *self, shout_connection_t *connection)
 {
-    char *response;
+    char *response = NULL;
 
-    if (shout_queue_collect(self->connection->rqueue.head, &response) <= 0)
-        return SHOUTERR_MALLOC;
-    shout_queue_free(&self->connection->rqueue);
+    if (connection->rqueue.len) {
+        if (shout_queue_collect(connection->rqueue.head, &response) <= 0) {
+            self->error = SHOUTERR_MALLOC;
+            return SHOUT_RS_ERROR;
+        }
+    }
+    shout_queue_free(&connection->rqueue);
 
-    if (!strstr(response, "OK")) {
+    if (!response || !strstr(response, "OK")) {
         free(response);
 
         /* check to see if that is a response to a POKE. */
         if (!(self->server_caps & LIBSHOUT_CAP_GOTCAPS)) {
             self->server_caps |= LIBSHOUT_CAP_GOTCAPS;
-            shout_connection_disconnect(self->connection);
-            shout_connection_connect(self->connection, self);
-            return SHOUTERR_BUSY;
+            shout_connection_disconnect(connection);
+            shout_connection_connect(connection, self);
+            connection->current_message_state = SHOUT_MSGSTATE_CREATING0;
+            connection->target_message_state = SHOUT_MSGSTATE_SENDING1;
+            return SHOUT_RS_NOTNOW;
         } else {
-            return SHOUTERR_NOLOGIN;
+            self->error = SHOUTERR_NOLOGIN;
+            return SHOUT_RS_ERROR;
         }
     }
     free(response);
 
     self->server_caps |= LIBSHOUT_CAP_GOTCAPS;
-    return SHOUTERR_SUCCESS;
+    connection->current_message_state = SHOUT_MSGSTATE_SENDING1;
+    connection->target_message_state = SHOUT_MSGSTATE_WAITING1;
+    return SHOUT_RS_DONE;
 }
 
 static const shout_protocol_impl_t shout_xaudiocast_impl_real = {
-    .msg_create = shout_create_xaudiocast_request
+    .msg_create = shout_create_xaudiocast_request,
+    .msg_get = shout_get_xaudiocast_response,
+    .msg_parse = shout_parse_xaudiocast_response
 };
-extern const shout_protocol_impl_t *shout_xaudiocast_impl = &shout_xaudiocast_impl_real;
+const shout_protocol_impl_t *shout_xaudiocast_impl = &shout_xaudiocast_impl_real;

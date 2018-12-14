@@ -272,12 +272,11 @@ static shout_connection_return_state_t shout_connection_iter__message__recv(shou
     if (rc < 0 && shout_connection__recoverable(con, shout))
         return SHOUT_RS_NOTNOW;
 
-    if (rc <= 0)
-        return SHOUT_RS_ERROR;
-
-    if ((ret = shout_queue_data(&(con->rqueue), (unsigned char*)buf, rc)) != SHOUTERR_SUCCESS) {
-        shout->error = ret;
-        return SHOUT_RS_ERROR;
+    if (rc > 0) {
+        if ((ret = shout_queue_data(&(con->rqueue), (unsigned char*)buf, rc)) != SHOUTERR_SUCCESS) {
+            shout->error = ret;
+            return SHOUT_RS_ERROR;
+        }
     }
 
     return con->impl->msg_get(shout, con);
@@ -507,6 +506,8 @@ int                 shout_connection_connect(shout_connection_t *con, shout_t *s
 
     con->current_socket_state = SHOUT_SOCKSTATE_CONNECTING;
     con->target_socket_state = SHOUT_SOCKSTATE_CONNECTED;
+    if (con->target_message_state != SHOUT_MSGSTATE_IDLE)
+        con->current_message_state = SHOUT_MSGSTATE_CREATING0;
 
     if (shout->tls_mode == SHOUT_TLS_RFC2818)
         return shout_connection_starttls(con, shout);

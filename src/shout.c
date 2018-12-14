@@ -400,10 +400,9 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
     shout_connection_select_tlsmode(connection, self->tls_mode);
     shout_connection_set_nonblocking(connection, 0);
 
-    shout_connection_connect(connection, self);
-
     connection->target_message_state = SHOUT_MSGSTATE_PARSED_FINAL;
-    connection->current_message_state = SHOUT_MSGSTATE_CREATING0;
+
+    shout_connection_connect(connection, self);
 
     shout_connection_iter(connection, self);
 
@@ -1074,9 +1073,8 @@ static int try_connect(shout_t *self)
 
         self->connection = shout_connection_new(self, impl, &(self->source_plan));
         shout_connection_select_tlsmode(self->connection, self->tls_mode);
-        shout_connection_connect(self->connection, self);
         self->connection->target_message_state = SHOUT_MSGSTATE_SENDING1;
-        self->connection->current_message_state = SHOUT_MSGSTATE_CREATING0;
+        shout_connection_connect(self->connection, self);
     }
 
     ret = shout_connection_iter(self->connection, self);
