@@ -553,6 +553,14 @@ ssize_t             shout_connection_send(shout_connection_t *con, shout_t *shou
     return len;
 }
 
+ssize_t             shout_connection_get_sendq(shout_connection_t *con, shout_t *shout)
+{
+    if (!con || !shout)
+        return -1;
+
+    return con->wqueue.len;
+}
+
 int                 shout_connection_starttls(shout_connection_t *con, shout_t *shout)
 {
     if (!con || !shout)
