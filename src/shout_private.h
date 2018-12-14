@@ -275,10 +275,6 @@ extern const shout_protocol_impl_t *shout_icy_impl;
 extern const shout_protocol_impl_t *shout_roaraudio_impl;
 
 char   *shout_http_basic_authorization(shout_t *self);
-shout_connection_return_state_t shout_create_http_request(shout_t *self, shout_connection_t *connection);
-int     shout_create_http_request_upgrade(shout_t *self, const char *proto);
-shout_connection_return_state_t shout_get_http_response(shout_t *self, shout_connection_t *connection);
-shout_connection_return_state_t shout_parse_http_response(shout_t *self, shout_connection_t *connection);
 
 shout_connection_return_state_t shout_create_xaudiocast_request(shout_t *self, shout_connection_t *connection);
 int     shout_get_xaudiocast_response(shout_t *self);
