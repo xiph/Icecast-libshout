@@ -239,7 +239,7 @@ static shout_connection_return_state_t shout_create_http_request(shout_t *self, 
     }
 }
 
-shout_connection_return_state_t shout_get_http_response(shout_t *self, shout_connection_t *connection)
+static shout_connection_return_state_t shout_get_http_response(shout_t *self, shout_connection_t *connection)
 {
     int          blen;
     char        *pc;
@@ -375,7 +375,7 @@ static inline int eat_body(shout_t *self, size_t len, const char *buf, size_t bu
     return 0;
 }
 
-shout_connection_return_state_t shout_parse_http_response(shout_t *self, shout_connection_t *connection)
+static shout_connection_return_state_t shout_parse_http_response(shout_t *self, shout_connection_t *connection)
 {
     http_parser_t   *parser;
     char            *header = NULL;
