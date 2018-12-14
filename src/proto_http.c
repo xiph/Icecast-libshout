@@ -65,7 +65,7 @@ static char *shout_http_basic_authorization(shout_t *self)
     return in;
 }
 
-static shout_connection_return_state_t shout_create_http_request_source(shout_t *self, shout_connection_t *connection, int auth)
+static shout_connection_return_state_t shout_create_http_request_source(shout_t *self, shout_connection_t *connection, int auth, int poke)
 {
     char        *basic_auth;
     char        *ai;
@@ -121,6 +121,10 @@ static shout_connection_return_state_t shout_create_http_request_source(shout_t 
             break;
         if (shout_queue_printf(connection, "Content-Type: %s\r\n", mimetype))
             break;
+        if (poke) {
+            if (shout_queue_str(connection, "Content-Length: 0\r\nConnection: Keep-Alive\r\n"))
+                break;
+        }
         if (shout_queue_printf(connection, "ice-public: %d\r\n", self->public))
             break;
 
@@ -239,9 +243,9 @@ static shout_connection_return_state_t shout_create_http_request(shout_t *self, 
     if (plan->is_source) {
         /* FIXME: This should not depend on GOTCAPS but on request of the server. */
         if (plan->auth && self->server_caps & LIBSHOUT_CAP_GOTCAPS) {
-            return shout_create_http_request_source(self, connection, 1);
+            return shout_create_http_request_source(self, connection, 1, 0);
         } else {
-            return shout_create_http_request_source(self, connection, 0);
+            return shout_create_http_request_source(self, connection, 0, 1);
         }
     } else {
         return shout_create_http_request_generic(self, connection, plan->method, plan->resource, plan->param, plan->fake_ua, NULL, plan->auth);
@@ -399,6 +403,10 @@ static shout_connection_return_state_t shout_parse_http_response(shout_t *self, 
     int              ret;
     char            *mount;
     int              consider_retry = 0;
+    int              can_reuse = 0;
+#ifdef HAVE_STRCASESTR
+    const char      *tmp;
+#endif
 
     /* all this copying! */
     hlen = shout_queue_collect(self->connection->rqueue.head, &header);
@@ -431,10 +439,28 @@ static shout_connection_return_state_t shout_parse_http_response(shout_t *self, 
         self->server_caps |= LIBSHOUT_CAP_GOTCAPS;
         retcode = httpp_getvar(parser, HTTPP_VAR_ERROR_CODE);
         code = atoi(retcode);
-#ifdef HAVE_OPENSSL
-        if (!self->upgrade_to_tls && code >= 200 && code < 300) {
+
+#ifdef HAVE_STRCASESTR
+        tmp = httpp_getvar(parser, HTTPP_VAR_VERSION);
+        if (tmp && strcmp(tmp, "1.1") == 0) {
+            can_reuse = 1;
+        }
+        tmp = httpp_getvar(parser, "connection");
+        if (tmp && strcasestr(tmp, "keep-alive")) {
+            can_reuse = 1;
+        }
+        if (tmp && strcasestr(tmp, "close")) {
+            can_reuse = 0;
+        }
 #else
-        if (code >= 200 && code < 300) {
+        /* get a real OS */
+        can_reuse = 0;
+#endif
+
+#ifdef HAVE_OPENSSL
+        if (!self->upgrade_to_tls && code >= 200 && code < 300 && connection->current_protocol_state == STATE_SOURCE) {
+#else
+        if (code >= 200 && code < 300 && connection->current_protocol_state == STATE_SOURCE) {
 #endif
             httpp_destroy(parser);
             free(header);
@@ -444,8 +470,10 @@ static shout_connection_return_state_t shout_parse_http_response(shout_t *self, 
         } else if ((code >= 200 && code < 300) || code == 401 || code == 405 || code == 426 || code == 101) {
             const char *content_length = httpp_getvar(parser, "content-length");
             if (content_length) {
-                if (eat_body(self, atoi(content_length), header, hlen) == -1)
+                if (eat_body(self, atoi(content_length), header, hlen) == -1) {
+                    can_reuse = 0;
                     goto failure;
+                }
             }
 #ifdef HAVE_OPENSSL
             self->upgrade_to_tls = 0;
@@ -459,6 +487,7 @@ static shout_connection_return_state_t shout_parse_http_response(shout_t *self, 
                 break;
             }
 #endif
+            close(-123);
             consider_retry = 1;
         }
     }
@@ -470,11 +499,13 @@ failure:
     switch ((shout_http_protocol_state_t)connection->current_protocol_state) {
         case STATE_CHALLENGE:
             if (consider_retry) {
-                shout_connection_disconnect(connection);
-                shout_connection_connect(connection, self);
+                if (!can_reuse) {
+                    shout_connection_disconnect(connection);
+                    shout_connection_connect(connection, self);
+                }
                 connection->current_message_state = SHOUT_MSGSTATE_CREATING0;
                 connection->target_message_state = SHOUT_MSGSTATE_SENDING1;
-                connection->target_protocol_state = STATE_SOURCE;
+                connection->current_protocol_state = STATE_SOURCE;
                 return SHOUT_RS_NOTNOW;
             } else {
                 self->error = SHOUTERR_NOLOGIN;
