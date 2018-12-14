@@ -298,6 +298,8 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
     size_t param_len;
     char *param = NULL;
     char *encvalue;
+    char *encpassword;
+    char *encmount;
     const char *param_template;
 
     if (!self || !metadata)
@@ -313,14 +315,21 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 
     switch (self->protocol) {
         case SHOUT_PROTOCOL_ICY:
-            param_template = "mode=updinfo&pass=%s&%s";
-            param_len = strlen(param_template) + strlen(encvalue) + 1 + strlen(self->password);
-            param = malloc(param_len);
-            if (!param) {
+            if (!(encpassword = _shout_util_url_encode(self->password))) {
                 free(encvalue);
                 return self->error = SHOUTERR_MALLOC;
             }
-            snprintf(param, param_len, param_template, self->password, encvalue);
+
+            param_template = "mode=updinfo&pass=%s&%s";
+            param_len = strlen(param_template) + strlen(encvalue) + 1 + strlen(encpassword);
+            param = malloc(param_len);
+            if (!param) {
+                free(encpassword);
+                free(encvalue);
+                return self->error = SHOUTERR_MALLOC;
+            }
+            snprintf(param, param_len, param_template, encpassword, encvalue);
+            free(encpassword);
 
             plan.param = param;
             plan.fake_ua = 1;
@@ -329,28 +338,49 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
             plan.resource = "/admin.cgi";
         break;
         case SHOUT_PROTOCOL_HTTP:
-            param_template = "mode=updinfo&mount=%s&%s";
-            param_len = strlen(param_template) + strlen(encvalue) + 1 + strlen(self->mount);
-            param = malloc(param_len);
-            if (!param) {
+            if (!(encmount = _shout_util_url_encode(self->mount))) {
                 free(encvalue);
                 return self->error = SHOUTERR_MALLOC;
             }
-            snprintf(param, param_len, param_template, self->mount, encvalue);
+
+            param_template = "mode=updinfo&mount=%s&%s";
+            param_len = strlen(param_template) + strlen(encvalue) + 1 + strlen(encmount);
+            param = malloc(param_len);
+            if (!param) {
+                free(encmount);
+                free(encvalue);
+                return self->error = SHOUTERR_MALLOC;
+            }
+            snprintf(param, param_len, param_template, encmount, encvalue);
+            free(encmount);
 
             plan.param = param;
             plan.auth = 1;
             plan.resource = "/admin/metadata";
         break;
         default:
-            param_template = "mode=updinfo&pass=%s&mount=%s&%s";
-            param_len = strlen(param_template) + strlen(encvalue) + 1 + strlen(self->password) + strlen(self->mount);
-            param = malloc(param_len);
-            if (!param) {
+            if (!(encmount = _shout_util_url_encode(self->mount))) {
                 free(encvalue);
                 return self->error = SHOUTERR_MALLOC;
             }
-            snprintf(param, param_len, param_template, self->password, self->mount, encvalue);
+            if (!(encpassword = _shout_util_url_encode(self->password))) {
+                free(encmount);
+                free(encvalue);
+                return self->error = SHOUTERR_MALLOC;
+            }
+
+            param_template = "mode=updinfo&pass=%s&mount=%s&%s";
+            param_len = strlen(param_template) + strlen(encvalue) + 1 + strlen(encpassword) + strlen(self->mount);
+            param = malloc(param_len);
+            if (!param) {
+                free(encpassword);
+                free(encmount);
+                free(encvalue);
+                return self->error = SHOUTERR_MALLOC;
+            }
+            snprintf(param, param_len, param_template, encpassword, encmount, encvalue);
+            free(encpassword);
+            free(encmount);
 
             plan.param = param;
             plan.auth = 0;
