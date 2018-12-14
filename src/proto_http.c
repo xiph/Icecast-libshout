@@ -255,6 +255,19 @@ static shout_connection_return_state_t shout_create_http_request(shout_t *self, 
             }
         break;
         case STATE_SOURCE:
+            /* Just an extra layer of safety */
+            switch (connection->selected_tls_mode) {
+                case SHOUT_TLS_AUTO_NO_PLAIN:
+                case SHOUT_TLS_RFC2817:
+                case SHOUT_TLS_RFC2818:
+                    if (!connection->tls) {
+                        /* TLS requested but for some reason not established. NOT sending credentials. */
+                        self->error = SHOUTERR_INSANE;
+                        return SHOUT_RS_ERROR;
+                    }
+                break;
+            }
+
             if (plan->is_source) {
                 return shout_create_http_request_source(self, connection, 1, 0);
             } else {
