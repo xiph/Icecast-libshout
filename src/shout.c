@@ -396,7 +396,9 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
         return self->error = SHOUTERR_MALLOC;
     }
 
+#ifdef HAVE_OPENSSL
     shout_connection_select_tlsmode(connection, self->tls_mode);
+#endif
     shout_connection_set_nonblocking(connection, 0);
 
     connection->target_message_state = SHOUT_MSGSTATE_PARSED_FINAL;
