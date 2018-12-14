@@ -310,7 +310,6 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
     memset(&plan, 0, sizeof(plan));
 
     plan.is_source = 0;
-    plan.tls_mode = self->tls_mode;
 
     switch (self->protocol) {
         case SHOUT_PROTOCOL_ICY:
@@ -1030,7 +1029,6 @@ static int try_connect(shout_t *self)
                 memset(&(self->source_plan.http), 0, sizeof(self->source_plan.http));
                 self->source_plan.http.is_source = 1;
                 self->source_plan.http.auth = 1;
-                self->source_plan.http.tls_mode = self->tls_mode;
                 self->source_plan.http.resource = self->mount;
             break;
             case SHOUT_PROTOCOL_XAUDIOCAST:
@@ -1045,6 +1043,7 @@ static int try_connect(shout_t *self)
         }
 
         self->connection = shout_connection_new(self, impl, &(self->source_plan));
+        shout_connection_select_tlsmode(self->connection, self->tls_mode);
         shout_connection_connect(self->connection, self);
         self->connection->target_message_state = SHOUT_MSGSTATE_SENDING1;
         self->connection->current_message_state = SHOUT_MSGSTATE_CREATING0;

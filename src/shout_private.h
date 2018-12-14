@@ -144,7 +144,6 @@ typedef union shout_protocol_extra_tag {
 typedef struct {
     int is_source;
     int fake_ua;
-    int tls_mode;
     int auth;
     const char *method;
     const char *resource;
