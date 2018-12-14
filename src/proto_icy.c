@@ -83,7 +83,7 @@ shout_connection_return_state_t shout_create_icy_request(shout_t *self, shout_co
 {
     int ret;
 
-    if (self->server_caps & LIBSHOUT_CAP_GOTCAPS) {
+    if (connection->server_caps & LIBSHOUT_CAP_GOTCAPS) {
         ret = shout_create_icy_request_real(self, connection);
     } else {
         ret = shout_create_icy_request_poke(self, connection);

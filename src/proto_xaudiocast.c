@@ -115,8 +115,8 @@ shout_connection_return_state_t shout_parse_xaudiocast_response(shout_t *self, s
         free(response);
 
         /* check to see if that is a response to a POKE. */
-        if (!(self->server_caps & LIBSHOUT_CAP_GOTCAPS)) {
-            self->server_caps |= LIBSHOUT_CAP_GOTCAPS;
+        if (!(connection->server_caps & LIBSHOUT_CAP_GOTCAPS)) {
+            connection->server_caps |= LIBSHOUT_CAP_GOTCAPS;
             shout_connection_disconnect(connection);
             shout_connection_connect(connection, self);
             connection->current_message_state = SHOUT_MSGSTATE_CREATING0;
@@ -129,7 +129,7 @@ shout_connection_return_state_t shout_parse_xaudiocast_response(shout_t *self, s
     }
     free(response);
 
-    self->server_caps |= LIBSHOUT_CAP_GOTCAPS;
+    connection->server_caps |= LIBSHOUT_CAP_GOTCAPS;
     connection->current_message_state = SHOUT_MSGSTATE_SENDING1;
     connection->target_message_state = SHOUT_MSGSTATE_WAITING1;
     return SHOUT_RS_DONE;

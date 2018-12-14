@@ -567,7 +567,5 @@ int                 shout_connection_starttls(shout_connection_t *con, shout_t *
 
     con->target_socket_state = SHOUT_SOCKSTATE_TLS_VERIFIED;
 
-    shout_connection_iter(con, shout);
-
     return SHOUTERR_SUCCESS;
 }

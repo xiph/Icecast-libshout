@@ -498,8 +498,6 @@ int shout_set_host(shout_t *self, const char *host)
     if (self->connection)
         return self->error = SHOUTERR_CONNECTED;
 
-    self->server_caps = 0;
-
     if (self->host)
         free(self->host);
 
@@ -524,8 +522,6 @@ int shout_set_port(shout_t *self, unsigned short port)
 
     if (self->connection)
         return self->error = SHOUTERR_CONNECTED;
-
-    self->server_caps = 0;
 
     self->port = port;
 

@@ -68,6 +68,8 @@
 #define LIBSHOUT_CAP_CHUNKED     0x00000100UL
 #define LIBSHOUT_CAP_100CONTINUE 0x00000200UL
 #define LIBSHOUT_CAP_UPGRADETLS  0x00010000UL
+#define LIBSHOUT_CAP_REQAUTH     0x20000000UL /* requires authentication */
+#define LIBSHOUT_CAP_CHALLENGED  0x40000000UL
 #define LIBSHOUT_CAP_GOTCAPS     0x80000000UL
 
 #define LIBSHOUT_MAX_RETRY       3
@@ -185,6 +187,9 @@ struct shout_connection_tag {
     sock_t         socket;
     shout_queue_t  rqueue;
     shout_queue_t  wqueue;
+
+    /* server capabilities (LIBSHOUT_CAP_*) */
+    uint32_t server_caps;
 };
 
 struct shout {
@@ -216,7 +221,6 @@ struct shout {
 
     /* TLS options */
 #ifdef HAVE_OPENSSL
-    int          upgrade_to_tls;
     int          tls_mode;
     char        *ca_directory;
     char        *ca_file;
@@ -227,9 +231,6 @@ struct shout {
     union {
         shout_http_plan_t http;
     } source_plan;
-
-    /* server capabilities (LIBSHOUT_CAP_*) */
-    uint32_t server_caps;
 
     /* socket the connection is on */
     shout_connection_t *connection;

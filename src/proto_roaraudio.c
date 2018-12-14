@@ -300,7 +300,7 @@ static shout_connection_return_state_t shout_parse_roaraudio_response(shout_t *s
     switch ((shout_roar_protocol_state_t)connection->current_protocol_state) {
         case STATE_IDENT:
             connection->current_protocol_state = STATE_AUTH;
-            self->server_caps |= LIBSHOUT_CAP_GOTCAPS;
+            connection->server_caps |= LIBSHOUT_CAP_GOTCAPS;
         break;
 
         case STATE_AUTH:
