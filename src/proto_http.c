@@ -488,11 +488,7 @@ static shout_connection_return_state_t shout_parse_http_response(shout_t *self, 
         can_reuse = 0;
 #endif
 
-#ifdef HAVE_OPENSSL
         if (code >= 200 && code < 300 && connection->current_protocol_state == STATE_SOURCE) {
-#else
-        if (code >= 200 && code < 300 && connection->current_protocol_state == STATE_SOURCE) {
-#endif
             httpp_destroy(parser);
             free(header);
             connection->current_message_state = SHOUT_MSGSTATE_SENDING1;
