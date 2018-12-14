@@ -453,12 +453,12 @@ static shout_connection_return_state_t shout_parse_http_response(shout_t *self, 
 #endif
 
     /* all this copying! */
-    hlen = shout_queue_collect(self->connection->rqueue.head, &header);
+    hlen = shout_queue_collect(connection->rqueue.head, &header);
     if (hlen <= 0) {
         self->error = SHOUTERR_MALLOC;
         return SHOUT_RS_ERROR;
     }
-    shout_queue_free(&self->connection->rqueue);
+    shout_queue_free(&connection->rqueue);
 
     parser = httpp_create_parser();
     httpp_initialize(parser, NULL);
