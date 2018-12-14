@@ -209,9 +209,18 @@ static shout_connection_return_state_t shout_create_http_request_generic(shout_t
                 break;
         }
 
+        if (param && is_post) {
+            if (shout_queue_printf(connection, "Content-Type: application/x-www-form-urlencoded\r\nContent-Length: %llu\r\n", (long long unsigned int)strlen(param)))
+                break;
+        }
+
         /* End of request */
         if (shout_queue_str(connection, "\r\n"))
             break;
+        if (param && is_post) {
+            if (shout_queue_str(connection, param))
+                break;
+        }
     } while (0);
 
     self->error = ret;
