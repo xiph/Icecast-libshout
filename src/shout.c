@@ -300,6 +300,8 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
     char *encpassword;
     char *encmount;
     const char *param_template;
+    int ret;
+    int error;
 
     if (!self || !metadata)
         return SHOUTERR_INSANE;
@@ -409,13 +411,18 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 
     shout_connection_connect(connection, self);
 
-    shout_connection_iter(connection, self);
+    ret = shout_connection_iter(connection, self);
+    error = self->error;
 
     shout_connection_unref(connection);
 
     free(param);
 
-    return SHOUTERR_SUCCESS;
+    if (ret == 0) {
+        return SHOUTERR_SUCCESS;
+    } else {
+        return error;
+    }
 }
 
 /* getters/setters */
