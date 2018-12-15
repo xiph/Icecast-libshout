@@ -223,19 +223,24 @@ int shout_send(shout_t *self, const unsigned char *data, size_t len)
 
 ssize_t shout_send_raw(shout_t *self, const unsigned char *data, size_t len)
 {
+    ssize_t ret;
+
     if (!self)
         return SHOUTERR_INSANE;
 
     if (!self->connection || self->connection->current_message_state != SHOUT_MSGSTATE_SENDING1)
         return SHOUTERR_UNCONNECTED;
 
-    return shout_connection_send(self->connection, self, data, len);
+    ret = shout_connection_send(self->connection, self, data, len);
+    if (ret < 0)
+       shout_connection_transfer_error(self->connection, self);
+    return ret;
 }
 
 ssize_t shout_queuelen(shout_t *self)
 {
     if (!self)
-        return SHOUTERR_INSANE;
+        return -1;
 
     return shout_connection_get_sendq(self->connection, self);
 }
@@ -412,7 +417,7 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
     shout_connection_connect(connection, self);
 
     ret = shout_connection_iter(connection, self);
-    error = self->error;
+    error = shout_connection_get_error(connection, self);
 
     shout_connection_unref(connection);
 
@@ -1080,6 +1085,9 @@ static int try_connect(shout_t *self)
         }
 
         self->connection = shout_connection_new(self, impl, &(self->source_plan));
+        if (!self->connection)
+            return self->error = SHOUTERR_MALLOC;
+
         shout_connection_select_tlsmode(self->connection, self->tls_mode);
         self->connection->target_message_state = SHOUT_MSGSTATE_SENDING1;
         shout_connection_connect(self->connection, self);

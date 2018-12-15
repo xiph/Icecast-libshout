@@ -222,7 +222,7 @@ static shout_connection_return_state_t shout_create_roaraudio_request(shout_t *s
         break;
     }
 
-    self->error = ret;
+    shout_connection_set_error(connection, self, ret);
     return ret == SHOUTERR_SUCCESS ? SHOUT_RS_DONE : SHOUT_RS_ERROR;
 }
 
@@ -233,7 +233,7 @@ static shout_connection_return_state_t shout_get_roaraudio_response(shout_t *sel
     uint8_t        header[HEADER_SIZE];
 
     if (!connection->rqueue.len) {
-        self->error = SHOUTERR_SOCKET;
+        shout_connection_set_error(connection, self, SHOUTERR_SOCKET);
         return SHOUT_RS_ERROR;
     }
 
@@ -255,7 +255,7 @@ static shout_connection_return_state_t shout_get_roaraudio_response(shout_t *sel
      */
 
     if (header[8] || header[9]) {
-        self->error = SHOUTERR_UNSUPPORTED;
+        shout_connection_set_error(connection, self, SHOUTERR_UNSUPPORTED);
         return SHOUT_RS_ERROR;
     }
 
@@ -278,7 +278,7 @@ static shout_connection_return_state_t shout_parse_roaraudio_response(shout_t *s
 
     if (shout_queue_collect(connection->rqueue.head, &data) != HEADER_SIZE) {
         free(data);
-        self->error = SHOUTERR_INSANE;
+        shout_connection_set_error(connection, self, SHOUTERR_INSANE);
         return SHOUT_RS_ERROR;
     }
     shout_queue_free(&connection->rqueue);
@@ -287,13 +287,13 @@ static shout_connection_return_state_t shout_parse_roaraudio_response(shout_t *s
 
     /* check version */
     if (header[0] != 0) {
-        self->error = SHOUTERR_UNSUPPORTED;
+        shout_connection_set_error(connection, self, SHOUTERR_UNSUPPORTED);
         return SHOUT_RS_ERROR;
     }
 
     /* have we got a positive response? */
     if (header[1] != CMD_OK) {
-        self->error = SHOUTERR_NOLOGIN;
+        shout_connection_set_error(connection, self, SHOUTERR_NOLOGIN);
         return SHOUT_RS_ERROR;
     }
 
@@ -320,7 +320,7 @@ static shout_connection_return_state_t shout_parse_roaraudio_response(shout_t *s
         break;
 
         default:
-            self->error = SHOUTERR_INSANE;
+            shout_connection_set_error(connection, self, SHOUTERR_INSANE);
             return SHOUT_RS_ERROR;
         break;
     }

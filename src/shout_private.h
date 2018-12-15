@@ -190,6 +190,8 @@ struct shout_connection_tag {
 
     /* server capabilities (LIBSHOUT_CAP_*) */
     uint32_t server_caps;
+
+    int error;
 };
 
 struct shout {
@@ -275,6 +277,9 @@ int                 shout_connection_disconnect(shout_connection_t *con);
 ssize_t             shout_connection_send(shout_connection_t *con, shout_t *shout, const void *buf, size_t len);
 ssize_t             shout_connection_get_sendq(shout_connection_t *con, shout_t *shout);
 int                 shout_connection_starttls(shout_connection_t *con, shout_t *shout);
+int                 shout_connection_set_error(shout_connection_t *con, shout_t *shout, int error);
+int                 shout_connection_get_error(shout_connection_t *con, shout_t *shout);
+int                 shout_connection_transfer_error(shout_connection_t *con, shout_t *shout);
 
 #ifdef HAVE_OPENSSL
 shout_tls_t *shout_tls_new(shout_t *self, sock_t socket);

@@ -74,7 +74,7 @@ shout_connection_return_state_t shout_create_xaudiocast_request(shout_t *self, s
     if (mount)
         free(mount);
 
-    self->error = ret;
+    shout_connection_set_error(connection, self, ret);
     return ret == SHOUTERR_SUCCESS ? SHOUT_RS_DONE : SHOUT_RS_ERROR;
 }
 
@@ -105,7 +105,7 @@ shout_connection_return_state_t shout_parse_xaudiocast_response(shout_t *self, s
 
     if (connection->rqueue.len) {
         if (shout_queue_collect(connection->rqueue.head, &response) <= 0) {
-            self->error = SHOUTERR_MALLOC;
+            shout_connection_set_error(connection, self, SHOUTERR_MALLOC);
             return SHOUT_RS_ERROR;
         }
     }
@@ -123,7 +123,7 @@ shout_connection_return_state_t shout_parse_xaudiocast_response(shout_t *self, s
             connection->target_message_state = SHOUT_MSGSTATE_SENDING1;
             return SHOUT_RS_NOTNOW;
         } else {
-            self->error = SHOUTERR_NOLOGIN;
+            shout_connection_set_error(connection, self, SHOUTERR_NOLOGIN);
             return SHOUT_RS_ERROR;
         }
     }
