@@ -509,7 +509,7 @@ int                 shout_connection_connect(shout_connection_t *con, shout_t *s
     if (con->target_message_state != SHOUT_MSGSTATE_IDLE)
         con->current_message_state = SHOUT_MSGSTATE_CREATING0;
 
-    if (shout->tls_mode == SHOUT_TLS_RFC2818)
+    if (con->selected_tls_mode == SHOUT_TLS_RFC2818)
         return shout_connection_starttls(con, shout);
 
     return SHOUTERR_SUCCESS;

@@ -66,6 +66,18 @@ static char *shout_http_basic_authorization(shout_t *self)
     return in;
 }
 
+static shout_connection_return_state_t shout_parse_http_select_next_state(shout_t *self, shout_connection_t *connection, int can_reuse, shout_http_protocol_state_t state)
+{
+    if (!can_reuse) {
+        shout_connection_disconnect(connection);
+        shout_connection_connect(connection, self);
+    }
+    connection->current_message_state = SHOUT_MSGSTATE_CREATING0;
+    connection->target_message_state = SHOUT_MSGSTATE_SENDING1;
+    connection->current_protocol_state = state;
+    return SHOUT_RS_NOTNOW;
+}
+
 static shout_connection_return_state_t shout_create_http_request_source(shout_t *self, shout_connection_t *connection, int auth, int poke)
 {
     char        *basic_auth;
@@ -241,9 +253,20 @@ static shout_connection_return_state_t shout_create_http_request(shout_t *self, 
         return SHOUT_RS_ERROR;
     }
 
-    if (connection->selected_tls_mode == SHOUT_TLS_RFC2817 && !connection->tls) {
-        connection->current_protocol_state = STATE_UPGRADE;
+#ifdef HAVE_OPENSSL
+    if (!connection->tls) {
+        /* Why not try Upgrade? */
+        if ((connection->selected_tls_mode == SHOUT_TLS_AUTO || connection->selected_tls_mode == SHOUT_TLS_AUTO_NO_PLAIN) &&
+                !(connection->server_caps & LIBSHOUT_CAP_GOTCAPS) &&
+                connection->current_protocol_state == STATE_CHALLENGE) {
+            connection->current_protocol_state = STATE_UPGRADE;
+        }
+
+        if (connection->selected_tls_mode == SHOUT_TLS_RFC2817) {
+            connection->current_protocol_state = STATE_UPGRADE;
+        }
     }
+#endif
 
     switch ((shout_http_protocol_state_t)connection->current_protocol_state) {
         case STATE_CHALLENGE:
@@ -292,6 +315,10 @@ static shout_connection_return_state_t shout_get_http_response(shout_t *self, sh
     int          newlines = 0;
 
     if (!connection->rqueue.len) {
+        if (!connection->tls && (connection->selected_tls_mode == SHOUT_TLS_AUTO || connection->selected_tls_mode == SHOUT_TLS_AUTO_NO_PLAIN)) {
+            shout_connection_select_tlsmode(connection, SHOUT_TLS_RFC2818);
+            return shout_parse_http_select_next_state(self, connection, 0, STATE_CHALLENGE);
+        }
         self->error = SHOUTERR_SOCKET;
         return SHOUT_RS_ERROR;
     }
@@ -425,18 +452,6 @@ static inline int eat_body(shout_t *self, shout_connection_t *connection, size_t
     return 0;
 }
 
-static shout_connection_return_state_t shout_parse_http_select_next_state(shout_t *self, shout_connection_t *connection, int can_reuse, shout_http_protocol_state_t state)
-{
-    if (!can_reuse) {
-        shout_connection_disconnect(connection);
-        shout_connection_connect(connection, self);
-    }
-    connection->current_message_state = SHOUT_MSGSTATE_CREATING0;
-    connection->target_message_state = SHOUT_MSGSTATE_SENDING1;
-    connection->current_protocol_state = state;
-    return SHOUT_RS_NOTNOW;
-}
-
 static shout_connection_return_state_t shout_parse_http_response(shout_t *self, shout_connection_t *connection)
 {
     http_parser_t   *parser;
@@ -507,7 +522,7 @@ static shout_connection_return_state_t shout_parse_http_response(shout_t *self, 
             connection->current_message_state = SHOUT_MSGSTATE_SENDING1;
             connection->target_message_state = SHOUT_MSGSTATE_WAITING1;
             return SHOUT_RS_DONE;
-        } else if ((code >= 200 && code < 300) || code == 401 || code == 405 || code == 426 || code == 101) {
+        } else if ((code >= 200 && code < 300) || code == 400 || code == 401 || code == 405 || code == 426 || code == 101) {
             const char *content_length = httpp_getvar(parser, "content-length");
             if (content_length) {
                 if (eat_body(self, connection, atoi(content_length), header, hlen) == -1) {
@@ -517,11 +532,28 @@ static shout_connection_return_state_t shout_parse_http_response(shout_t *self, 
             }
 #ifdef HAVE_OPENSSL
             switch (code) {
+                case 400:
+                    if (connection->current_protocol_state != STATE_UPGRADE) {
+                        free(header);
+                        httpp_destroy(parser);
+                        self->error = SHOUTERR_NOLOGIN;
+                        return SHOUT_RS_ERROR;
+                    }
+                    if (connection->selected_tls_mode == SHOUT_TLS_AUTO_NO_PLAIN) {
+                        can_reuse = 0;
+                        shout_connection_select_tlsmode(connection, SHOUT_TLS_RFC2818);
+                    }
+                break;
+
                 case 426:
                     if (connection->tls) {
+                        free(header);
+                        httpp_destroy(parser);
                         self->error = SHOUTERR_NOLOGIN;
                         return SHOUT_RS_ERROR;
                     } else if (connection->selected_tls_mode == SHOUT_TLS_DISABLED) {
+                        free(header);
+                        httpp_destroy(parser);
                         self->error = SHOUTERR_NOCONNECT;
                         return SHOUT_RS_ERROR;
                     } else {
@@ -529,6 +561,8 @@ static shout_connection_return_state_t shout_parse_http_response(shout_t *self, 
                         connection->server_caps |= LIBSHOUT_CAP_CHALLENGED;
                         connection->server_caps -= LIBSHOUT_CAP_CHALLENGED;
                         shout_connection_select_tlsmode(connection, SHOUT_TLS_RFC2817);
+                        free(header);
+                        httpp_destroy(parser);
                         return shout_parse_http_select_next_state(self, connection, can_reuse, STATE_UPGRADE);
                     }
                 break;
