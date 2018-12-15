@@ -46,26 +46,26 @@ shout_connection_return_state_t shout_create_xaudiocast_request(shout_t *self, s
     do {
         if (!(mount = _shout_util_url_encode_resource(self->mount)))
             break;
-        if (shout_queue_printf(self->connection, "SOURCE %s %s\n", self->password, mount))
+        if (shout_queue_printf(connection, "SOURCE %s %s\n", self->password, mount))
             break;
-        if (shout_queue_printf(self->connection, "x-audiocast-name: %s\n", shout_get_meta(self, "name")))
+        if (shout_queue_printf(connection, "x-audiocast-name: %s\n", shout_get_meta(self, "name")))
             break;
         val = shout_get_meta(self, "url");
-        if (shout_queue_printf(self->connection, "x-audiocast-url: %s\n", val ? val : "http://www.icecast.org/"))
+        if (shout_queue_printf(connection, "x-audiocast-url: %s\n", val ? val : "http://www.icecast.org/"))
             break;
         val = shout_get_meta(self, "genre");
-        if (shout_queue_printf(self->connection, "x-audiocast-genre: %s\n", val ? val : "icecast"))
+        if (shout_queue_printf(connection, "x-audiocast-genre: %s\n", val ? val : "icecast"))
             break;
-        if (shout_queue_printf(self->connection, "x-audiocast-bitrate: %s\n", bitrate))
+        if (shout_queue_printf(connection, "x-audiocast-bitrate: %s\n", bitrate))
             break;
-        if (shout_queue_printf(self->connection, "x-audiocast-public: %i\n", self->public))
+        if (shout_queue_printf(connection, "x-audiocast-public: %i\n", self->public))
             break;
         val = shout_get_meta(self, "description");
-        if (shout_queue_printf(self->connection, "x-audiocast-description: %s\n", val ? val : "Broadcasting with the icecast streaming media server!"))
+        if (shout_queue_printf(connection, "x-audiocast-description: %s\n", val ? val : "Broadcasting with the icecast streaming media server!"))
             break;
-        if (self->dumpfile && shout_queue_printf(self->connection, "x-audiocast-dumpfile: %s\n", self->dumpfile))
+        if (self->dumpfile && shout_queue_printf(connection, "x-audiocast-dumpfile: %s\n", self->dumpfile))
             break;
-        if (shout_queue_str(self->connection, "\n"))
+        if (shout_queue_str(connection, "\n"))
             break;
 
         ret = SHOUTERR_SUCCESS;
