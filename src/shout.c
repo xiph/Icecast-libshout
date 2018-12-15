@@ -357,7 +357,7 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
             plan.auth = 1;
             plan.resource = "/admin/metadata";
         break;
-        default:
+        case SHOUT_PROTOCOL_XAUDIOCAST:
             if (!(encmount = _shout_util_url_encode(self->mount))) {
                 free(encvalue);
                 return self->error = SHOUTERR_MALLOC;
@@ -385,6 +385,10 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
             plan.auth = 0;
             plan.method = "GET";
             plan.resource = "/admin.cgi";
+        break;
+        default:
+            free(encvalue);
+            return self->error = SHOUTERR_UNSUPPORTED;
         break;
     }
 
