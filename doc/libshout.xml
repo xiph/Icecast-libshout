@@ -34,7 +34,7 @@
         <itemizedlist><title>Protocols</title>
             <listitem>HTTP</listitem>
             <listitem>RoarAudio</listitem>
-            <listitem>Audiocast</listitem>
+            <listitem>XAudioCast (deprecated)</listitem>
             <listitem>ShoutCast</listitem>
         </itemizedlist>
 
@@ -1190,8 +1190,10 @@
 
                 <varlistentry>
                     <term><constant>SHOUT_PROTOCOL_XAUDIOCAST</constant></term>
-                    <listitem>The Audiocast format. This is the native protocol of
-                        <application>Icecast 1</application>.</listitem>
+                    <listitem>
+                        The Audiocast format. This is the native protocol of <application>Icecast 1</application>.
+                        <note>This has been deprecated. Support may be removed in future versions of libshout.</note>
+                    </listitem>
                 </varlistentry>
 
                 <varlistentry>

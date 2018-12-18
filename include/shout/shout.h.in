@@ -51,7 +51,7 @@
 #define SHOUT_FORMAT_VORBIS         SHOUT_FORMAT_OGG
 
 #define SHOUT_PROTOCOL_HTTP         (  0)
-#define SHOUT_PROTOCOL_XAUDIOCAST   (  1)
+#define SHOUT_PROTOCOL_XAUDIOCAST   (  1) /* Deprecated. May be removed in future versions. Do not use. */
 #define SHOUT_PROTOCOL_ICY          (  2)
 #define SHOUT_PROTOCOL_ROARAUDIO    (  3)
 
