@@ -827,6 +827,7 @@ const char *shout_get_audio_info(shout_t *self, const char *name)
 int shout_set_meta(shout_t *self, const char *name, const char *value)
 {
     size_t i;
+    char c;
 
     if (!self || !name)
         return SHOUTERR_INSANE;
@@ -834,9 +835,15 @@ int shout_set_meta(shout_t *self, const char *name, const char *value)
     if (self->state != SHOUT_STATE_UNCONNECTED)
         return self->error = SHOUTERR_CONNECTED;
 
-    for (i = 0; name[i]; i++)
-        if ((name[i] < 'a' || name[i] > 'z') && (name[i] < '0' || name[i] > '9'))
+    for (i = 0; (c = name[i]); i++) {
+        if ((c < 'a' || c > 'z') && (c < '0' || c > '9'))
             return self->error = SHOUTERR_INSANE;
+    }
+
+    for (i = 0; (c = value[i]); i++) {
+        if (c == '\r' || c == '\n')
+            return self->error = SHOUTERR_INSANE;
+    }
 
     return self->error = _shout_util_dict_set(self->meta, name, value);
 }
