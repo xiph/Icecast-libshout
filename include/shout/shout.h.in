@@ -27,6 +27,10 @@
 #include <os.h>
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define SHOUTERR_SUCCESS            (  0) /* No error */
 #define SHOUTERR_INSANE             ( -1) /* Nonsensical arguments e.g. self being NULL */ 
 #define SHOUTERR_NOCONNECT          ( -2) /* Couldn't connect */
@@ -77,10 +81,6 @@
 
 typedef struct shout shout_t;
 typedef struct _util_dict shout_metadata_t;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /* initializes the shout library. Must be called before anything else */
 void shout_init(void);
