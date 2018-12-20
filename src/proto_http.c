@@ -298,7 +298,7 @@ static shout_connection_return_state_t shout_create_http_request(shout_t *self, 
             }
         break;
         case STATE_UPGRADE:
-            return shout_create_http_request_generic(self, connection, "OPTIONS", "*", NULL, 0, "TLS/1.0, HTTP/1.1", 0);
+            return shout_create_http_request_generic(self, connection, "GET", "/", NULL, 0, "TLS/1.0, HTTP/1.1", 0);
         break;
         default:
             shout_connection_set_error(connection, self, SHOUTERR_INSANE);
