@@ -37,7 +37,8 @@
 typedef enum {
     STATE_CHALLENGE = 0,
     STATE_SOURCE,
-    STATE_UPGRADE
+    STATE_UPGRADE,
+    STATE_POKE
 } shout_http_protocol_state_t;
 
 static char *shout_http_basic_authorization(shout_t *self)
@@ -298,7 +299,10 @@ static shout_connection_return_state_t shout_create_http_request(shout_t *self, 
             }
         break;
         case STATE_UPGRADE:
-            return shout_create_http_request_generic(self, connection, "GET", "/", NULL, 0, "TLS/1.0, HTTP/1.1", 0);
+            return shout_create_http_request_generic(self, connection, "OPTIONS", "*", NULL, 0, "TLS/1.0, HTTP/1.1", 0);
+        break;
+        case STATE_POKE:
+            return shout_create_http_request_generic(self, connection, "GET", "/admin/!POKE", NULL, 0, NULL, 0);
         break;
         default:
             shout_connection_set_error(connection, self, SHOUTERR_INSANE);
@@ -316,8 +320,12 @@ static shout_connection_return_state_t shout_get_http_response(shout_t *self, sh
 
     if (!connection->rqueue.len) {
         if (!connection->tls && (connection->selected_tls_mode == SHOUT_TLS_AUTO || connection->selected_tls_mode == SHOUT_TLS_AUTO_NO_PLAIN)) {
-            shout_connection_select_tlsmode(connection, SHOUT_TLS_RFC2818);
-            return shout_parse_http_select_next_state(self, connection, 0, STATE_CHALLENGE);
+            if (connection->current_protocol_state == STATE_POKE) {
+                shout_connection_select_tlsmode(connection, SHOUT_TLS_RFC2818);
+                return shout_parse_http_select_next_state(self, connection, 0, STATE_CHALLENGE);
+            } else {
+                return shout_parse_http_select_next_state(self, connection, 0, STATE_POKE);
+            }
         }
         shout_connection_set_error(connection, self, SHOUTERR_SOCKET);
         return SHOUT_RS_ERROR;
@@ -533,7 +541,7 @@ static shout_connection_return_state_t shout_parse_http_response(shout_t *self, 
 #ifdef HAVE_OPENSSL
             switch (code) {
                 case 400:
-                    if (connection->current_protocol_state != STATE_UPGRADE) {
+                    if (connection->current_protocol_state != STATE_UPGRADE && connection->current_protocol_state != STATE_POKE) {
                         free(header);
                         httpp_destroy(parser);
                         shout_connection_set_error(connection, self, SHOUTERR_NOLOGIN);
@@ -568,6 +576,7 @@ static shout_connection_return_state_t shout_parse_http_response(shout_t *self, 
                 break;
 
                 case 101:
+                    shout_connection_select_tlsmode(connection, SHOUT_TLS_RFC2817);
                     shout_connection_starttls(connection, self);
                 break;
             }
@@ -591,6 +600,7 @@ failure:
                 return shout_parse_http_select_next_state(self, connection, can_reuse, STATE_SOURCE);
             break;
             case STATE_UPGRADE:
+            case STATE_POKE:
                 if (connection->server_caps & LIBSHOUT_CAP_CHALLENGED) {
                     return shout_parse_http_select_next_state(self, connection, can_reuse, STATE_SOURCE);
                 } else {
