@@ -41,7 +41,33 @@ struct _shout_tls {
     const char  *ca_file;
     const char  *allowed_ciphers;
     const char  *client_certificate;
+    shout_tls_callback_t callback;
+    void        *callback_userdata;
 };
+
+static int shout_tls_emit(shout_tls_t *tls, shout_event_t event, ...)
+{
+    int ret;
+#if SHOUT_STDARG
+    va_list ap;
+#endif
+
+    if (!tls)
+        return SHOUTERR_INSANE;
+
+    if (!tls->callback)
+        return SHOUT_CALLBACK_PASS;
+
+#if SHOUT_STDARG
+    va_start(ap, event);
+    ret = tls->callback(tls, event, tls->callback_userdata, ap);
+    va_end(ap);
+#else
+    ret = tls->callback(tls, event, tls->callback_userdata);
+#endif
+
+    return ret;
+}
 
 shout_tls_t *shout_tls_new(shout_t *self, sock_t socket)
 {
@@ -174,8 +200,14 @@ static inline int tls_check_cert(shout_tls_t *tls)
 {
     X509 *cert = SSL_get_peer_certificate(tls->ssl);
     int cert_ok = 0;
+    int ret;
+
     if (!cert)
         return SHOUTERR_TLSBADCERT;
+
+    ret = shout_tls_emit(tls, SHOUT_EVENT_TLS_CHECK_PEER_CERTIFICATE);
+    if (ret != SHOUT_CALLBACK_PASS)
+        return ret;
 
     do {
         if (SSL_get_verify_result(tls->ssl) != X509_V_OK)
@@ -244,4 +276,49 @@ int shout_tls_recoverable(shout_tls_t *tls)
     if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE)
         return 1;
     return 0;
+}
+
+int          shout_tls_get_peer_certificate(shout_tls_t *tls, char **buf)
+{
+    X509 *cert;
+    BIO *bio;
+    unsigned char *data;
+    unsigned int len;
+
+
+    if (!tls || !buf)
+        return SHOUTERR_INSANE;
+
+    cert  = SSL_get_peer_certificate(tls->ssl);
+    if (!cert)
+        return SHOUTERR_TLSBADCERT;
+
+    bio = BIO_new(BIO_s_mem());
+    if (!bio)
+        return SHOUTERR_MALLOC;
+
+    PEM_write_bio_X509(bio, cert);
+
+    len = BIO_get_mem_data(bio, &data);
+
+    if (len) {
+        *buf = malloc(len + 1);
+        memcpy(*buf, data, len);
+        (*buf)[len] = 0;
+    }
+
+    BIO_free(bio);
+
+    return SHOUTERR_SUCCESS;
+}
+
+int          shout_tls_set_callback(shout_tls_t *tls, shout_tls_callback_t callback, void *userdata)
+{
+    if (!tls)
+        return SHOUTERR_INSANE;
+
+    tls->callback = callback;
+    tls->callback_userdata = userdata;
+
+    return SHOUTERR_SUCCESS;
 }

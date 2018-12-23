@@ -1144,7 +1144,84 @@ const char *shout_get_client_certificate(shout_t *self)
 }
 #endif
 
+int shout_control(shout_t *self, shout_control_t control, ...)
+{
+    int ret = SHOUTERR_INSANE;
+    char *buf;
+#if SHOUT_STDARG
+    va_list ap;
+#endif
+
+    if (!self)
+        return SHOUTERR_INSANE;
+
+#if SHOUT_STDARG
+    va_start(ap, control);
+#endif
+
+    switch (control) {
+#if SHOUT_STDARG && defined(HAVE_OPENSSL)
+        case SHOUT_CONTROL_GET_SERVER_CERTIFICATE_AS_PEM:
+            if (self->tls) {
+                void **vpp = va_arg(ap, void **);
+                if (vpp) {
+                    ret = shout_tls_get_peer_certificate(self->tls, &buf);
+                    if (ret == SHOUTERR_SUCCESS) {
+                        *vpp = buf;
+                    }
+                } else {
+                    ret = SHOUTERR_INSANE;
+                }
+            } else {
+                ret = SHOUTERR_BUSY;
+            }
+        break;
+#endif
+        case SHOUT_CONTROL__MIN:
+        case SHOUT_CONTROL__MAX:
+            ret = SHOUTERR_INSANE;
+        break;
+    }
+
+#if SHOUT_STDARG
+    va_end(ap);
+#endif
+
+    return self->error = ret;
+}
+int shout_set_callback(shout_t *self, shout_callback_t callback, void *userdata)
+{
+    if (!self)
+        return SHOUTERR_INSANE;
+
+    self->callback = callback;
+    self->callback_userdata = userdata;
+
+    return self->error = SHOUTERR_SUCCESS;
+}
+
 /* -- static function definitions -- */
+#ifdef HAVE_OPENSSL
+#if SHOUT_STDARG
+static int shout_cb_tls_callback(shout_tls_t *tls, shout_event_t event, void *userdata, va_list ap)
+#else
+/* Get a real OS */
+static int shout_cb_tls_callback(shout_tls_t *tls, shout_event_t event, void *userdata)
+#endif
+{
+    shout_t *self = userdata;
+
+    if (!self->callback)
+        return SHOUT_CALLBACK_PASS;
+
+#if SHOUT_STDARG
+    return self->callback(self, event, self->callback_userdata, ap);
+#else
+    return self->callback(self, event, self->callback_userdata);
+#endif
+}
+#endif
+
 static int get_response(shout_t *self)
 {
     char buf[1024];
@@ -1242,6 +1319,7 @@ retry:
                     self->tls = shout_tls_new(self, self->socket);
                     if (!self->tls) /* just guessing that it's a malloc error */
                         return SHOUTERR_MALLOC;
+                    shout_tls_set_callback(self->tls, shout_cb_tls_callback, self);
                 }
                 if ((rc = shout_tls_try_connect(self->tls)) != SHOUTERR_SUCCESS) {
                     if (rc == SHOUTERR_BUSY)

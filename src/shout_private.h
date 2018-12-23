@@ -128,6 +128,9 @@ struct shout {
     /* is this stream private? */
     int public;
 
+    shout_callback_t callback;
+    void *callback_userdata;
+
     /* TLS options */
 #ifdef HAVE_OPENSSL
     int          upgrade_to_tls;
@@ -181,12 +184,21 @@ ssize_t shout_conn_write(shout_t *self, const void *buf, size_t len);
 int     shout_conn_recoverable(shout_t *self);
 
 #ifdef HAVE_OPENSSL
+#if SHOUT_STDARG
+typedef int (*shout_tls_callback_t)(shout_tls_t *tls, shout_event_t event, void *userdata, va_list ap);
+#else
+/* Get a real OS */
+typedef int (*shout_tls_callback_t)(shout_tls_t *tls, shout_event_t event, void *userdata);
+#endif
+
 shout_tls_t *shout_tls_new(shout_t *self, sock_t socket);
 int          shout_tls_try_connect(shout_tls_t *tls);
 int          shout_tls_close(shout_tls_t *tls);
 ssize_t      shout_tls_read(shout_tls_t *tls, void *buf, size_t len);
 ssize_t      shout_tls_write(shout_tls_t *tls, const void *buf, size_t len);
 int          shout_tls_recoverable(shout_tls_t *tls);
+int          shout_tls_get_peer_certificate(shout_tls_t *tls, char **buf);
+int          shout_tls_set_callback(shout_tls_t *tls, shout_tls_callback_t callback, void *userdata);
 #endif
 
 /* protocols */
