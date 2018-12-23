@@ -83,6 +83,7 @@ XIPH_C99_INTTYPES
 
 dnl Checks for library functions.
 AC_CHECK_FUNCS([gettimeofday ftime])
+AC_CHECK_FUNCS([strcasestr])
 AC_SEARCH_LIBS([nanosleep], [rt],
   [AC_DEFINE([HAVE_NANOSLEEP], [1],
     [Define if you have the nanosleep function])])

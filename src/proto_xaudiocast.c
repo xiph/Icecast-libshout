@@ -31,7 +31,7 @@
 #include <shout/shout.h>
 #include "shout_private.h"
 
-int shout_create_xaudiocast_request(shout_t *self)
+shout_connection_return_state_t shout_create_xaudiocast_request(shout_t *self, shout_connection_t *connection)
 {
     const char  *bitrate;
     const char  *val;
@@ -46,26 +46,26 @@ int shout_create_xaudiocast_request(shout_t *self)
     do {
         if (!(mount = _shout_util_url_encode_resource(self->mount)))
             break;
-        if (shout_queue_printf(self, "SOURCE %s %s\n", self->password, mount))
+        if (shout_queue_printf(connection, "SOURCE %s %s\n", self->password, mount))
             break;
-        if (shout_queue_printf(self, "x-audiocast-name: %s\n", shout_get_meta(self, "name")))
+        if (shout_queue_printf(connection, "x-audiocast-name: %s\n", shout_get_meta(self, "name")))
             break;
         val = shout_get_meta(self, "url");
-        if (shout_queue_printf(self, "x-audiocast-url: %s\n", val ? val : "http://www.icecast.org/"))
+        if (shout_queue_printf(connection, "x-audiocast-url: %s\n", val ? val : "http://www.icecast.org/"))
             break;
         val = shout_get_meta(self, "genre");
-        if (shout_queue_printf(self, "x-audiocast-genre: %s\n", val ? val : "icecast"))
+        if (shout_queue_printf(connection, "x-audiocast-genre: %s\n", val ? val : "icecast"))
             break;
-        if (shout_queue_printf(self, "x-audiocast-bitrate: %s\n", bitrate))
+        if (shout_queue_printf(connection, "x-audiocast-bitrate: %s\n", bitrate))
             break;
-        if (shout_queue_printf(self, "x-audiocast-public: %i\n", self->public))
+        if (shout_queue_printf(connection, "x-audiocast-public: %i\n", self->public))
             break;
         val = shout_get_meta(self, "description");
-        if (shout_queue_printf(self, "x-audiocast-description: %s\n", val ? val : "Broadcasting with the icecast streaming media server!"))
+        if (shout_queue_printf(connection, "x-audiocast-description: %s\n", val ? val : "Broadcasting with the icecast streaming media server!"))
             break;
-        if (self->dumpfile && shout_queue_printf(self, "x-audiocast-dumpfile: %s\n", self->dumpfile))
+        if (self->dumpfile && shout_queue_printf(connection, "x-audiocast-dumpfile: %s\n", self->dumpfile))
             break;
-        if (shout_queue_str(self, "\n"))
+        if (shout_queue_str(connection, "\n"))
             break;
 
         ret = SHOUTERR_SUCCESS;
@@ -74,51 +74,70 @@ int shout_create_xaudiocast_request(shout_t *self)
     if (mount)
         free(mount);
 
-    return ret;
+    shout_connection_set_error(connection, self, ret);
+    return ret == SHOUTERR_SUCCESS ? SHOUT_RS_DONE : SHOUT_RS_ERROR;
 }
 
-int shout_get_xaudiocast_response(shout_t *self)
+shout_connection_return_state_t shout_get_xaudiocast_response(shout_t *self, shout_connection_t *connection)
 {
-    shout_buf_t *queue = self->rqueue.head;
-    unsigned int i;
+    shout_buf_t *queue = connection->rqueue.head;
+    size_t i;
+
+    if (!connection->rqueue.len)
+        return SHOUT_RS_DONE;
 
     do {
         for (i = 0; i < queue->len; i++) {
             if (queue->data[i] == '\n') {
                 /* got response */
-                return SHOUTERR_SUCCESS;
+                return SHOUT_RS_DONE;
             }
         }
     } while ((queue = queue->next));
 
     /* need more data */
-    return SHOUTERR_BUSY;
+    return SHOUT_RS_NOTNOW;
 }
 
-int shout_parse_xaudiocast_response(shout_t *self)
+shout_connection_return_state_t shout_parse_xaudiocast_response(shout_t *self, shout_connection_t *connection)
 {
-    char *response;
+    char *response = NULL;
 
-    if (shout_queue_collect(self->rqueue.head, &response) <= 0)
-        return SHOUTERR_MALLOC;
-    shout_queue_free(&self->rqueue);
+    if (connection->rqueue.len) {
+        if (shout_queue_collect(connection->rqueue.head, &response) <= 0) {
+            shout_connection_set_error(connection, self, SHOUTERR_MALLOC);
+            return SHOUT_RS_ERROR;
+        }
+    }
+    shout_queue_free(&connection->rqueue);
 
-    if (!strstr(response, "OK")) {
+    if (!response || !strstr(response, "OK")) {
         free(response);
 
         /* check to see if that is a response to a POKE. */
-        if (!(self->server_caps & LIBSHOUT_CAP_GOTCAPS)) {
-            self->server_caps |= LIBSHOUT_CAP_GOTCAPS;
-            self->retry++;
-            if (self->retry > LIBSHOUT_MAX_RETRY)
-                self->retry = 0;
-            return SHOUTERR_SOCKET;
+        if (!(connection->server_caps & LIBSHOUT_CAP_GOTCAPS)) {
+            connection->server_caps |= LIBSHOUT_CAP_GOTCAPS;
+            shout_connection_disconnect(connection);
+            shout_connection_connect(connection, self);
+            connection->current_message_state = SHOUT_MSGSTATE_CREATING0;
+            connection->target_message_state = SHOUT_MSGSTATE_SENDING1;
+            return SHOUT_RS_NOTNOW;
         } else {
-            return SHOUTERR_NOLOGIN;
+            shout_connection_set_error(connection, self, SHOUTERR_NOLOGIN);
+            return SHOUT_RS_ERROR;
         }
     }
     free(response);
 
-    self->server_caps |= LIBSHOUT_CAP_GOTCAPS;
-    return SHOUTERR_SUCCESS;
+    connection->server_caps |= LIBSHOUT_CAP_GOTCAPS;
+    connection->current_message_state = SHOUT_MSGSTATE_SENDING1;
+    connection->target_message_state = SHOUT_MSGSTATE_WAITING1;
+    return SHOUT_RS_DONE;
 }
+
+static const shout_protocol_impl_t shout_xaudiocast_impl_real = {
+    .msg_create = shout_create_xaudiocast_request,
+    .msg_get = shout_get_xaudiocast_response,
+    .msg_parse = shout_parse_xaudiocast_response
+};
+const shout_protocol_impl_t *shout_xaudiocast_impl = &shout_xaudiocast_impl_real;

@@ -71,18 +71,19 @@ int shout_queue_data(shout_queue_t *queue, const unsigned char *data, size_t len
     return SHOUTERR_SUCCESS;
 }
 
-int shout_queue_str(shout_t *self, const char *str)
+int shout_queue_str(shout_connection_t *self, const char *str)
 {
     return shout_queue_data(&self->wqueue, (const unsigned char*)str, strlen(str));
 }
 
 /* this should be shared with sock_write. Create libicecommon. */
-int shout_queue_printf(shout_t *self, const char *fmt, ...)
+int shout_queue_printf(shout_connection_t *self, const char *fmt, ...)
 {
     char        buffer[1024];
     char       *buf;
     va_list     ap, ap_retry;
     int         len;
+    int         ret = SHOUTERR_SUCCESS;
 
     buf = buffer;
 
@@ -91,7 +92,6 @@ int shout_queue_printf(shout_t *self, const char *fmt, ...)
 
     len = vsnprintf(buf, sizeof(buffer), fmt, ap);
 
-    self->error = SHOUTERR_SUCCESS;
     if (len > 0) {
 		if ((size_t)len < sizeof(buffer)) {
             shout_queue_data(&self->wqueue, (unsigned char*)buf, len);
@@ -102,7 +102,7 @@ int shout_queue_printf(shout_t *self, const char *fmt, ...)
                 shout_queue_data(&self->wqueue, (unsigned char*)buf, len);
                 free(buf);
 			} else {
-                self->error = SHOUTERR_MALLOC;
+                ret = SHOUTERR_MALLOC;
             }
         }
     }
@@ -110,7 +110,7 @@ int shout_queue_printf(shout_t *self, const char *fmt, ...)
     va_end(ap_retry);
     va_end(ap);
 
-    return self->error;
+    return ret;
 }
 
 void shout_queue_free(shout_queue_t *queue)

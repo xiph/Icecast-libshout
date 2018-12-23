@@ -28,16 +28,16 @@
 #include <shout/shout.h>
 #include "shout_private.h"
 
-static int shout_create_icy_request_poke(shout_t *self)
+static int shout_create_icy_request_poke(shout_t *self, shout_connection_t *connection)
 {
-    if (shout_queue_printf(self, "!POKE\nicy-name:libshout server poke request\n\n")) {
+    if (shout_queue_printf(connection, "!POKE\nicy-name:libshout server poke request\n\n")) {
         return SHOUTERR_MALLOC;
     } else {
         return SHOUTERR_SUCCESS;
     }
 }
 
-static int shout_create_icy_request_real(shout_t *self)
+static int shout_create_icy_request_real(shout_t *self, shout_connection_t *connection)
 {
     const char *bitrate;
     const char *val;
@@ -49,28 +49,28 @@ static int shout_create_icy_request_real(shout_t *self)
 
     ret = SHOUTERR_MALLOC;
     do {
-		if (shout_queue_printf(self, "%s\n", self->password))
+		if (shout_queue_printf(connection, "%s\n", self->password))
             break;
-		if (shout_queue_printf(self, "icy-name:%s\n", shout_get_meta(self, "name")))
+		if (shout_queue_printf(connection, "icy-name:%s\n", shout_get_meta(self, "name")))
             break;
         val = shout_get_meta(self, "url");
-		if (shout_queue_printf(self, "icy-url:%s\n", val ? val : "http://www.icecast.org/"))
+		if (shout_queue_printf(connection, "icy-url:%s\n", val ? val : "http://www.icecast.org/"))
             break;
         val = shout_get_meta(self, "irc");
-		if (shout_queue_printf(self, "icy-irc:%s\n", val ? val : ""))
+		if (shout_queue_printf(connection, "icy-irc:%s\n", val ? val : ""))
             break;
         val = shout_get_meta(self, "aim");
-		if (shout_queue_printf(self, "icy-aim:%s\n", val ? val : ""))
+		if (shout_queue_printf(connection, "icy-aim:%s\n", val ? val : ""))
             break;
         val = shout_get_meta(self, "icq");
-		if (shout_queue_printf(self, "icy-icq:%s\n", val ? val : ""))
+		if (shout_queue_printf(connection, "icy-icq:%s\n", val ? val : ""))
             break;
-		if (shout_queue_printf(self, "icy-pub:%i\n", self->public))
+		if (shout_queue_printf(connection, "icy-pub:%i\n", self->public))
             break;
         val = shout_get_meta(self, "genre");
-		if (shout_queue_printf(self, "icy-genre:%s\n", val ? val : "icecast"))
+		if (shout_queue_printf(connection, "icy-genre:%s\n", val ? val : "icecast"))
             break;
-		if (shout_queue_printf(self, "icy-br:%s\n\n", bitrate))
+		if (shout_queue_printf(connection, "icy-br:%s\n\n", bitrate))
             break;
 
         ret = SHOUTERR_SUCCESS;
@@ -79,11 +79,23 @@ static int shout_create_icy_request_real(shout_t *self)
     return ret;
 }
 
-int shout_create_icy_request(shout_t *self)
+shout_connection_return_state_t shout_create_icy_request(shout_t *self, shout_connection_t *connection)
 {
-    if (self->server_caps & LIBSHOUT_CAP_GOTCAPS) {
-        return shout_create_icy_request_real(self);
+    int ret;
+
+    if (connection->server_caps & LIBSHOUT_CAP_GOTCAPS) {
+        ret = shout_create_icy_request_real(self, connection);
     } else {
-        return shout_create_icy_request_poke(self);
+        ret = shout_create_icy_request_poke(self, connection);
     }
+
+    shout_connection_set_error(connection, self, ret);
+    return ret == SHOUTERR_SUCCESS ? SHOUT_RS_DONE : SHOUT_RS_ERROR;
 }
+
+static const shout_protocol_impl_t shout_icy_impl_real = {
+    .msg_create = shout_create_icy_request,
+    .msg_get = shout_get_xaudiocast_response,
+    .msg_parse = shout_parse_xaudiocast_response
+};
+const shout_protocol_impl_t *shout_icy_impl = &shout_icy_impl_real;

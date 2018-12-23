@@ -204,6 +204,8 @@ static inline int tls_setup_process(shout_tls_t *tls)
     tls->ssl_ret = SSL_connect(tls->ssl);
     if (SSL_is_init_finished(tls->ssl))
         return tls_check_cert(tls);
+    if (!shout_tls_recoverable(tls))
+        return SHOUTERR_SOCKET;
     return SHOUTERR_BUSY;
 }
 
