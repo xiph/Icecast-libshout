@@ -27,6 +27,8 @@
 #include <os.h>
 #endif
 
+#include <stdarg.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -79,8 +81,24 @@ extern "C" {
 #define SHOUT_META_AIM              "aim"
 #define SHOUT_META_ICQ              "icq"
 
+#define SHOUT_CALLBACK_PASS         (  1) /* Pass the event to the next handler */
+
+typedef enum {
+    SHOUT_CONTROL__MIN = 0,
+    SHOUT_CONTROL_GET_SERVER_CERTIFICATE_AS_PEM,
+    SHOUT_CONTROL__MAX = 32767
+} shout_control_t;
+
+typedef enum {
+    SHOUT_EVENT__MIN = 0,
+    SHOUT_EVENT_TLS_CHECK_PEER_CERTIFICATE,
+    SHOUT_EVENT__MAX = 32767
+} shout_event_t;
+
 typedef struct shout shout_t;
 typedef struct _util_dict shout_metadata_t;
+
+typedef int (*shout_callback_t)(shout_t *shout, shout_event_t event, void *userdata, va_list ap);
 
 /* initializes the shout library. Must be called before anything else */
 void shout_init(void);
@@ -252,6 +270,10 @@ void shout_metadata_free(shout_metadata_t *self);
  *   SHOUTERR_INSANE if self isn't a valid shout_metadata_t* or name is null
  *   SHOUTERR_MALLOC if memory can't be allocated */
 int shout_metadata_add(shout_metadata_t *self, const char *name, const char *value);
+
+/* Advanced. Do not use. */
+int shout_control(shout_t *self, shout_control_t control, ...);
+int shout_set_callback(shout_t *self, shout_callback_t callback, void *userdata);
 
 #ifdef __cplusplus
 }

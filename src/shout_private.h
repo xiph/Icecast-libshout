@@ -161,6 +161,8 @@ typedef struct {
     shout_connection_return_state_t (*protocol_iter)(shout_t *self, shout_connection_t *connection);
 } shout_protocol_impl_t;
 
+typedef int (*shout_connection_callback_t)(shout_connection_t *con, shout_event_t event, void *userdata, va_list ap);
+
 struct shout_connection_tag {
     size_t                          refc;
 
@@ -180,6 +182,9 @@ struct shout_connection_tag {
     int (*destory)(shout_connection_t *connection);
 
     int                             nonblocking;
+
+    shout_connection_callback_t callback;
+    void        *callback_userdata;
 
 #ifdef HAVE_OPENSSL
     shout_tls_t   *tls;
@@ -220,6 +225,9 @@ struct shout {
     char *user;
     /* is this stream private? */
     int public;
+
+    shout_callback_t callback;
+    void *callback_userdata;
 
     /* TLS options */
 #ifdef HAVE_OPENSSL
@@ -280,14 +288,20 @@ int                 shout_connection_starttls(shout_connection_t *con, shout_t *
 int                 shout_connection_set_error(shout_connection_t *con, shout_t *shout, int error);
 int                 shout_connection_get_error(shout_connection_t *con, shout_t *shout);
 int                 shout_connection_transfer_error(shout_connection_t *con, shout_t *shout);
+int                 shout_connection_control(shout_connection_t *con, shout_control_t control, ...);
+int                 shout_connection_set_callback(shout_connection_t *con, shout_connection_callback_t callback, void *userdata);
 
 #ifdef HAVE_OPENSSL
+typedef int (*shout_tls_callback_t)(shout_tls_t *tls, shout_event_t event, void *userdata, va_list ap);
+
 shout_tls_t *shout_tls_new(shout_t *self, sock_t socket);
 int          shout_tls_try_connect(shout_tls_t *tls);
 int          shout_tls_close(shout_tls_t *tls);
 ssize_t      shout_tls_read(shout_tls_t *tls, void *buf, size_t len);
 ssize_t      shout_tls_write(shout_tls_t *tls, const void *buf, size_t len);
 int          shout_tls_recoverable(shout_tls_t *tls);
+int          shout_tls_get_peer_certificate(shout_tls_t *tls, char **buf);
+int          shout_tls_set_callback(shout_tls_t *tls, shout_tls_callback_t callback, void *userdata);
 #endif
 
 /* protocols */

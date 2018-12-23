@@ -30,6 +30,18 @@
 #include <shout/shout.h>
 #include "shout_private.h"
 
+#ifdef HAVE_OPENSSL
+static int shout_cb_tls_callback(shout_tls_t *tls, shout_event_t event, void *userdata, va_list ap)
+{
+    shout_connection_t *con = userdata;
+
+    if (!con->callback)
+        return SHOUT_CALLBACK_PASS;
+
+    return con->callback(con, event, con->callback_userdata, ap);
+}
+#endif
+
 shout_connection_t *shout_connection_new(shout_t *self, const shout_protocol_impl_t *impl, const void *plan)
 {
     shout_connection_t *con;
@@ -576,6 +588,8 @@ int                 shout_connection_starttls(shout_connection_t *con, shout_t *
     if (!con->tls) /* just guessing that it's a malloc error */
         return SHOUTERR_MALLOC;
 
+    shout_tls_set_callback(con->tls, shout_cb_tls_callback, con);
+
     con->target_socket_state = SHOUT_SOCKSTATE_TLS_VERIFIED;
 
     return SHOUTERR_SUCCESS;
@@ -603,6 +617,60 @@ int                 shout_connection_transfer_error(shout_connection_t *con, sho
         return SHOUTERR_INSANE;
 
     shout->error = con->error;
+
+    return SHOUTERR_SUCCESS;
+}
+int                 shout_connection_control(shout_connection_t *con, shout_control_t control, ...)
+{
+    int ret = SHOUTERR_INSANE;
+    char *buf;
+    va_list ap;
+
+    if (!con)
+        return SHOUTERR_INSANE;
+
+    va_start(ap, control);
+
+    switch (control) {
+#ifdef HAVE_OPENSSL
+        case SHOUT_CONTROL_GET_SERVER_CERTIFICATE_AS_PEM:
+            if (con->tls) {
+                void **vpp = va_arg(ap, void **);
+                if (vpp) {
+                    ret = shout_tls_get_peer_certificate(con->tls, &buf);
+                    if (ret == SHOUTERR_SUCCESS) {
+                        *vpp = buf;
+                    }
+                } else {
+                    ret = SHOUTERR_INSANE;
+                }
+            } else {
+                ret = SHOUTERR_BUSY;
+            }
+        break;
+#else
+        case SHOUT_CONTROL_GET_SERVER_CERTIFICATE_AS_PEM:
+            ret = SHOUTERR_UNSUPPORTED;
+        break;
+#endif
+        case SHOUT_CONTROL__MIN:
+        case SHOUT_CONTROL__MAX:
+            ret = SHOUTERR_INSANE;
+        break;
+    }
+
+    va_end(ap);
+
+    return ret;
+}
+
+int                 shout_connection_set_callback(shout_connection_t *con, shout_connection_callback_t callback, void *userdata)
+{
+    if (!con)
+        return SHOUTERR_INSANE;
+
+    con->callback = callback;
+    con->callback_userdata = userdata;
 
     return SHOUTERR_SUCCESS;
 }

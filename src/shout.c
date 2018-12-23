@@ -50,6 +50,7 @@
 #endif
 
 /* -- local prototypes -- */
+static int shout_cb_connection_callback(shout_connection_t *con, shout_event_t event, void *userdata, va_list ap);
 static int try_connect(shout_t *self);
 
 /* -- static data -- */
@@ -406,6 +407,8 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
         free(param);
         return self->error = SHOUTERR_MALLOC;
     }
+
+    shout_connection_set_callback(self->connection, shout_cb_connection_callback, self);
 
 #ifdef HAVE_OPENSSL
     shout_connection_select_tlsmode(connection, self->tls_mode);
@@ -1064,7 +1067,86 @@ const char *shout_get_client_certificate(shout_t *self)
 }
 #endif
 
+int shout_control(shout_t *self, shout_control_t control, ...)
+{
+    int ret = SHOUTERR_INSANE;
+    va_list ap;
+
+    if (!self)
+        return SHOUTERR_INSANE;
+
+    va_start(ap, control);
+
+    switch (control) {
+        case SHOUT_CONTROL_GET_SERVER_CERTIFICATE_AS_PEM:
+            if (self->connection->tls) {
+                void **vpp = va_arg(ap, void **);
+                if (vpp) {
+                    ret = shout_connection_control(self->connection, SHOUT_CONTROL_GET_SERVER_CERTIFICATE_AS_PEM, vpp);
+                } else {
+                    ret = SHOUTERR_INSANE;
+                }
+            } else {
+                ret = SHOUTERR_BUSY;
+            }
+        break;
+        case SHOUT_CONTROL__MIN:
+        case SHOUT_CONTROL__MAX:
+            ret = SHOUTERR_INSANE;
+        break;
+    }
+
+    va_end(ap);
+
+    return self->error = ret;
+}
+int shout_set_callback(shout_t *self, shout_callback_t callback, void *userdata)
+{
+    if (!self)
+        return SHOUTERR_INSANE;
+
+    self->callback = callback;
+    self->callback_userdata = userdata;
+
+    return self->error = SHOUTERR_SUCCESS;
+}
+
 /* -- static function definitions -- */
+static int shout_call_callback(shout_t *self, shout_event_t event, ...)
+{
+    va_list ap;
+    int ret;
+
+    if (!self->callback)
+        return SHOUT_CALLBACK_PASS;
+
+    va_start(ap, event);
+    ret = self->callback(self, event, self->callback_userdata, ap);
+    va_end(ap);
+
+    return ret;
+}
+static int shout_cb_connection_callback(shout_connection_t *con, shout_event_t event, void *userdata, va_list ap)
+{
+    shout_t *self = userdata;
+
+    /* Avoid going up if not needed */
+    if (!self->callback)
+        return SHOUT_CALLBACK_PASS;
+
+    switch (event) {
+        case SHOUT_EVENT_TLS_CHECK_PEER_CERTIFICATE:
+            return shout_call_callback(self, event, con);
+        break;
+        case SHOUT_EVENT__MIN:
+        case SHOUT_EVENT__MAX:
+            return SHOUTERR_INSANE;
+        break;
+    }
+
+    return SHOUT_CALLBACK_PASS;
+}
+
 static int try_connect(shout_t *self)
 {
     int ret;
@@ -1094,6 +1176,8 @@ static int try_connect(shout_t *self)
         self->connection = shout_connection_new(self, impl, &(self->source_plan));
         if (!self->connection)
             return self->error = SHOUTERR_MALLOC;
+
+        shout_connection_set_callback(self->connection, shout_cb_connection_callback, self);
 
         shout_connection_select_tlsmode(self->connection, self->tls_mode);
         self->connection->target_message_state = SHOUT_MSGSTATE_SENDING1;

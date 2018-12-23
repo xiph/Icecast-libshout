@@ -75,6 +75,7 @@ dnl Checks for header files.
 AC_HEADER_STDC
 AC_HEADER_TIME
 AC_CHECK_HEADERS([strings.h sys/timeb.h arpa/inet.h])
+AC_CHECK_HEADERS([stdarg.h], [SHOUT_STDARG=1], [AC_MSG_ERROR([required header <stdarg.h> not found])])
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
