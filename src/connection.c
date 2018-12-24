@@ -131,10 +131,10 @@ static shout_connection_return_state_t shout_connection_iter__wait_for_io(shout_
     if (ret > 0 && (FD_ISSET(con->socket, &fhset_r) || FD_ISSET(con->socket, &fhset_w) || FD_ISSET(con->socket, &fhset_e))) {
         return SHOUT_RS_DONE;
     } else if (ret == 0) {
-        shout_connection_set_error(con, shout, SHOUTERR_RETRY);
+        shout_connection_set_error(con, SHOUTERR_RETRY);
         return SHOUT_RS_TIMEOUT;
     } else {
-        shout_connection_set_error(con, shout, SHOUTERR_SOCKET);
+        shout_connection_set_error(con, SHOUTERR_SOCKET);
         return SHOUT_RS_ERROR;
     }
 }
@@ -146,8 +146,8 @@ static shout_connection_return_state_t shout_connection_iter__socket(shout_conne
 
     switch (con->current_socket_state) {
         case SHOUT_SOCKSTATE_UNCONNECTED:
-            shout_connection_set_error(con, shout, shout_connection_connect(con, shout));
-            if (shout_connection_get_error(con, shout) == SHOUTERR_SUCCESS) {
+            shout_connection_set_error(con, shout_connection_connect(con, shout));
+            if (shout_connection_get_error(con) == SHOUTERR_SUCCESS) {
                 con->current_socket_state = SHOUT_SOCKSTATE_CONNECTING;
                 return SHOUT_RS_DONE;
             }
@@ -179,13 +179,13 @@ static shout_connection_return_state_t shout_connection_iter__socket(shout_conne
             } else if (rc == SHOUTERR_BUSY) {
                 return SHOUT_RS_NOTNOW;
             } else {
-                shout_connection_set_error(con, shout, rc);
+                shout_connection_set_error(con, rc);
                 return SHOUT_RS_ERROR;
             }
         break;
     }
 
-    shout_connection_set_error(con, shout, SHOUTERR_SOCKET);
+    shout_connection_set_error(con, SHOUTERR_SOCKET);
     return SHOUT_RS_ERROR;
 }
 
@@ -230,10 +230,10 @@ static ssize_t try_write(shout_connection_t *con, shout_t *shout, const void *da
 
     if (ret < 0) {
         if (shout_connection__recoverable(con, shout)) {
-            shout_connection_set_error(con, shout, SHOUTERR_BUSY);
+            shout_connection_set_error(con, SHOUTERR_BUSY);
             return pos;
         }
-        shout_connection_set_error(con, shout, SHOUTERR_SOCKET);
+        shout_connection_set_error(con, SHOUTERR_SOCKET);
         return ret;
     }
     return pos;
@@ -251,7 +251,7 @@ static shout_connection_return_state_t shout_connection_iter__message__send_queu
     while (buf) {
         ret = try_write(con, shout, buf->data + buf->pos, buf->len - buf->pos);
         if (ret < 0) {
-            if (shout_connection_get_error(con, shout) == SHOUTERR_BUSY) {
+            if (shout_connection_get_error(con) == SHOUTERR_BUSY) {
                 return SHOUT_RS_NOTNOW;
             } else {
                 return SHOUT_RS_ERROR;
@@ -287,7 +287,7 @@ static shout_connection_return_state_t shout_connection_iter__message__recv(shou
 
     if (rc > 0) {
         if ((ret = shout_queue_data(&(con->rqueue), (unsigned char*)buf, rc)) != SHOUTERR_SUCCESS) {
-            shout_connection_set_error(con, shout, ret);
+            shout_connection_set_error(con, ret);
             return SHOUT_RS_ERROR;
         }
     }
@@ -371,7 +371,7 @@ static shout_connection_return_state_t shout_connection_iter__message(shout_conn
         break;
     }
 
-    shout_connection_set_error(con, shout, SHOUTERR_SOCKET);
+    shout_connection_set_error(con, SHOUTERR_SOCKET);
     return SHOUT_RS_ERROR;
 }
 
@@ -387,11 +387,11 @@ static shout_connection_return_state_t shout_connection_iter__protocol(shout_con
     ret = con->impl->protocol_iter(shout, con);
     switch (ret) {
         case SHOUT_RS_ERROR:
-            shout_connection_set_error(con, shout, SHOUTERR_SOCKET);
+            shout_connection_set_error(con, SHOUTERR_SOCKET);
         break;
         case SHOUT_RS_NOTNOW:
         case SHOUT_RS_TIMEOUT:
-            shout_connection_set_error(con, shout, SHOUTERR_RETRY);
+            shout_connection_set_error(con, SHOUTERR_RETRY);
         break;
     }
 
@@ -425,7 +425,7 @@ int                 shout_connection_iter(shout_connection_t *con, shout_t *shou
                 retry = 1; \
             break; \
             case SHOUT_RS_ERROR: \
-                return shout_connection_get_error(con, shout); \
+                return shout_connection_get_error(con); \
             break; \
         } \
     }
@@ -559,7 +559,7 @@ ssize_t             shout_connection_send(shout_connection_t *con, shout_t *shou
 
     ret = shout_queue_data(&(con->wqueue), buf, len);
     if (ret != SHOUTERR_SUCCESS) {
-        shout_connection_set_error(con, shout, ret);
+        shout_connection_set_error(con, ret);
         return -1;
     }
 
@@ -595,18 +595,18 @@ int                 shout_connection_starttls(shout_connection_t *con, shout_t *
     return SHOUTERR_SUCCESS;
 }
 
-int                 shout_connection_set_error(shout_connection_t *con, shout_t *shout, int error)
+int                 shout_connection_set_error(shout_connection_t *con, int error)
 {
-    if (!con || !shout)
+    if (!con)
         return SHOUTERR_INSANE;
 
     con->error = error;
 
     return SHOUTERR_SUCCESS;
 }
-int                 shout_connection_get_error(shout_connection_t *con, shout_t *shout)
+int                 shout_connection_get_error(shout_connection_t *con)
 {
-    if (!con || !shout)
+    if (!con)
         return SHOUTERR_INSANE;
 
     return con->error;

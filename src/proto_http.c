@@ -107,7 +107,7 @@ static shout_connection_return_state_t shout_create_http_request_source(shout_t 
         break;
 
         default:
-            shout_connection_set_error(connection, self, SHOUTERR_INSANE);
+            shout_connection_set_error(connection, SHOUTERR_INSANE);
             return SHOUT_RS_ERROR;
         break;
     }
@@ -163,7 +163,7 @@ static shout_connection_return_state_t shout_create_http_request_source(shout_t 
     if (mount)
         free(mount);
 
-    shout_connection_set_error(connection, self, ret);
+    shout_connection_set_error(connection, ret);
     return ret == SHOUTERR_SUCCESS ? SHOUT_RS_DONE : SHOUT_RS_ERROR;
 }
 
@@ -241,7 +241,7 @@ static shout_connection_return_state_t shout_create_http_request_generic(shout_t
         }
     } while (0);
 
-    shout_connection_set_error(connection, self, ret);
+    shout_connection_set_error(connection, ret);
     return ret == SHOUTERR_SUCCESS ? SHOUT_RS_DONE : SHOUT_RS_ERROR;
 }
 
@@ -250,7 +250,7 @@ static shout_connection_return_state_t shout_create_http_request(shout_t *self, 
     const shout_http_plan_t *plan = connection->plan;
 
     if (!plan) {
-        shout_connection_set_error(connection, self, SHOUTERR_INSANE);
+        shout_connection_set_error(connection, SHOUTERR_INSANE);
         return SHOUT_RS_ERROR;
     }
 
@@ -286,7 +286,7 @@ static shout_connection_return_state_t shout_create_http_request(shout_t *self, 
                 case SHOUT_TLS_RFC2818:
                     if (!connection->tls) {
                         /* TLS requested but for some reason not established. NOT sending credentials. */
-                        shout_connection_set_error(connection, self, SHOUTERR_INSANE);
+                        shout_connection_set_error(connection, SHOUTERR_INSANE);
                         return SHOUT_RS_ERROR;
                     }
                 break;
@@ -305,7 +305,7 @@ static shout_connection_return_state_t shout_create_http_request(shout_t *self, 
             return shout_create_http_request_generic(self, connection, "GET", "/admin/!POKE", NULL, 0, NULL, 0);
         break;
         default:
-            shout_connection_set_error(connection, self, SHOUTERR_INSANE);
+            shout_connection_set_error(connection, SHOUTERR_INSANE);
             return SHOUT_RS_ERROR;
         break;
     }
@@ -327,7 +327,7 @@ static shout_connection_return_state_t shout_get_http_response(shout_t *self, sh
                 return shout_parse_http_select_next_state(self, connection, 0, STATE_POKE);
             }
         }
-        shout_connection_set_error(connection, self, SHOUTERR_SOCKET);
+        shout_connection_set_error(connection, SHOUTERR_SOCKET);
         return SHOUT_RS_ERROR;
     }
 
@@ -478,7 +478,7 @@ static shout_connection_return_state_t shout_parse_http_response(shout_t *self, 
     /* all this copying! */
     hlen = shout_queue_collect(connection->rqueue.head, &header);
     if (hlen <= 0) {
-        shout_connection_set_error(connection, self, SHOUTERR_MALLOC);
+        shout_connection_set_error(connection, SHOUTERR_MALLOC);
         return SHOUT_RS_ERROR;
     }
     shout_queue_free(&connection->rqueue);
@@ -489,7 +489,7 @@ static shout_connection_return_state_t shout_parse_http_response(shout_t *self, 
     if (!(mount = _shout_util_url_encode(self->mount))) {
         httpp_destroy(parser);
         free(header);
-        shout_connection_set_error(connection, self, SHOUTERR_MALLOC);
+        shout_connection_set_error(connection, SHOUTERR_MALLOC);
         return SHOUT_RS_ERROR;
     }
 
@@ -544,7 +544,7 @@ static shout_connection_return_state_t shout_parse_http_response(shout_t *self, 
                     if (connection->current_protocol_state != STATE_UPGRADE && connection->current_protocol_state != STATE_POKE) {
                         free(header);
                         httpp_destroy(parser);
-                        shout_connection_set_error(connection, self, SHOUTERR_NOLOGIN);
+                        shout_connection_set_error(connection, SHOUTERR_NOLOGIN);
                         return SHOUT_RS_ERROR;
                     }
                     if (connection->selected_tls_mode == SHOUT_TLS_AUTO_NO_PLAIN) {
@@ -557,12 +557,12 @@ static shout_connection_return_state_t shout_parse_http_response(shout_t *self, 
                     if (connection->tls) {
                         free(header);
                         httpp_destroy(parser);
-                        shout_connection_set_error(connection, self, SHOUTERR_NOLOGIN);
+                        shout_connection_set_error(connection, SHOUTERR_NOLOGIN);
                         return SHOUT_RS_ERROR;
                     } else if (connection->selected_tls_mode == SHOUT_TLS_DISABLED) {
                         free(header);
                         httpp_destroy(parser);
-                        shout_connection_set_error(connection, self, SHOUTERR_NOCONNECT);
+                        shout_connection_set_error(connection, SHOUTERR_NOCONNECT);
                         return SHOUT_RS_ERROR;
                     } else {
                         /* Reset challenge state here as we do not know if it's the same inside TLS */
@@ -612,7 +612,7 @@ failure:
             break;
         }
     }
-    shout_connection_set_error(connection, self, SHOUTERR_NOLOGIN);
+    shout_connection_set_error(connection, SHOUTERR_NOLOGIN);
     return SHOUT_RS_ERROR;
 }
 

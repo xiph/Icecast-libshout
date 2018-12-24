@@ -89,7 +89,7 @@ shout_connection_return_state_t shout_create_icy_request(shout_t *self, shout_co
         ret = shout_create_icy_request_poke(self, connection);
     }
 
-    shout_connection_set_error(connection, self, ret);
+    shout_connection_set_error(connection, ret);
     return ret == SHOUTERR_SUCCESS ? SHOUT_RS_DONE : SHOUT_RS_ERROR;
 }
 

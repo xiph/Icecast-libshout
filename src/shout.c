@@ -420,7 +420,7 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
     shout_connection_connect(connection, self);
 
     ret = shout_connection_iter(connection, self);
-    error = shout_connection_get_error(connection, self);
+    error = shout_connection_get_error(connection);
 
     shout_connection_unref(connection);
 
