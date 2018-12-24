@@ -284,11 +284,16 @@ static shout_connection_return_state_t shout_create_http_request(shout_t *self, 
                 case SHOUT_TLS_AUTO_NO_PLAIN:
                 case SHOUT_TLS_RFC2817:
                 case SHOUT_TLS_RFC2818:
+#ifdef HAVE_OPENSSL
                     if (!connection->tls) {
                         /* TLS requested but for some reason not established. NOT sending credentials. */
                         shout_connection_set_error(connection, SHOUTERR_INSANE);
                         return SHOUT_RS_ERROR;
                     }
+#else
+                    shout_connection_set_error(connection, SHOUTERR_UNSUPPORTED);
+                    return SHOUT_RS_ERROR;
+#endif
                 break;
             }
 
@@ -319,6 +324,7 @@ static shout_connection_return_state_t shout_get_http_response(shout_t *self, sh
     int          newlines = 0;
 
     if (!connection->rqueue.len) {
+#ifdef HAVE_OPENSSL
         if (!connection->tls && (connection->selected_tls_mode == SHOUT_TLS_AUTO || connection->selected_tls_mode == SHOUT_TLS_AUTO_NO_PLAIN)) {
             if (connection->current_protocol_state == STATE_POKE) {
                 shout_connection_select_tlsmode(connection, SHOUT_TLS_RFC2818);
@@ -327,6 +333,7 @@ static shout_connection_return_state_t shout_get_http_response(shout_t *self, sh
                 return shout_parse_http_select_next_state(self, connection, 0, STATE_POKE);
             }
         }
+#endif
         shout_connection_set_error(connection, SHOUTERR_SOCKET);
         return SHOUT_RS_ERROR;
     }

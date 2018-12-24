@@ -165,6 +165,7 @@ static shout_connection_return_state_t shout_connection_iter__socket(shout_conne
                 return SHOUT_RS_DONE;
             }
         break;
+#ifdef HAVE_OPENSSL
         case SHOUT_SOCKSTATE_CONNECTED:
             shout_tls_try_connect(con->tls);
             con->current_socket_state = SHOUT_SOCKSTATE_TLS_CONNECTING;
@@ -183,6 +184,13 @@ static shout_connection_return_state_t shout_connection_iter__socket(shout_conne
                 return SHOUT_RS_ERROR;
             }
         break;
+        case SHOUT_SOCKSTATE_CONNECTED:
+        case SHOUT_SOCKSTATE_TLS_CONNECTING:
+        case SHOUT_SOCKSTATE_TLS_CONNECTED:
+            shout_connection_set_error(con, SHOUTERR_UNSUPPORTED);
+            return SHOUT_RS_ERROR;
+        break;
+#endif
     }
 
     shout_connection_set_error(con, SHOUTERR_SOCKET);
@@ -578,6 +586,7 @@ ssize_t             shout_connection_get_sendq(shout_connection_t *con, shout_t 
 
 int                 shout_connection_starttls(shout_connection_t *con, shout_t *shout)
 {
+#ifdef HAVE_OPENSSL
     if (!con || !shout)
         return SHOUTERR_INSANE;
 
@@ -593,6 +602,9 @@ int                 shout_connection_starttls(shout_connection_t *con, shout_t *
     con->target_socket_state = SHOUT_SOCKSTATE_TLS_VERIFIED;
 
     return SHOUTERR_SUCCESS;
+#else
+    return SHOUTERR_UNSUPPORTED;
+#endif
 }
 
 int                 shout_connection_set_error(shout_connection_t *con, int error)

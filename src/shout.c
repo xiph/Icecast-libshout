@@ -1078,6 +1078,7 @@ int shout_control(shout_t *self, shout_control_t control, ...)
     va_start(ap, control);
 
     switch (control) {
+#ifdef HAVE_OPENSSL
         case SHOUT_CONTROL_GET_SERVER_CERTIFICATE_AS_PEM:
             if (self->connection->tls) {
                 void **vpp = va_arg(ap, void **);
@@ -1090,6 +1091,11 @@ int shout_control(shout_t *self, shout_control_t control, ...)
                 ret = SHOUTERR_BUSY;
             }
         break;
+#else
+        case SHOUT_CONTROL_GET_SERVER_CERTIFICATE_AS_PEM:
+            ret = SHOUTERR_UNSUPPORTED;
+        break;
+#endif
         case SHOUT_CONTROL__MIN:
         case SHOUT_CONTROL__MAX:
             ret = SHOUTERR_INSANE;
@@ -1179,7 +1185,9 @@ static int try_connect(shout_t *self)
 
         shout_connection_set_callback(self->connection, shout_cb_connection_callback, self);
 
+#ifdef HAVE_OPENSSL
         shout_connection_select_tlsmode(self->connection, self->tls_mode);
+#endif
         self->connection->target_message_state = SHOUT_MSGSTATE_SENDING1;
         shout_connection_connect(self->connection, self);
     }
