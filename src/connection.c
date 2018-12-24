@@ -184,6 +184,7 @@ static shout_connection_return_state_t shout_connection_iter__socket(shout_conne
                 return SHOUT_RS_ERROR;
             }
         break;
+#else
         case SHOUT_SOCKSTATE_CONNECTED:
         case SHOUT_SOCKSTATE_TLS_CONNECTING:
         case SHOUT_SOCKSTATE_TLS_CONNECTED:
