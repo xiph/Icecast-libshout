@@ -199,6 +199,7 @@ int shout_close(shout_t *self)
         self->close(self);
 
     shout_connection_unref(self->connection);
+    self->connection = NULL;
     self->starttime = 0;
     self->senttime = 0;
 
