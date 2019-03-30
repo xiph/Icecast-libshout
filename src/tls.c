@@ -23,6 +23,8 @@
 #   include <config.h>
 #endif
 
+#include <string.h>
+
 #include <shout/shout.h>
 #include "shout_private.h"
 
