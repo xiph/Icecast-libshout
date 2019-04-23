@@ -644,7 +644,6 @@ int                 shout_connection_transfer_error(shout_connection_t *con, sho
 int                 shout_connection_control(shout_connection_t *con, shout_control_t control, ...)
 {
     int ret = SHOUTERR_INSANE;
-    char *buf;
     va_list ap;
 
     if (!con)
@@ -657,6 +656,8 @@ int                 shout_connection_control(shout_connection_t *con, shout_cont
         case SHOUT_CONTROL_GET_SERVER_CERTIFICATE_AS_PEM:
             if (con->tls) {
                 void **vpp = va_arg(ap, void **);
+                char *buf;
+
                 if (vpp) {
                     ret = shout_tls_get_peer_certificate(con->tls, &buf);
                     if (ret == SHOUTERR_SUCCESS) {
