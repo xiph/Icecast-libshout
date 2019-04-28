@@ -1,3 +1,16 @@
+libshout XXX (XXX)
+
+* Fixed handling of invalid characters in strings:
+  * Correctly escape mountpoint names (#2233),
+  * Correctly escape mountpoint names and passwords in deprecated metadata API (#2304),
+  * Do not allow ICE headers with invalid characters (#2302).
+* Fixed and updated build system.
+* Allow building libshout on Android.
+* Rewrote TLS handling code and statemachine (#2244, #2298, #2301, #2303).
+* Support OPTIONS for RFC 2817 TLS mode.
+* Allow manual inspection of server's TLS certificate.
+* Updated documentation.
+
 libshout 2.4.1 (20151120)
 
 * Fixed issue with missing file in distribution
