@@ -1,4 +1,4 @@
-libshout XXX (XXX)
+libshout 2.4.2 (20190429)
 
 * Fixed handling of invalid characters in strings:
   * Correctly escape mountpoint names (#2233),
