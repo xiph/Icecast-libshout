@@ -89,6 +89,11 @@ AC_SEARCH_LIBS([nanosleep], [rt],
   [AC_DEFINE([HAVE_NANOSLEEP], [1],
     [Define if you have the nanosleep function])])
 
+dnl Allow examples not to be build
+AC_ARG_ENABLE([examples],
+  AC_HELP_STRING([--disable-examples],[Do not build example code]))
+AM_CONDITIONAL([HAVE_EXAMPLES],[test "${enable_examples}" != "no"])
+
 dnl Module checks
 XIPH_NET
 

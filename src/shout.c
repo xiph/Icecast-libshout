@@ -29,7 +29,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
+#ifdef HAVE_STRINGS_H
+#   include <strings.h>
+#endif
 #include <errno.h>
 
 #include <shout/shout.h>
