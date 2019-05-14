@@ -193,6 +193,10 @@ struct shout_connection_tag {
     shout_queue_t  rqueue;
     shout_queue_t  wqueue;
 
+    uint64_t       wait_timeout;
+    /* maybe we want to convert this to general flag vector later */
+    int            wait_timeout_happened;
+
     /* server capabilities (LIBSHOUT_CAP_*) */
     uint32_t server_caps;
 
@@ -279,7 +283,8 @@ int                 shout_connection_unref(shout_connection_t *con);
 int                 shout_connection_iter(shout_connection_t *con, shout_t *shout);
 int                 shout_connection_select_tlsmode(shout_connection_t *con, int tlsmode);
 int                 shout_connection_set_nonblocking(shout_connection_t *con, unsigned int nonblocking);
-int                 shout_connection_set_next_timeout(shout_connection_t *con, shout_t *shout, uint32_t timeout /* [ms] */);
+int                 shout_connection_set_wait_timeout(shout_connection_t *con, shout_t *shout, uint64_t timeout /* [ms] */);
+int                 shout_connection_get_wait_timeout_happened(shout_connection_t *con, shout_t *shout); /* returns SHOUTERR_* or > 0 for true */
 int                 shout_connection_connect(shout_connection_t *con, shout_t *shout);
 int                 shout_connection_disconnect(shout_connection_t *con);
 ssize_t             shout_connection_send(shout_connection_t *con, shout_t *shout, const void *buf, size_t len);
