@@ -86,8 +86,6 @@ shout_tls_t *shout_tls_new(shout_t *self, sock_t socket)
 
 static inline int tls_setup(shout_tls_t *tls)
 {
-    SSL_METHOD *meth;
-
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     SSL_library_init();
     SSL_load_error_strings();
@@ -95,11 +93,7 @@ static inline int tls_setup(shout_tls_t *tls)
     SSLeay_add_ssl_algorithms();
 #endif
 
-    meth = TLSv1_client_method();
-    if (!meth)
-        goto error;
-
-    tls->ssl_ctx = SSL_CTX_new(meth);
+    tls->ssl_ctx = SSL_CTX_new(TLSv1_client_method());
     if (!tls->ssl_ctx)
         goto error;
 
