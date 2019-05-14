@@ -88,10 +88,12 @@ static inline int tls_setup(shout_tls_t *tls)
 {
     SSL_METHOD *meth;
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     SSL_library_init();
     SSL_load_error_strings();
     SSLeay_add_all_algorithms();
     SSLeay_add_ssl_algorithms();
+#endif
 
     meth = TLSv1_client_method();
     if (!meth)
