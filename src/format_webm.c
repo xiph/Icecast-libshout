@@ -38,22 +38,22 @@
 /* -- local datatypes -- */
 
 /* A value that no EBML var-int is allowed to take. */
-#define EBML_UNKNOWN ((uint64_t) -1)
+#define EBML_UNKNOWN            ((uint64_t) -1)
 
 /* masks to turn the tag ID varints from the Matroska spec
  * into their parsed-as-number equivalents */
-#define EBML_LONG_MASK (~0x10000000)
-#define EBML_SHORT_MASK (~0x80)
+#define EBML_LONG_MASK          (~0x10000000)
+#define EBML_SHORT_MASK         (~0x80)
 
 /* tag IDs we're interested in */
-#define WEBM_EBML_ID    (0x1A45DFA3 & EBML_LONG_MASK)
-#define WEBM_SEGMENT_ID (0x18538067 & EBML_LONG_MASK)
-#define WEBM_CLUSTER_ID (0x1F43B675 & EBML_LONG_MASK)
+#define WEBM_EBML_ID            (0x1A45DFA3 & EBML_LONG_MASK)
+#define WEBM_SEGMENT_ID         (0x18538067 & EBML_LONG_MASK)
+#define WEBM_CLUSTER_ID         (0x1F43B675 & EBML_LONG_MASK)
 
-#define WEBM_TIMECODE_ID     (0xE7 & EBML_SHORT_MASK)
-#define WEBM_SIMPLE_BLOCK_ID (0xA3 & EBML_SHORT_MASK)
-#define WEBM_BLOCK_GROUP_ID (0xA0 & EBML_SHORT_MASK)
-#define WEBM_BLOCK_ID (0xA1 & EBML_SHORT_MASK)
+#define WEBM_TIMECODE_ID        (0xE7 & EBML_SHORT_MASK)
+#define WEBM_SIMPLE_BLOCK_ID    (0xA3 & EBML_SHORT_MASK)
+#define WEBM_BLOCK_GROUP_ID     (0xA0 & EBML_SHORT_MASK)
+#define WEBM_BLOCK_ID           (0xA1 & EBML_SHORT_MASK)
 
 typedef enum webm_parsing_state {
     WEBM_STATE_READ_TAG = 0,
@@ -140,11 +140,11 @@ int shout_open_webm(shout_t *self)
 static int send_webm(shout_t *self, const unsigned char *data, size_t len)
 {
     webm_t *webm = (webm_t *) self->format_data;
-
     size_t input_progress = 0;
+
     self->error = SHOUTERR_SUCCESS;
 
-    while(input_progress < len && self->error == SHOUTERR_SUCCESS) {
+    while (input_progress < len && self->error == SHOUTERR_SUCCESS) {
         copy_possible(data, &input_progress, len,
                       webm->input_buffer, &webm->input_write_position, SHOUT_BUFSIZE);
 
@@ -152,7 +152,7 @@ static int send_webm(shout_t *self, const unsigned char *data, size_t len)
     }
 
     /* Squeeze out any possible output, unless we're failing */
-    if(self->error == SHOUTERR_SUCCESS) {
+    if (self->error == SHOUTERR_SUCCESS) {
         self->error = flush_output(self, webm);
     }
 
@@ -166,7 +166,9 @@ static int send_webm(shout_t *self, const unsigned char *data, size_t len)
 static void close_webm(shout_t *self)
 {
     webm_t *webm_filter = (webm_t *) self->format_data;
-    if(webm_filter) free(webm_filter);
+
+    if (webm_filter)
+        free(webm_filter);
 }
 
 /* -- processing functions -- */
@@ -182,15 +184,15 @@ static int webm_process(shout_t *self, webm_t *webm)
 
     /* loop as long as buffer holds process-able data */
     webm->waiting_for_more_input = false;
-    while( webm->input_read_position < webm->input_write_position
+    while (webm->input_read_position < webm->input_write_position
            && !webm->waiting_for_more_input
-           && self->error == SHOUTERR_SUCCESS ) {
+           && self->error == SHOUTERR_SUCCESS) {
 
         /* calculate max space an operation can work on */
         to_process = webm->input_write_position - webm->input_read_position;
 
         /* perform appropriate operation */
-        switch(webm->parsing_state) {
+        switch (webm->parsing_state) {
             case WEBM_STATE_READ_TAG:
                 self->error =  webm_process_tag(self, webm);
                 break;
@@ -199,7 +201,7 @@ static int webm_process(shout_t *self, webm_t *webm)
                 /* copy a known quantity of bytes to the output */
 
                 /* calculate size needing to be copied this step */
-                if(webm->copy_len < to_process) {
+                if (webm->copy_len < to_process) {
                     to_process = webm->copy_len;
                 }
 
@@ -211,7 +213,7 @@ static int webm_process(shout_t *self, webm_t *webm)
                 /* update state with copy progress */
                 webm->copy_len -= to_process;
                 webm->input_read_position += to_process;
-                if(webm->copy_len == 0) {
+                if (webm->copy_len == 0) {
                     webm->parsing_state = WEBM_STATE_READ_TAG;
                 }
 
@@ -221,7 +223,7 @@ static int webm_process(shout_t *self, webm_t *webm)
 
     }
 
-    if(webm->input_read_position < webm->input_write_position) {
+    if (webm->input_read_position < webm->input_write_position) {
         /* slide unprocessed data to front of buffer */
         to_process = webm->input_write_position - webm->input_read_position;
         memmove(webm->input_buffer, webm->input_buffer + webm->input_read_position, to_process);
@@ -263,10 +265,10 @@ static int webm_process_tag(shout_t *self, webm_t *webm)
 
     /* parse tag header */
     tag_length = ebml_parse_tag(start_of_buffer, end_of_buffer, &tag_id, &payload_length);
-    if(tag_length == 0) {
+    if (tag_length == 0) {
         webm->waiting_for_more_input = true;
         return self->error;
-    } else if(tag_length < 0) {
+    } else if (tag_length < 0) {
         return self->error = SHOUTERR_INSANE;
     }
 
@@ -280,7 +282,7 @@ static int webm_process_tag(shout_t *self, webm_t *webm)
 
     /* handle tag appropriately */
 
-    switch(tag_id) {
+    switch (tag_id) {
         case WEBM_SEGMENT_ID:
         case WEBM_CLUSTER_ID:
             /* open containers to process children */
@@ -294,10 +296,10 @@ static int webm_process_tag(shout_t *self, webm_t *webm)
                                           payload_length,
                                           false, &timecode);
 
-            if(status == 0) {
+            if (status == 0) {
                 webm->waiting_for_more_input = true;
                 return self->error;
-            } else if(status < 0) {
+            } else if (status < 0) {
                 return self->error = SHOUTERR_INSANE;
             }
 
@@ -323,10 +325,10 @@ static int webm_process_tag(shout_t *self, webm_t *webm)
              */
             track_number_length = ebml_parse_var_int(start_of_buffer + tag_length,
                                                      end_of_buffer, &track_number);
-            if(track_number_length == 0) {
+            if (track_number_length == 0) {
                 webm->waiting_for_more_input = true;
                 return self->error;
-            } else if(track_number_length < 0) {
+            } else if (track_number_length < 0) {
                 return self->error = SHOUTERR_INSANE;
             }
 
@@ -340,10 +342,10 @@ static int webm_process_tag(shout_t *self, webm_t *webm)
             status = ebml_parse_sized_int(start_of_buffer + tag_length + track_number_length,
                                           end_of_buffer, 2, true, &timecode);
 
-            if(status == 0) {
+            if (status == 0) {
                 webm->waiting_for_more_input = true;
                 return self->error;
-            } else if(status < 0) {
+            } else if (status < 0) {
                 return self->error = SHOUTERR_INSANE;
             }
 
@@ -355,7 +357,7 @@ static int webm_process_tag(shout_t *self, webm_t *webm)
 
     /* queue copying */
 
-    if(to_copy > 0) {
+    if (to_copy > 0) {
         webm->copy_len = to_copy;
         webm->parsing_state = WEBM_STATE_COPY_THRU;
     }
@@ -371,12 +373,12 @@ static int webm_output(shout_t *self, webm_t *webm, const unsigned char *data, s
 {
     size_t output_progress = 0;
 
-    while(output_progress < len && self->error == SHOUTERR_SUCCESS)
+    while (output_progress < len && self->error == SHOUTERR_SUCCESS)
     {
         copy_possible(data, &output_progress, len,
                       webm->output_buffer, &webm->output_position, SHOUT_BUFSIZE);
 
-        if(webm->output_position == SHOUT_BUFSIZE) {
+        if (webm->output_position == SHOUT_BUFSIZE) {
             self->error = flush_output(self, webm);
         }
     }
@@ -399,9 +401,9 @@ static size_t copy_possible(const void *src_base,
 {
     size_t src_space = src_len - *src_position;
     size_t target_space = target_len - *target_position;
-
     size_t to_copy = src_space;
-    if(target_space < to_copy) to_copy = target_space;
+
+    if (target_space < to_copy) to_copy = target_space;
 
     memcpy(target_base + *target_position, src_base + *src_position, to_copy);
 
@@ -423,11 +425,13 @@ static size_t copy_possible(const void *src_base,
  */
 static int flush_output(shout_t *self, webm_t *webm)
 {
-    if(webm->output_position == 0) {
+    ssize_t ret;
+
+    if (webm->output_position == 0) {
         return self->error;
     }
 
-    ssize_t ret = shout_send_raw(self, webm->output_buffer, webm->output_position);
+    ret = shout_send_raw(self, webm->output_buffer, webm->output_position);
     if (ret != (ssize_t) webm->output_position) {
         return self->error = SHOUTERR_SOCKET;
     }
