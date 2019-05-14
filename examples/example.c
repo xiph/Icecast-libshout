@@ -51,7 +51,7 @@ int main()
 	}
 
 	if (shout_set_format(shout, SHOUT_FORMAT_OGG) != SHOUTERR_SUCCESS) {
-		printf("Error setting user: %s\n", shout_get_error(shout));
+		printf("Error setting format: %s\n", shout_get_error(shout));
 		return 1;
 	}
 
