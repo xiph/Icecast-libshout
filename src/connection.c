@@ -350,6 +350,7 @@ static shout_connection_return_state_t shout_connection_iter__message(shout_conn
             if (con->wqueue.len) {
                 return shout_connection_iter__message__send_queue(con, shout);
             } else {
+                shout_connection_set_error(con, SHOUTERR_SUCCESS);
                 return SHOUT_RS_ERROR;
             }
         break;

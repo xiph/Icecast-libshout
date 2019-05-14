@@ -120,8 +120,13 @@ static shout_connection_return_state_t shout_create_http_request_source(shout_t 
     do {
         if (!(mount = _shout_util_url_encode_resource(self->mount)))
             break;
-        if (shout_queue_printf(connection, "SOURCE %s HTTP/1.0\r\n", mount))
-            break;
+        if (connection->server_caps & LIBSHOUT_CAP_PUT) {
+            if (shout_queue_printf(connection, "PUT %s HTTP/1.1\r\n", mount))
+                break;
+        } else {
+            if (shout_queue_printf(connection, "SOURCE %s HTTP/1.0\r\n", mount))
+                break;
+        }
         if (self->password && auth) {
             if (! (basic_auth = shout_http_basic_authorization(self)))
                 break;
@@ -140,6 +145,11 @@ static shout_connection_return_state_t shout_create_http_request_source(shout_t 
         if (poke) {
             if (shout_queue_str(connection, "Content-Length: 0\r\nConnection: Keep-Alive\r\n"))
                 break;
+        } else if (connection->server_caps & LIBSHOUT_CAP_PUT) {
+            if (shout_queue_printf(connection, "Expect: 100-continue\r\n", mount))
+                break;
+            /* Set timeout for 100-continue to 4s = 4000 ms. This is a little less than the default source_timeout/2. */
+            shout_connection_set_wait_timeout(connection, self, 4000 /* [ms] */);
         }
         if (shout_queue_printf(connection, "ice-public: %d\r\n", self->public))
             break;
@@ -487,8 +497,14 @@ static shout_connection_return_state_t shout_parse_http_response(shout_t *self, 
     /* all this copying! */
     hlen = shout_queue_collect(connection->rqueue.head, &header);
     if (hlen <= 0) {
-        shout_connection_set_error(connection, SHOUTERR_MALLOC);
-        return SHOUT_RS_ERROR;
+        if (connection->current_protocol_state == STATE_SOURCE && shout_connection_get_wait_timeout_happened(connection, self) > 0) {
+            connection->current_message_state = SHOUT_MSGSTATE_SENDING1;
+            connection->target_message_state = SHOUT_MSGSTATE_WAITING1;
+            return SHOUT_RS_DONE;
+        } else {
+            shout_connection_set_error(connection, SHOUTERR_MALLOC);
+            return SHOUT_RS_ERROR;
+        }
     }
     shout_queue_free(&connection->rqueue);
 
@@ -533,7 +549,7 @@ static shout_connection_return_state_t shout_parse_http_response(shout_t *self, 
         can_reuse = 0;
 #endif
 
-        if (code >= 200 && code < 300 && connection->current_protocol_state == STATE_SOURCE) {
+        if ((code == 100 || (code >= 200 && code < 300)) && connection->current_protocol_state == STATE_SOURCE) {
             httpp_destroy(parser);
             free(header);
             connection->current_message_state = SHOUT_MSGSTATE_SENDING1;
