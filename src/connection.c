@@ -101,7 +101,7 @@ int                 shout_connection_unref(shout_connection_t *con)
     return SHOUTERR_SUCCESS;
 }
 
-static struct timeval shout_connection_iter__wait_for_io__get_timeout(shout_connection_t *con, shout_t *shout)
+static struct timeval shout_connection_iter__wait_for_io__get_timeout(shout_connection_t *con, shout_t *shout, uint64_t timeout)
 {
     static const struct timeval tv_blocking = {
         .tv_sec = 8,
@@ -112,16 +112,22 @@ static struct timeval shout_connection_iter__wait_for_io__get_timeout(shout_conn
         .tv_usec = 1000
     };
 
-    if (con->nonblocking) {
+    if (timeout) {
+        struct timeval tv = {
+            .tv_sec = timeout / 1000,
+            .tv_usec = (timeout % 1000) * 1000
+        };
+        return tv;
+    } else if (con->nonblocking) {
         return tv_nonblocking;
     } else {
         return tv_blocking;
     }
 }
 
-static shout_connection_return_state_t shout_connection_iter__wait_for_io(shout_connection_t *con, shout_t *shout, int for_read, int for_write)
+static shout_connection_return_state_t shout_connection_iter__wait_for_io(shout_connection_t *con, shout_t *shout, int for_read, int for_write, uint64_t timeout)
 {
-    struct timeval tv = shout_connection_iter__wait_for_io__get_timeout(con, shout);
+    struct timeval tv = shout_connection_iter__wait_for_io__get_timeout(con, shout, timeout);
     fd_set fhset_r;
     fd_set fhset_w;
     fd_set fhset_e;
@@ -162,7 +168,7 @@ static shout_connection_return_state_t shout_connection_iter__socket(shout_conne
         break;
         case SHOUT_SOCKSTATE_CONNECTING:
             if (con->nonblocking) {
-                ret = shout_connection_iter__wait_for_io(con, shout, 1, 1);
+                ret = shout_connection_iter__wait_for_io(con, shout, 1, 1, 0);
                 if (ret != SHOUT_RS_DONE) {
                     return ret;
                 }
@@ -344,12 +350,28 @@ static shout_connection_return_state_t shout_connection_iter__message(shout_conn
             if (con->wqueue.len) {
                 return shout_connection_iter__message__send_queue(con, shout);
             } else {
+                shout_connection_set_error(con, SHOUTERR_SUCCESS);
                 return SHOUT_RS_ERROR;
             }
         break;
         case SHOUT_MSGSTATE_WAITING0:
         case SHOUT_MSGSTATE_WAITING1:
-            ret = shout_connection_iter__wait_for_io(con, shout, 1, 0);
+            if (con->wait_timeout) {
+                uint64_t now = timing_get_time();
+                if (now > con->wait_timeout) {
+                    if (con->current_message_state == SHOUT_MSGSTATE_WAITING0) {
+                        con->current_message_state = SHOUT_MSGSTATE_RECEIVED0;
+                    } else {
+                        con->current_message_state = SHOUT_MSGSTATE_RECEIVING1;
+                    }
+                    con->wait_timeout_happened = 1;
+                    return SHOUT_RS_DONE;
+                } else {
+                    ret = shout_connection_iter__wait_for_io(con, shout, 1, 0, con->wait_timeout - now);
+                }
+            } else {
+                ret = shout_connection_iter__wait_for_io(con, shout, 1, 0, 0);
+            }
             if (ret == SHOUT_RS_DONE) {
                 if (con->current_message_state == SHOUT_MSGSTATE_WAITING0) {
                     con->current_message_state = SHOUT_MSGSTATE_RECEIVING0;
@@ -375,6 +397,7 @@ static shout_connection_return_state_t shout_connection_iter__message(shout_conn
         case SHOUT_MSGSTATE_RECEIVED1:
             if (con->impl->msg_parse)
                 ret = con->impl->msg_parse(shout, con);
+            shout_connection_set_wait_timeout(con, shout, 0);
             return ret;
         break;
         case SHOUT_MSGSTATE_PARSED_INFORMATIONAL0:
@@ -506,7 +529,30 @@ int                 shout_connection_set_nonblocking(shout_connection_t *con, un
     return SHOUTERR_SUCCESS;
 }
 
-int                 shout_connection_set_next_timeout(shout_connection_t *con, shout_t *shout, uint32_t timeout /* [ms] */);
+int                 shout_connection_set_wait_timeout(shout_connection_t *con, shout_t *shout, uint64_t timeout /* [ms] */)
+{
+    if (!con || !shout)
+        return SHOUTERR_INSANE;
+
+    if (timeout) {
+        con->wait_timeout = timing_get_time() + timeout;
+    } else {
+        con->wait_timeout = 0;
+    }
+
+    con->wait_timeout_happened = 0;
+
+    return SHOUTERR_SUCCESS;
+}
+
+int                 shout_connection_get_wait_timeout_happened(shout_connection_t *con, shout_t *shout) /* returns SHOUTERR_* or > 0 for true */
+{
+    if (!con || !shout)
+        return SHOUTERR_INSANE;
+
+    return con->wait_timeout_happened;
+}
+
 int                 shout_connection_connect(shout_connection_t *con, shout_t *shout)
 {
     int port;
