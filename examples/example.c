@@ -12,7 +12,8 @@ int main()
 {
     shout_t *shout;
     unsigned char buff[4096];
-    long read, ret, total;
+    size_t read, total;
+    int ret;
 
     shout_init();
 
