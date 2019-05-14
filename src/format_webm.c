@@ -43,12 +43,17 @@
 /* masks to turn the tag ID varints from the Matroska spec
  * into their parsed-as-number equivalents */
 #define EBML_LONG_MASK          (~0x10000000)
+#define EBML_MID3_MASK          (~0x200000)
+#define EBML_MID2_MASK          (~0x4000)
 #define EBML_SHORT_MASK         (~0x80)
 
 /* tag IDs we're interested in */
 #define WEBM_EBML_ID            (0x1A45DFA3 & EBML_LONG_MASK)
 #define WEBM_SEGMENT_ID         (0x18538067 & EBML_LONG_MASK)
 #define WEBM_CLUSTER_ID         (0x1F43B675 & EBML_LONG_MASK)
+#define WEBM_SEGMENT_INFO_ID    (0x1549A966 & EBML_LONG_MASK)
+
+#define WEBM_TIMESTAMPSCALE_ID  (0x2AD7B1 & EBML_MID3_MASK)
 
 #define WEBM_TIMECODE_ID        (0xE7 & EBML_SHORT_MASK)
 #define WEBM_SIMPLE_BLOCK_ID    (0xA3 & EBML_SHORT_MASK)
@@ -78,6 +83,9 @@ typedef struct _webm_t {
     size_t input_write_position;
     size_t input_read_position;
     size_t output_position;
+
+    /* Metadata */
+    uint64_t timestamp_scale;
 
     /* statistics */
     uint64_t cluster_timestamp;
@@ -157,8 +165,7 @@ static int send_webm(shout_t *self, const unsigned char *data, size_t len)
     }
 
     /* Report latest known timecode for rate-control */
-    /* TODO: handle TimecodeScale values besides default 1000000 */
-    self->senttime = webm->latest_timestamp * 1000;
+    self->senttime = (webm->latest_timestamp * webm->timestamp_scale) / 1000;
 
     return self->error;
 }
@@ -255,6 +262,7 @@ static int webm_process_tag(shout_t *self, webm_t *webm)
     uint64_t timecode;
     ssize_t track_number_length;
     uint64_t track_number;
+    uint64_t timestamp_scale;
 
     uint64_t to_copy;
 
@@ -287,6 +295,30 @@ static int webm_process_tag(shout_t *self, webm_t *webm)
         case WEBM_CLUSTER_ID:
             /* open containers to process children */
             to_copy = tag_length;
+            break;
+
+        case WEBM_SEGMENT_INFO_ID:
+            /* open containers to process children */
+            to_copy = tag_length;
+            /* set defaults */
+            webm->timestamp_scale = 1000000;
+            break;
+
+        case WEBM_TIMESTAMPSCALE_ID:
+            /* read cluster timecode */
+            status = ebml_parse_sized_int(start_of_buffer + tag_length,
+                                          end_of_buffer,
+                                          payload_length,
+                                          false, &timestamp_scale);
+
+            if (status == 0) {
+                webm->waiting_for_more_input = true;
+                return self->error;
+            } else if (status < 0) {
+                return self->error = SHOUTERR_INSANE;
+            }
+
+            webm->timestamp_scale = timestamp_scale;
             break;
 
         case WEBM_TIMECODE_ID:
