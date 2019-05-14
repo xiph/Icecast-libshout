@@ -38,12 +38,12 @@ int shout_queue_data(shout_queue_t *queue, const unsigned char *data, size_t len
     shout_buf_t *buf;
     size_t       plen;
 
-	if (!len)
+    if (!len)
         return SHOUTERR_SUCCESS;
 
     if (!queue->len) {
         queue->head = calloc(1, sizeof(shout_buf_t));
-		if (!queue->head)
+        if (!queue->head)
             return SHOUTERR_MALLOC;
     }
 
@@ -55,7 +55,7 @@ int shout_queue_data(shout_queue_t *queue, const unsigned char *data, size_t len
     while (len > 0) {
         if (buf->len == SHOUT_BUFSIZE) {
             buf->next = calloc(1, sizeof(shout_buf_t));
-			if (!buf->next)
+            if (!buf->next)
                 return SHOUTERR_MALLOC;
             buf->next->prev = buf;
             buf = buf->next;
@@ -93,7 +93,7 @@ int shout_queue_printf(shout_connection_t *self, const char *fmt, ...)
     len = vsnprintf(buf, sizeof(buffer), fmt, ap);
 
     if (len > 0) {
-		if ((size_t)len < sizeof(buffer)) {
+        if ((size_t)len < sizeof(buffer)) {
             shout_queue_data(&self->wqueue, (unsigned char*)buf, len);
         } else {
             buf = malloc(++len);
@@ -101,7 +101,7 @@ int shout_queue_printf(shout_connection_t *self, const char *fmt, ...)
                 len = vsnprintf(buf, len, fmt, ap_retry);
                 shout_queue_data(&self->wqueue, (unsigned char*)buf, len);
                 free(buf);
-			} else {
+            } else {
                 ret = SHOUTERR_MALLOC;
             }
         }
@@ -135,7 +135,7 @@ ssize_t shout_queue_collect(shout_buf_t *queue, char **buf)
     for (node = queue; node; node = node->next)
         len += node->len;
 
-	if (!(*buf = malloc(len)))
+    if (!(*buf = malloc(len)))
         return SHOUTERR_MALLOC;
 
     for (node = queue; node; node = node->next) {
