@@ -86,20 +86,35 @@ shout_tls_t *shout_tls_new(shout_t *self, sock_t socket)
 
 static inline int tls_setup(shout_tls_t *tls)
 {
-    SSL_METHOD *meth;
+    long ssl_opts = 0;
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     SSL_library_init();
     SSL_load_error_strings();
     SSLeay_add_all_algorithms();
     SSLeay_add_ssl_algorithms();
 
-    meth = TLSv1_client_method();
-    if (!meth)
-        goto error;
+    tls->ssl_ctx = SSL_CTX_new(TLSv1_client_method());
+    ssl_opts |= SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3; // Disable SSLv2 and SSLv3
+#else
+    tls->ssl_ctx = SSL_CTX_new(TLS_client_method());
+    SSL_CTX_set_min_proto_version(tls->ssl_ctx, TLS1_VERSION);
+#endif
 
-    tls->ssl_ctx = SSL_CTX_new(meth);
+#ifdef SSL_OP_NO_COMPRESSION
+    ssl_opts |= SSL_OP_NO_COMPRESSION;             // Never use compression
+#endif
+
     if (!tls->ssl_ctx)
         goto error;
+
+    /* Even though this function is called set, it adds the
+     * flags to the already existing flags (possibly default
+     * flags already set by OpenSSL)!
+     * Calling SSL_CTX_get_options is not needed here, therefore.
+     */
+    SSL_CTX_set_options(tls->ssl_ctx, ssl_opts);
+
 
     SSL_CTX_set_default_verify_paths(tls->ssl_ctx);
     SSL_CTX_load_verify_locations(tls->ssl_ctx, tls->ca_file, tls->ca_directory);
