@@ -306,6 +306,7 @@ ssize_t      shout_tls_read(shout_tls_t *tls, void *buf, size_t len);
 ssize_t      shout_tls_write(shout_tls_t *tls, const void *buf, size_t len);
 int          shout_tls_recoverable(shout_tls_t *tls);
 int          shout_tls_get_peer_certificate(shout_tls_t *tls, char **buf);
+int          shout_tls_get_peer_certificate_chain(shout_tls_t *tls, char **buf);
 int          shout_tls_set_callback(shout_tls_t *tls, shout_tls_callback_t callback, void *userdata);
 #endif
 

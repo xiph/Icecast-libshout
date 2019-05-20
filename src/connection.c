@@ -700,12 +700,17 @@ int                 shout_connection_control(shout_connection_t *con, shout_cont
     switch (control) {
 #ifdef HAVE_OPENSSL
         case SHOUT_CONTROL_GET_SERVER_CERTIFICATE_AS_PEM:
+        case SHOUT_CONTROL_GET_SERVER_CERTIFICATE_CHAIN_AS_PEM:
             if (con->tls) {
                 void **vpp = va_arg(ap, void **);
                 char *buf;
 
                 if (vpp) {
-                    ret = shout_tls_get_peer_certificate(con->tls, &buf);
+                    if (control == SHOUT_CONTROL_GET_SERVER_CERTIFICATE_AS_PEM) {
+                        ret = shout_tls_get_peer_certificate(con->tls, &buf);
+                    } else {
+                        ret = shout_tls_get_peer_certificate_chain(con->tls, &buf);
+                    }
                     if (ret == SHOUTERR_SUCCESS) {
                         *vpp = buf;
                     }
@@ -718,6 +723,7 @@ int                 shout_connection_control(shout_connection_t *con, shout_cont
         break;
 #else
         case SHOUT_CONTROL_GET_SERVER_CERTIFICATE_AS_PEM:
+        case SHOUT_CONTROL_GET_SERVER_CERTIFICATE_CHAIN_AS_PEM:
             ret = SHOUTERR_UNSUPPORTED;
         break;
 #endif

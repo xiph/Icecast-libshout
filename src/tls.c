@@ -337,6 +337,49 @@ int          shout_tls_get_peer_certificate(shout_tls_t *tls, char **buf)
     return SHOUTERR_SUCCESS;
 }
 
+int          shout_tls_get_peer_certificate_chain(shout_tls_t *tls, char **buf)
+{
+    BIO *bio;
+    unsigned char *data;
+    unsigned int len;
+    int j, certs;
+    STACK_OF(X509) * chain;
+
+
+    if (!tls || !buf)
+        return SHOUTERR_INSANE;
+
+    chain = SSL_get_peer_cert_chain(tls->ssl);
+
+    certs = sk_X509_num(chain);
+
+    if (!certs)
+        return SHOUTERR_TLSBADCERT;
+
+    bio = BIO_new(BIO_s_mem());
+    if (!bio)
+        return SHOUTERR_MALLOC;
+
+    for(j = 0; j < certs; ++j) {
+        X509 *cert = sk_X509_value(chain, j);
+
+        PEM_write_bio_X509(bio, cert);
+
+    }
+
+    len = BIO_get_mem_data(bio, &data);
+
+    if (len) {
+        *buf = malloc(len + 1);
+        memcpy(*buf, data, len);
+        (*buf)[len] = 0;
+    }
+
+    BIO_free(bio);
+
+    return SHOUTERR_SUCCESS;
+}
+
 int          shout_tls_set_callback(shout_tls_t *tls, shout_tls_callback_t callback, void *userdata)
 {
     if (!tls)

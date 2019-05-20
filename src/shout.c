@@ -1083,10 +1083,11 @@ int shout_control(shout_t *self, shout_control_t control, ...)
     switch (control) {
 #ifdef HAVE_OPENSSL
         case SHOUT_CONTROL_GET_SERVER_CERTIFICATE_AS_PEM:
+        case SHOUT_CONTROL_GET_SERVER_CERTIFICATE_CHAIN_AS_PEM:
             if (self->connection->tls) {
                 void **vpp = va_arg(ap, void **);
                 if (vpp) {
-                    ret = shout_connection_control(self->connection, SHOUT_CONTROL_GET_SERVER_CERTIFICATE_AS_PEM, vpp);
+                    ret = shout_connection_control(self->connection, control, vpp);
                 } else {
                     ret = SHOUTERR_INSANE;
                 }
@@ -1096,6 +1097,7 @@ int shout_control(shout_t *self, shout_control_t control, ...)
         break;
 #else
         case SHOUT_CONTROL_GET_SERVER_CERTIFICATE_AS_PEM:
+        case SHOUT_CONTROL_GET_SERVER_CERTIFICATE_CHAIN_AS_PEM:
             ret = SHOUTERR_UNSUPPORTED;
         break;
 #endif
