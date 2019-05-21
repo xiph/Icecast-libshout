@@ -1339,7 +1339,6 @@ static int try_connect(shout_t *self)
                 rc = self->error = shout_open_mp3(self);
                 break;
             case SHOUT_FORMAT_WEBM:
-            case SHOUT_FORMAT_WEBMAUDIO:
             case SHOUT_FORMAT_MATROSKA:
                 rc = self->error = shout_open_webm(self);
                 break;
