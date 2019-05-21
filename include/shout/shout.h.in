@@ -48,10 +48,10 @@ extern "C" {
 #define SHOUTERR_TLSBADCERT         (-12) /* TLS connection can not be established because of bad certificate */
 #define SHOUTERR_RETRY              (-13) /* Retry last operation. */
 
-#define SHOUT_FORMAT_OGG            (  0) /* application/ogg */
-#define SHOUT_FORMAT_MP3            (  1) /* audio/mpeg */
-#define SHOUT_FORMAT_WEBM           (  2) /* video/webm */
-#define SHOUT_FORMAT_WEBMAUDIO      (  3) /* audio/webm audio only */
+#define SHOUT_FORMAT_OGG            (  0) /* Ogg */
+#define SHOUT_FORMAT_MP3            (  1) /* MP3 */
+#define SHOUT_FORMAT_WEBM           (  2) /* WebM */
+#define SHOUT_FORMAT_WEBMAUDIO      (  3) /* WebM, audio only, obsolete. Only used by shout_set_format() */
 
 /* backward-compatibility alias */
 #define SHOUT_FORMAT_VORBIS         SHOUT_FORMAT_OGG
@@ -227,9 +227,14 @@ int shout_set_public(shout_t *self, unsigned int make_public);
 unsigned int shout_get_public(shout_t *self);
 
 /* takes a SHOUT_FORMAT_xxxx argument */
-int shout_set_format(shout_t *self, unsigned int format);
-unsigned int shout_get_format(shout_t *self);
+int shout_set_format(shout_t *self, unsigned int format); // obsolete
+unsigned int shout_get_format(shout_t *self); // obsolete
 
+/* Set the format of the content to send.
+ * * format is one of SHOUT_FORMAT_xxxx.
+ * * usage is a bit vector composed of SHOUT_USAGE_xxxx.
+ * * codecs is NULL as of this version. Future versions will also support NULL.
+ */
 int shout_set_content_format(shout_t *self, unsigned int format, unsigned int usage, const char *codecs);
 int shout_get_content_format(shout_t *self, unsigned int *format, unsigned int *usage, const char **codecs);
 
