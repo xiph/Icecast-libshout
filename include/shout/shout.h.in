@@ -52,6 +52,7 @@ extern "C" {
 #define SHOUT_FORMAT_MP3            (  1) /* MP3 */
 #define SHOUT_FORMAT_WEBM           (  2) /* WebM */
 #define SHOUT_FORMAT_WEBMAUDIO      (  3) /* WebM, audio only, obsolete. Only used by shout_set_format() */
+#define SHOUT_FORMAT_MATROSKA       (  4) /* Matroska */
 
 /* backward-compatibility alias */
 #define SHOUT_FORMAT_VORBIS         SHOUT_FORMAT_OGG

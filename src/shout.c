@@ -901,6 +901,15 @@ static const char *shout_get_mimetype(unsigned int format, unsigned int usage, c
                 return "video/webm";
             }
         break;
+        case SHOUT_FORMAT_MATROSKA:
+            if (is_audio(usage)) {
+                return "audio/x-matroska";
+            } else if (is_video(usage) && (usage & SHOUT_USAGE_3D)) {
+                return "video/x-matroska-3d";
+            } else if (is_video(usage)) {
+                return "video/x-matroska";
+            }
+        break;
     }
 
     return NULL;
@@ -1331,6 +1340,7 @@ static int try_connect(shout_t *self)
                 break;
             case SHOUT_FORMAT_WEBM:
             case SHOUT_FORMAT_WEBMAUDIO:
+            case SHOUT_FORMAT_MATROSKA:
                 rc = self->error = shout_open_webm(self);
                 break;
 
