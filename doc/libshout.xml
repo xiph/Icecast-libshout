@@ -28,6 +28,7 @@
         <itemizedlist><title>Audio Formats</title>
             <listitem>Ogg (audio any video with different codecs)</listitem>
             <listitem>WebM (audio and video)</listitem>
+            <listitem>Matroska (audio and video)</listitem>
             <listitem>MP3</listitem>
         </itemizedlist>
 
@@ -548,6 +549,9 @@
                     are listed in <link linkend="format_constants">Format Constants</link>.
                     The default is <constant>SHOUT_FORMAT_OGG</constant>.
                 </para>
+                <warning>This function has been obsoleted and may not be included in future versions of the library.
+                    Please use <link linkend="shout_set_content_format"><function>shout_set_content_format</function></link>
+                </warning>
 
                 <funcsynopsis id="shout_get_format">
                     <funcprototype>
@@ -557,6 +561,55 @@
                 </funcsynopsis>
                 <para>
                     Returns the audio format used by this stream.
+                </para>
+                <warning>This function has been obsoleted and may not be included in future versions of the library.
+                    Please use <link linkend="shout_get_content_format"><function>shout_get_content_format</function></link>
+                </warning>
+
+
+                <funcsynopsis id="shout_set_content_format">
+                    <funcprototype>
+                        <funcdef>int <function>shout_set_content_format</function></funcdef>
+                        <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+                        <paramdef><type>unsigned int</type> <parameter>format</parameter></paramdef>
+                        <paramdef><type>unsigned int</type> <parameter>usage</parameter></paramdef>
+                        <paramdef><type>const char</type> *<parameter>codecs</parameter></paramdef>
+                    </funcprototype>
+                </funcsynopsis>
+                <para>
+                    Sets the format of the stream, the usage, and the used codecs.
+                </para>
+                <para>
+                    The format must be one of the supported format constants
+                    are listed in <link linkend="format_constants">Format Constants</link>.
+                    The default is <constant>SHOUT_FORMAT_OGG</constant>.
+                </para>
+                <para>
+                    The usage parameter is a bit-wise or-ed set of usages from the usage constants
+                    are listed in <link linkend="usage_constants">Usage Constants</link>.
+                    The default is <constant>SHOUT_USAGE_UNKNOWN</constant>.
+                </para>
+                <para>
+                    The codecs parameter is used for codec pinning. In codec pinning mode only the listed codecs
+                    are allowed to be contained in the stream. This helps listening software with playback.
+                    This is not yet supported and must be set to NULL meaning no pinning.
+                    The value of NULL will also be supported by future versions.
+                </para>
+                <note>
+                    <constant>SHOUT_FORMAT_WEBMAUDIO</constant> is not accepted by this function as it is deprecated.
+                    Use <constant>SHOUT_FORMAT_WEB</constant> and <constant>SHOUT_USAGE_AUDIO</constant>.
+                </note>
+
+                <funcsynopsis id="shout_get_content_format">
+                    <funcprototype>
+                        <funcdef>int <function>shout_set_content_format</function></funcdef>
+                        <paramdef><type>shout_t</type> *<parameter>self</parameter></paramdef>
+                        <paramdef><type>unsigned int</type> *<parameter>format</parameter></paramdef>
+                        <paramdef><type>unsigned int</type> *<parameter>usage</parameter></paramdef>
+                        <paramdef><type>const char</type> **<parameter>codecs</parameter></paramdef>
+                    </funcprototype>
+                </funcsynopsis>
+                <para>Returns the content format parameters as set by link <link linkend="shout_set_content_format"><function>shout_set_content_format</function></link>.
                 </para>
 
                 <funcsynopsis id="shout_set_mount">
@@ -1160,7 +1213,12 @@
 
                 <varlistentry>
                     <term><constant>SHOUT_FORMAT_WEBMAUDIO</constant></term>
-                    <listitem>The WebM format, audio only streams.</listitem>
+                    <listitem>his is deprecated. Use <constant>SHOUT_FORMAT_WEBM</constant> with <constant>SHOUT_USAGE_AUDIO</constant></listitem>
+                </varlistentry>
+
+                <varlistentry>
+                    <term><constant>SHOUT_FORMAT_MATROSKA</constant></term>
+                    <listitem>The Matroska format.</listitem>
                 </varlistentry>
 
                 <varlistentry>
@@ -1173,6 +1231,79 @@
                     <term><constant>SHOUT_FORMAT_MP3</constant></term>
                     <listitem>The MP3 format.</listitem>
                 </varlistentry>
+            </variablelist>
+
+            <variablelist id="usage_constants"><title>Usages</title>
+                <varlistentry>
+                    <term><constant>SHOUT_USAGE_AUDIO</constant></term>
+                    <listitem>Contains audio substreams.</listitem>
+                </varlistentry>
+
+                <varlistentry>
+                    <term><constant>SHOUT_USAGE_VISUAL</constant></term>
+                    <listitem>Contains Picture/Video substreams. This is often combined with <constant>SHOUT_USAGE_AUDIO</constant>.</listitem>
+                </varlistentry>
+
+                <varlistentry>
+                    <term><constant>SHOUT_USAGE_TEXT</constant></term>
+                    <listitem>Contains text substreams that are not subtitles.</listitem>
+                </varlistentry>
+
+                <varlistentry>
+                    <term><constant>SHOUT_USAGE_SUBTITLE</constant></term>
+                    <listitem>Contains subtitles as substreams.</listitem>
+                </varlistentry>
+
+                <varlistentry>
+                    <term><constant>SHOUT_USAGE_LIGHT</constant></term>
+                    <listitem>Contains light control substreams.</listitem>
+                </varlistentry>
+
+                <varlistentry>
+                    <term><constant>SHOUT_USAGE_UI</constant></term>
+                    <listitem>Contains User Interface data as substreams. Example of such are DVD menus or Matroska buttons.</listitem>
+                </varlistentry>
+
+                <varlistentry>
+                    <term><constant>SHOUT_USAGE_METADATA</constant></term>
+                    <listitem>Contains additional metadata as substreams. Examples are substreams with references to additional data sources, or program guide data.</listitem>
+                </varlistentry>
+
+                <varlistentry>
+                    <term><constant>SHOUT_USAGE_APPLICATION</constant></term>
+                    <listitem>Contains substreams with data specific to the application.</listitem>
+                </varlistentry>
+
+                <varlistentry>
+                    <term><constant>SHOUT_USAGE_CONTROL</constant></term>
+                    <listitem>Contains substreams that include control data for the streaming environment. Examples include commands to the signal routers, remuxers, or transmitters.</listitem>
+                </varlistentry>
+
+                <varlistentry>
+                    <term><constant>SHOUT_USAGE_COMPLEX</constant></term>
+                    <listitem>Contains substreams that themself contain data of more than one type. Examples include encapsulation of one container into another.</listitem>
+                </varlistentry>
+
+                <varlistentry>
+                    <term><constant>SHOUT_USAGE_OTHER</constant></term>
+                    <listitem>Contains substreams of a type not yet known to libshout.</listitem>
+                </varlistentry>
+
+                <varlistentry>
+                    <term><constant>SHOUT_USAGE_UNKNOWN</constant></term>
+                    <listitem>May contain (future) substreams of yet unknown nature to the caller.</listitem>
+                </varlistentry>
+
+                <varlistentry>
+                    <term><constant>SHOUT_USAGE_3D</constant></term>
+                    <listitem>Contains information for 3D playback.</listitem>
+                </varlistentry>
+
+                <varlistentry>
+                    <term><constant>SHOUT_USAGE_4D</constant></term>
+                    <listitem>Contains information for 4D/XD playback. 4D/XD playback is used to improve the immersion by adding effects like body shakers or wind.</listitem>
+                </varlistentry>
+
             </variablelist>
 
             <variablelist id="protocol_constants"><title>Protocols</title>

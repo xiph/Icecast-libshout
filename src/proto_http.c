@@ -91,27 +91,10 @@ static shout_connection_return_state_t shout_create_http_request_source(shout_t 
     const char  *mimetype;
     char        *mount = NULL;
 
-    switch (self->format) {
-        case SHOUT_FORMAT_OGG:
-            mimetype = "application/ogg";
-        break;
-
-        case SHOUT_FORMAT_MP3:
-            mimetype = "audio/mpeg";
-        break;
-
-        case SHOUT_FORMAT_WEBM:
-            mimetype = "video/webm";
-        break;
-
-        case SHOUT_FORMAT_WEBMAUDIO:
-            mimetype = "audio/webm";
-        break;
-
-        default:
-            shout_connection_set_error(connection, SHOUTERR_INSANE);
-            return SHOUT_RS_ERROR;
-        break;
+    mimetype = shout_get_mimetype_from_self(self);
+    if (!mimetype) {
+        shout_connection_set_error(connection, SHOUTERR_INSANE);
+        return SHOUT_RS_ERROR;
     }
 
     /* this is lazy code that relies on the only error from queue_* being

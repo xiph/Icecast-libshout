@@ -131,6 +131,7 @@ shout_t *shout_new(void)
 
     self->port      = LIBSHOUT_DEFAULT_PORT;
     self->format    = LIBSHOUT_DEFAULT_FORMAT;
+    self->usage     = LIBSHOUT_DEFAULT_USAGE;
     self->protocol  = LIBSHOUT_DEFAULT_PROTOCOL;
 
     return self;
@@ -811,14 +812,22 @@ int shout_set_format(shout_t *self, unsigned int format)
     if (self->connection)
         return self->error = SHOUTERR_CONNECTED;
 
-    if (format != SHOUT_FORMAT_OGG && format != SHOUT_FORMAT_MP3 &&
-        format != SHOUT_FORMAT_WEBM && format != SHOUT_FORMAT_WEBMAUDIO) {
-        return self->error = SHOUTERR_UNSUPPORTED;
+    switch (format) {
+        case SHOUT_FORMAT_OGG:
+            return shout_set_content_format(self, SHOUT_FORMAT_OGG, SHOUT_USAGE_UNKNOWN, NULL);
+        break;
+        case SHOUT_FORMAT_MP3:
+            return shout_set_content_format(self, SHOUT_FORMAT_MP3, SHOUT_USAGE_AUDIO, NULL);
+        break;
+        case SHOUT_FORMAT_WEBM:
+            return shout_set_content_format(self, SHOUT_FORMAT_WEBM, SHOUT_USAGE_AUDIO|SHOUT_USAGE_VISUAL, NULL);
+        break;
+        case SHOUT_FORMAT_WEBMAUDIO:
+            return shout_set_content_format(self, SHOUT_FORMAT_WEBM, SHOUT_USAGE_AUDIO, NULL);
+        break;
     }
 
-    self->format = format;
-
-    return self->error = SHOUTERR_SUCCESS;
+    return self->error = SHOUTERR_UNSUPPORTED;
 }
 
 unsigned int shout_get_format(shout_t* self)
@@ -826,7 +835,128 @@ unsigned int shout_get_format(shout_t* self)
     if (!self)
         return 0;
 
+    if (self->format == SHOUT_FORMAT_WEBM && self->usage == SHOUT_USAGE_AUDIO) {
+        return SHOUT_FORMAT_WEBMAUDIO;
+    }
+
     return self->format;
+}
+
+static inline unsigned int remove_bits(unsigned int value, unsigned int to_remove)
+{
+    value |= to_remove;
+    value -= to_remove;
+
+    return value;
+}
+
+static inline int is_audio(unsigned int usage)
+{
+    if (!(usage & SHOUT_USAGE_AUDIO))
+        return 0;
+
+    if (remove_bits(usage, SHOUT_USAGE_AUDIO|SHOUT_USAGE_SUBTITLE))
+        return 0;
+
+    return 1;
+}
+
+static inline int is_video(unsigned int usage)
+{
+    if (!(usage & SHOUT_USAGE_VISUAL))
+        return 0;
+
+    if (remove_bits(usage, SHOUT_USAGE_VISUAL|SHOUT_USAGE_AUDIO|SHOUT_USAGE_SUBTITLE|SHOUT_USAGE_3D|SHOUT_USAGE_4D))
+        return 0;
+
+    return 1;
+}
+
+static const char *shout_get_mimetype(unsigned int format, unsigned int usage, const char *codecs)
+{
+    if (codecs)
+        return NULL;
+
+    switch (format) {
+        case SHOUT_FORMAT_OGG:
+            if (is_audio(usage)) {
+                return "audio/ogg";
+            } else if (is_video(usage)) {
+                return "video/ogg";
+            } else {
+                return "application/ogg";
+            }
+        break;
+
+        case SHOUT_FORMAT_MP3:
+            /* MP3 *ONLY* support Audio. So all other values are outright invalid */
+            if (usage == SHOUT_USAGE_AUDIO) {
+                return "audio/mpeg";
+            }
+        break;
+        case SHOUT_FORMAT_WEBM:
+            if (is_audio(usage)) {
+                return "audio/webm";
+            } else if (is_video(usage)) {
+                return "video/webm";
+            }
+        break;
+        case SHOUT_FORMAT_MATROSKA:
+            if (is_audio(usage)) {
+                return "audio/x-matroska";
+            } else if (is_video(usage) && (usage & SHOUT_USAGE_3D)) {
+                return "video/x-matroska-3d";
+            } else if (is_video(usage)) {
+                return "video/x-matroska";
+            }
+        break;
+    }
+
+    return NULL;
+}
+
+const char *shout_get_mimetype_from_self(shout_t *self)
+{
+    return shout_get_mimetype(self->format, self->usage, NULL);
+}
+
+int shout_set_content_format(shout_t *self, unsigned int format, unsigned int usage, const char *codecs)
+{
+    if (!self)
+        return SHOUTERR_INSANE;
+
+    if (self->connection)
+        return self->error = SHOUTERR_CONNECTED;
+
+    if (codecs) {
+        return self->error = SHOUTERR_UNSUPPORTED;
+    }
+
+    if (!shout_get_mimetype(format, usage, codecs)) {
+        return self->error = SHOUTERR_UNSUPPORTED;
+    }
+
+    self->format = format;
+    self->usage  = usage;
+
+    return self->error = SHOUTERR_SUCCESS;
+}
+
+int shout_get_content_format(shout_t *self, unsigned int *format, unsigned int *usage, const char **codecs)
+{
+    if (!self)
+        return SHOUTERR_INSANE;
+
+    if (format)
+        *format = self->format;
+
+    if (usage)
+        *usage = self->usage;
+
+    if (codecs)
+        *codecs = NULL;
+
+    return self->error = SHOUTERR_SUCCESS;
 }
 
 int shout_set_protocol(shout_t *self, unsigned int protocol)
@@ -1209,7 +1339,7 @@ static int try_connect(shout_t *self)
                 rc = self->error = shout_open_mp3(self);
                 break;
             case SHOUT_FORMAT_WEBM:
-            case SHOUT_FORMAT_WEBMAUDIO:
+            case SHOUT_FORMAT_MATROSKA:
                 rc = self->error = shout_open_webm(self);
                 break;
 
