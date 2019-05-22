@@ -1161,7 +1161,7 @@
 
                 <varlistentry>
                     <term><constant>SHOUT_FORMAT_WEBMAUDIO</constant></term>
-                    <listitem>The WebM format, audio only streams.</listitem>
+                    <listitem>his is deprecated. Use <constant>SHOUT_FORMAT_WEBM</constant> with <constant>SHOUT_USAGE_AUDIO</constant></listitem>
                 </varlistentry>
 
                 <varlistentry>
