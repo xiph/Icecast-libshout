@@ -28,6 +28,7 @@
         <itemizedlist><title>Audio Formats</title>
             <listitem>Ogg (audio any video with different codecs)</listitem>
             <listitem>WebM (audio and video)</listitem>
+            <listitem>Matroska (audio and video)</listitem>
             <listitem>MP3</listitem>
         </itemizedlist>
 
@@ -1161,6 +1162,11 @@
                 <varlistentry>
                     <term><constant>SHOUT_FORMAT_WEBMAUDIO</constant></term>
                     <listitem>The WebM format, audio only streams.</listitem>
+                </varlistentry>
+
+                <varlistentry>
+                    <term><constant>SHOUT_FORMAT_MATROSKA</constant></term>
+                    <listitem>The Matroska format.</listitem>
                 </varlistentry>
 
                 <varlistentry>
