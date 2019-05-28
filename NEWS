@@ -1,3 +1,11 @@
+libshout 2.4.3 (????????)
+* Fixed building with OpenSSL 1.1.0.
+* Fixed static building with OpenSSL.
+* Added support for PUT.
+* Added support for WebM and Matroska with full timing.
+* Added support to inspect the full server's TLS certificate chain.
+* Improved API to set the format used for streaming.
+
 libshout 2.4.2 (20190429)
 
 * Fixed handling of invalid characters in strings:
