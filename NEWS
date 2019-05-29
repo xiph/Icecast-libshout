@@ -1,4 +1,4 @@
-libshout 2.4.3 (????????)
+libshout 2.4.3 (20190529)
 * Fixed building with OpenSSL 1.1.0.
 * Fixed static building with OpenSSL.
 * Added support for PUT.

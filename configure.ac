@@ -3,7 +3,7 @@
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 4)
-m4_define(libshout_micro, 2)
+m4_define(libshout_micro, 3)
 m4_define(libshout_version, libshout_major.libshout_minor.libshout_micro)
 
 AC_INIT([libshout], libshout_version, [icecast-dev@xiph.org])
